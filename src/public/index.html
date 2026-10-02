@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Box for Less — Product Master</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">BFL</span>
+      <div>
+        <div class="brand-title">Box for Less</div>
+        <div class="brand-sub">Product Master · Phase 1</div>
+      </div>
+    </div>
+    <nav class="mainnav">
+      <a href="#/products" data-nav="products" class="active">Product Master</a>
+      <a href="#/imports" data-nav="imports">Imports</a>
+      <a href="#/changes" data-nav="changes">Change Review <span id="reviewBadge" class="badge hidden">0</span></a>
+      <a href="scan.html" data-nav="scan">📷 Scan</a>
+    </nav>
+  </header>
+
+  <main id="view" class="view"></main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

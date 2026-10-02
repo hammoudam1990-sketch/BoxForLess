@@ -1,0 +1,25 @@
+{
+  "name": "boxforless-sales-catalog",
+  "version": "0.2.1",
+  "private": true,
+  "description": "Box for Less Digital Product Catalog & Sales Request Application - Phase 1 Product Master",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server/index.js",
+    "dev": "node --watch src/server/index.js",
+    "migrate": "node src/db/migrate.js",
+    "gen-cert": "node scripts/gen-cert.js",
+    "import": "node scripts/import-cli.js",
+    "data-quality": "node scripts/data-quality-report.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@zxing/library": "^0.21.3",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "xlsx": "^0.18.5"
+  }
+}

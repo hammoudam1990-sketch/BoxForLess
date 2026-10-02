@@ -1,0 +1,16 @@
+node_modules/
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/uploads/
+data/product-images/
+certs/
+*.pem
+data/_server.log
+data/data-quality-report.json
+*.log
+.DS_Store
+
+# local data checkpoints / backups (filesystem snapshots, not source)
+data/checkpoints/
+data/backups/
