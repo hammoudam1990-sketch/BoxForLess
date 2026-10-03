@@ -1,7 +1,7 @@
 # Stage 3 — Customer Request Cart & Submission
 
-**Status:** implemented and server-verified. **Not yet verified on a real iPhone**,
-so Stage 3 is *not* declared complete. See [Verification](#verification).
+**Status:** ✅ **COMPLETE** — implemented, server-verified, and **verified on a real
+iPhone (2026-10-03)**. Released as `v0.3.0`. See [Verification](#verification).
 
 Quantities are **CTN only**. No PCS, no unit selection, no CTN↔PCS conversion, no
 parsing of `CTN24` strings, no loose-piece logic.
@@ -234,6 +234,36 @@ leaks · staff read-only view.
 **Production database:** product, image and category data verified **byte-identical**
 to the `v0.3.0-pre-stage3` checkpoint. Zero requests, zero customers.
 
-**❌ Not verified on a real iPhone.** The cart, drawer, customer search and
-submission have not been exercised on the device. Stage 3 is not complete until
-they are.
+### ✅ Real-device verification — PASSED (iPhone, 2026-10-03)
+
+Tested on a real iPhone over the LAN at `http://192.168.100.213:3000/catalog`,
+against the committed build (`39b7a64`; served `catalog.js` / `cart.js` /
+`request-ui.js` hash-matched the working tree). All ten checks passed:
+
+| # | Check | Result |
+|---|---|---|
+| 1 | **Available Now** tab | ✅ |
+| 2 | **Full Catalogue** tab | ✅ |
+| 3 | Add-to-request control | ✅ |
+| 4 | CTN increment / decrement | ✅ |
+| 5 | Cart bar shows correct CTN and product count | ✅ |
+| 6 | Cart drawer opens; quantity controls work | ✅ |
+| 7 | Customer search behaves correctly | ✅ |
+| 8 | "My company is not listed" path | ✅ |
+| 9 | Submission succeeds and shows the request reference | ✅ |
+| 10 | No exact stock, Odoo customer id, pricing or internal data exposed | ✅ |
+
+Item 7 passed with the customer master **empty by design** — search correctly
+returns nothing below three characters and nothing above it, because no customer
+records exist until an export with stable `res.partner` ids is supplied. The
+"not listed" path (item 8) is therefore the live route, exactly as intended.
+
+### Environment note from the device session
+
+Two LAN issues surfaced during testing, neither a defect in this project: the
+machine's Wi-Fi address moved `192.168.100.8 → 192.168.100.213` (DHCP), and the
+network was reclassified `Private → Public`, which left the existing
+`LocalSubnet` firewall rules scoped to a profile that was no longer active and
+silently dropped inbound traffic. Reclassifying the network as Private restored
+it. The TLS certificate's SAN still lists only the old address, so LAN testing
+uses **HTTP on port 3000**; only the barcode scanner needs a secure context.

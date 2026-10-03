@@ -62,10 +62,10 @@ preserved image for barcode 5283013330912, and correct image orientation.
 - ❌ No customer accounts, registration or salesperson assignment.
 - ❌ No sales dashboard, no WhatsApp automation.
 
-## Stage 3 — Customer Request Cart ⚠️ RELEASE CANDIDATE
+## Stage 3 — Customer Request Cart ✅ COMPLETE
 
-Implemented and server-verified; **awaiting real-iPhone verification**.
-Detail: `STAGE_3_REQUESTS.md`.
+Implemented, server-verified and **verified on a real iPhone (2026-10-03)**.
+Released as `v0.3.0`. Detail: `STAGE_3_REQUESTS.md`.
 
 - [x] Available Now (951) / Full Catalogue (3,883) browsing.
 - [x] CTN-only request cart, server-validated, atomic submission.
@@ -74,7 +74,7 @@ Detail: `STAGE_3_REQUESTS.md`.
 - [x] Odoo customer master architecture; opaque handles; "not listed" path.
 - [x] Staff read-only Requests view.
 - [x] 188/188 tests; 9 mutants caught; production DB byte-identical to checkpoint.
-- [ ] **Real-iPhone verification — outstanding.**
+- [x] **Real-iPhone verification PASSED (2026-10-03)** — all ten checks.
 - [ ] Customer master import — BLOCKED pending an export with stable Customer IDs.
 
 ### Explicitly NOT in Stage 3

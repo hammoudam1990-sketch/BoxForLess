@@ -2,10 +2,13 @@
 
 All notable changes to this project are documented here.
 
-## [0.3.0-rc.1] — 2026-10-03 — Stage 3: customer request cart & submission (CTN only)
+## [0.3.0] — 2026-10-03 — Stage 3: customer request cart & submission (CTN only)
 
-**Release candidate — NOT yet verified on a real iPhone**, so Stage 3 is not
-declared complete. Full detail: `STAGE_3_REQUESTS.md`.
+**✅ STAGE 3 COMPLETE — verified on a real iPhone (2026-10-03).** All ten device
+checks passed: Available Now and Full Catalogue tabs, add-to-request, CTN
+increment/decrement, cart bar counts, cart drawer, customer search, the
+"not listed" path, submission with a returned reference, and no exposure of stock
+figures, Odoo ids, pricing or internal data. Full detail: `STAGE_3_REQUESTS.md`.
 
 ### Added
 - **Request cart and submission.** A customer builds a request from the catalog and
