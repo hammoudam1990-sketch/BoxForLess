@@ -5,6 +5,9 @@
 // Routing: /catalog (list) and /catalog/product/:id (detail). Both URLs are
 // served the same shell by the server; this module reads location.pathname.
 
+import { setQuantity, quantityOf } from './cart.js';
+import { mountRequestUI, renderCartBar, setCartMutationHandler } from './request-ui.js';
+
 const view = document.getElementById('view');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
@@ -56,7 +59,10 @@ function thumb(product, { eager = false } = {}) {
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 24;
-const state = { search: '', availability: 'all', withImage: false, topLevel: '', categoryPath: '', sort: 'name_asc', offset: 0 };
+// view: 'available' = active products with stock on hand (the default, because a
+// customer browsing to order cares about what they can actually have);
+// 'full' = every active product, including out-of-stock.
+const state = { view: 'available', search: '', availability: 'all', withImage: false, topLevel: '', categoryPath: '', sort: 'name_asc', offset: 0 };
 
 const FILTERS = [
   { key: 'all', label: 'All', facet: 'all' },
@@ -65,17 +71,42 @@ const FILTERS = [
   { key: 'out_of_stock', label: 'Out of Stock', facet: 'out_of_stock' },
 ];
 
+/**
+ * The add-to-request control. A product holding less than one whole carton is not
+ * requestable even while it still reads Limited Stock, so it gets a plain note
+ * instead of a stepper — better than offering a control whose every use would fail.
+ */
+function requestControl(product) {
+  if (!product.requestable) {
+    return `<div class="c-noreq">Not available to request right now</div>`;
+  }
+  const qty = quantityOf(product.id);
+  const unit = product.pack ? ` · ${esc(product.pack)}` : '';
+  if (qty < 1) {
+    return `<button class="c-add" type="button" data-add="${esc(product.id)}">Add to request${unit}</button>`;
+  }
+  return `<div class="c-stepper" data-stepper="${esc(product.id)}">
+      <button type="button" class="c-step" data-dec="${esc(product.id)}" aria-label="Fewer cartons">−</button>
+      <span class="c-qty"><b>${qty}</b> CTN</span>
+      <button type="button" class="c-step" data-inc="${esc(product.id)}" aria-label="More cartons">+</button>
+    </div>`;
+}
+
 function card(product) {
-  return `<a class="c-card" href="/catalog/product/${encodeURIComponent(product.id)}">
-    ${thumb(product)}
-    <div class="c-card-body">
-      <div class="c-name">${esc(product.name)}</div>
-      ${product.pack ? `<div class="c-pack">${esc(product.pack)}</div>` : ''}
-      ${product.category ? `<div class="c-cat">${esc(product.category.name)}</div>` : ''}
-      ${pill(product.availability)}
-      <div class="c-cta">View Product →</div>
+  return `<div class="c-card">
+    <a class="c-card-link" href="/catalog/product/${encodeURIComponent(product.id)}">
+      ${thumb(product)}
+      <div class="c-card-body">
+        <div class="c-name">${esc(product.name)}</div>
+        ${product.pack ? `<div class="c-pack">${esc(product.pack)}</div>` : ''}
+        ${product.category ? `<div class="c-cat">${esc(product.category.name)}</div>` : ''}
+        ${pill(product.availability)}
+      </div>
+    </a>
+    <div class="c-card-actions" data-product='${esc(JSON.stringify({ id: product.id, name: product.name, pack: product.pack }))}'>
+      ${requestControl(product)}
     </div>
-  </a>`;
+  </div>`;
 }
 
 function listShell(facets, categories) {
@@ -108,6 +139,12 @@ function listShell(facets, categories) {
     : '';
 
   return `
+    <div class="c-views" role="tablist">
+      <button type="button" class="c-view" role="tab" data-view="available"
+        aria-selected="${state.view === 'available'}">Available Now</button>
+      <button type="button" class="c-view" role="tab" data-view="full"
+        aria-selected="${state.view === 'full'}">Full Catalogue</button>
+    </div>
     <div class="c-search">
       <input id="q" type="search" inputmode="search" autocomplete="off"
              placeholder="Search products..." aria-label="Search products"
@@ -134,6 +171,7 @@ function listQuery() {
   if (state.search.trim()) p.set('search', state.search.trim());
   if (state.availability !== 'all') p.set('availability', state.availability);
   if (state.withImage) p.set('with_image', 'true');
+  p.set('view', state.view);
   if (state.topLevel) p.set('top_level', state.topLevel);
   if (state.categoryPath) p.set('category_path', state.categoryPath);
   p.set('sort', state.sort);
@@ -223,6 +261,13 @@ async function renderList() {
     e.currentTarget.setAttribute('aria-pressed', String(state.withImage));
     loadResults();
   });
+  view.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => {
+    if (state.view === b.dataset.view) return;
+    state.view = b.dataset.view;
+    state.offset = 0;
+    renderList();   // re-render so the tab state and the counts both follow
+  }));
+
   view.querySelectorAll('[data-top]').forEach((b) => b.addEventListener('click', () => {
     state.topLevel = b.dataset.top;
     state.categoryPath = '';  // a new top level clears any sub-category
@@ -280,7 +325,10 @@ async function renderDetail(id) {
             </div>` : ''}
             <div><div class="c-fact-k">Availability</div><div>${pill(p.availability)}</div></div>
           </div>
-          <a class="c-btn" href="/catalog" style="display:inline-block;text-decoration:none">Back to Catalog</a>
+          <div class="c-detail-actions" data-product='${esc(JSON.stringify({ id: p.id, name: p.name, pack: p.pack }))}'>
+            ${requestControl(p)}
+          </div>
+          <a class="c-btn" href="/catalog" style="display:inline-block;text-decoration:none;margin-top:14px">Back to Catalog</a>
         </div>
       </div>
     </div>`;
@@ -297,6 +345,28 @@ function route() {
   return renderList();
 }
 
+// Add / increment / decrement, delegated so it survives every re-render.
+// Only the control itself re-renders — the grid is left alone so the page does not
+// jump under the customer's thumb mid-scroll.
+document.addEventListener('click', (e) => {
+  const host = e.target.closest('.c-card-actions, .c-detail-actions');
+  const btn = e.target.closest('[data-add], [data-inc], [data-dec]');
+  if (!host || !btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  let product;
+  try { product = JSON.parse(host.dataset.product); } catch { return; }
+  const current = quantityOf(product.id);
+  const next = btn.hasAttribute('data-add') ? current + 1
+    : btn.hasAttribute('data-inc') ? current + 1
+      : current - 1;
+
+  setQuantity({ barcode: product.id, name: product.name, pack: product.pack }, next);
+  host.innerHTML = requestControl({ ...product, requestable: true });
+  renderCartBar();
+});
+
 // Intercept in-app links so navigation stays a single page load on mobile.
 document.addEventListener('click', (e) => {
   const a = e.target.closest('a[href^="/catalog"]');
@@ -307,5 +377,10 @@ document.addEventListener('click', (e) => {
   route();
 });
 window.addEventListener('popstate', route);
+
+// The cart bar persists across views; re-render controls after a submission so
+// steppers reset to "Add to request".
+setCartMutationHandler(() => route());
+mountRequestUI();
 
 route();

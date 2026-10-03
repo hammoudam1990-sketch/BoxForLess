@@ -168,14 +168,26 @@ CREATE INDEX IF NOT EXISTS ix_import_changes_type    ON import_changes(change_ty
 -- Created now, UNUSED in Phase 1, so Product Master never needs restructuring
 -- when these phases arrive. No Phase 1 code reads or writes these tables.
 -- ===========================================================================
+-- customers — mirror of the Odoo customer master (res.partner).
+-- `name` holds Odoo's Display Name. `odoo_customer_ref` is the STABLE identity and
+-- is the only thing a request stores; it is nullable ONLY because the export that
+-- carries it is still pending. Display name may be used to MATCH an incoming row to
+-- an existing customer, but is never the stored permanent identity.
+-- Pricelist, avatar and Odoo UI stats are never imported.
 CREATE TABLE IF NOT EXISTS customers (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  name        TEXT NOT NULL,
-  reference   TEXT,
-  is_active   INTEGER NOT NULL DEFAULT 1,
-  created_at  TEXT,
-  updated_at  TEXT
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  odoo_customer_ref TEXT,            -- stable res.partner id; unique when present
+  name              TEXT NOT NULL,   -- Odoo Display Name
+  reference         TEXT,            -- legacy skeleton column, unused
+  phone             TEXT,            -- staff reference only; NEVER an identity, never customer-facing
+  country           TEXT,            -- staff reference only
+  is_active         INTEGER NOT NULL DEFAULT 1,
+  created_at        TEXT,
+  updated_at        TEXT
 );
+-- Indexes for the Stage 3 columns are created by applyMigrations(), never here:
+-- on a pre-Stage-3 database this file runs BEFORE those columns are added, so an
+-- index here would fail the whole open. (Same trap as ix_products_odoo_category_path.)
 CREATE TABLE IF NOT EXISTS sales_users (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   name        TEXT NOT NULL,
@@ -185,21 +197,47 @@ CREATE TABLE IF NOT EXISTS sales_users (
   created_at  TEXT,
   updated_at  TEXT
 );
+-- requests — a customer ASKING for products. NOT a reservation, NOT a confirmed
+-- order: Stage 3 reserves no stock. `stock_as_of` records which import's figures
+-- the request was validated against, so a later dispute is answerable.
+-- A request from a company absent from the customer master is stored UNLINKED
+-- (customer_id NULL + unlisted_* + needs_customer_match) for staff to reconcile;
+-- it never silently creates a customer master record.
 CREATE TABLE IF NOT EXISTS requests (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  customer_id   INTEGER REFERENCES customers(id)   ON DELETE SET NULL,
-  sales_user_id INTEGER REFERENCES sales_users(id) ON DELETE SET NULL,
-  status        TEXT,
-  created_at    TEXT,
-  updated_at    TEXT
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  reference            TEXT UNIQUE,     -- human-facing code, e.g. REQ-2026-0001
+  customer_id          INTEGER REFERENCES customers(id)   ON DELETE SET NULL,
+  sales_user_id        INTEGER REFERENCES sales_users(id) ON DELETE SET NULL,
+  unlisted_company     TEXT,
+  unlisted_contact     TEXT,
+  unlisted_phone       TEXT,
+  needs_customer_match INTEGER NOT NULL DEFAULT 0,
+  notes                TEXT,
+  status               TEXT,
+  submitted_at         TEXT,
+  stock_as_of          TEXT,            -- completed_at of the import the request was validated against
+  created_at           TEXT,
+  updated_at           TEXT
 );
+-- (indexes: see applyMigrations)
+
+-- request_items — quantities are CTN ONLY in Stage 3 (no PCS, no conversion).
+-- The *_at_request columns are SNAPSHOTS: products change, and a request must still
+-- read correctly months later. `quantity` is the unused legacy skeleton column,
+-- retained because migrations here are additive only.
 CREATE TABLE IF NOT EXISTS request_items (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  request_id  INTEGER NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
-  product_id  INTEGER NOT NULL REFERENCES products(id) ON DELETE RESTRICT, -- history protected
-  quantity    REAL,
-  created_at  TEXT
+  id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id               INTEGER NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
+  product_id               INTEGER NOT NULL REFERENCES products(id) ON DELETE RESTRICT, -- history protected
+  quantity_ctn             INTEGER,    -- whole cartons requested (>= 1)
+  quantity                 REAL,       -- legacy skeleton column, unused
+  product_name_at_request  TEXT,
+  barcode_at_request       TEXT,
+  box_uom_at_request       TEXT,
+  available_ctn_at_request INTEGER,
+  created_at               TEXT
 );
+-- (indexes: see applyMigrations)
 CREATE TABLE IF NOT EXISTS quotations (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   request_id     INTEGER REFERENCES requests(id) ON DELETE SET NULL,

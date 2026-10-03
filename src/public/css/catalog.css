@@ -199,3 +199,134 @@ body {
 
 /* category label on the product card */
 .c-cat { color: var(--c-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
+
+/* ===========================================================================
+   Stage 3 — request cart. Purely additive: no existing rule above is changed.
+   =========================================================================== */
+
+/* Available Now / Full Catalogue switch */
+.c-views {
+  display: flex; gap: 6px; margin-bottom: 12px;
+  background: #e9edf3; border-radius: 12px; padding: 4px;
+}
+.c-view {
+  flex: 1; min-height: 40px; padding: 8px 10px;
+  border: 0; border-radius: 9px; cursor: pointer;
+  background: transparent; color: var(--c-muted);
+  font-size: 14px; font-weight: 600;
+}
+.c-view[aria-selected="true"] { background: var(--c-surface); color: var(--c-ink); box-shadow: 0 1px 3px rgba(17,22,29,.12); }
+
+/* The card is now a container (link + actions) rather than one big anchor, so a
+   tap on the stepper cannot navigate to the product page. */
+.c-card-link { display: flex; flex-direction: column; flex: 1; text-decoration: none; color: inherit; }
+.c-card-actions { padding: 0 12px 12px; }
+.c-detail-actions { margin: 18px 0 4px; }
+
+.c-add {
+  width: 100%; min-height: var(--c-tap);
+  padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--c-accent); background: var(--c-accent); color: #fff;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.c-add:active { opacity: .85; }
+.c-noreq { color: var(--c-muted); font-size: 12px; line-height: 1.35; padding: 6px 0; }
+
+.c-stepper {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  border: 1px solid var(--c-accent); border-radius: 10px; overflow: hidden;
+  min-height: var(--c-tap); background: var(--c-surface);
+}
+.c-step {
+  width: 44px; min-height: 42px; flex: none;       /* full 44px touch target */
+  border: 0; background: transparent; color: var(--c-accent);
+  font-size: 22px; line-height: 1; cursor: pointer;
+}
+.c-step:active { background: #eef3fc; }
+.c-qty { font-size: 14px; font-variant-numeric: tabular-nums; }
+
+/* bottom bar */
+.c-cartbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--c-surface); border-top: 1px solid var(--c-line);
+  box-shadow: 0 -6px 20px rgba(17, 22, 29, .07);
+}
+.c-cartbar-info { font-size: 14px; }
+/* keep the last row of products clear of the fixed bar */
+.c-main { padding-bottom: 92px; }
+
+/* drawer */
+.c-noscroll { overflow: hidden; }
+.c-drawer { position: fixed; inset: 0; z-index: 40; }
+.c-drawer-backdrop { position: absolute; inset: 0; background: rgba(17, 22, 29, .45); }
+.c-drawer-panel {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: var(--c-bg); border-radius: 16px 16px 0 0;
+  padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+}
+@media (min-width: 760px) {
+  .c-drawer-panel { left: auto; right: 0; top: 0; bottom: 0; width: 460px; max-height: none; border-radius: 0; }
+}
+.c-drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.c-drawer-head h2 { font-size: 18px; margin: 0; }
+
+.c-line {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--c-surface); border: 1px solid var(--c-line);
+  border-radius: var(--c-radius); padding: 10px 12px; margin-bottom: 10px;
+}
+.c-line-main { flex: 1; min-width: 0; }
+.c-line-name { font-size: 14px; font-weight: 600; }
+.c-line-err { color: var(--c-out); font-size: 12px; margin-top: 4px; }
+.c-line .c-stepper { min-height: 38px; flex: none; }
+.c-line .c-step { width: 34px; min-height: 36px; font-size: 18px; }
+.c-remove {
+  width: 36px; height: 36px; flex: none; border: 0; border-radius: 10px;
+  background: transparent; color: var(--c-muted); font-size: 22px; cursor: pointer;
+}
+.c-empty-cart { color: var(--c-muted); text-align: center; padding: 24px 0; }
+
+.c-customer, .c-field { margin: 14px 0; }
+.c-field label {
+  display: block; font-size: 12px; color: var(--c-muted);
+  text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px;
+}
+.c-field input, .c-field textarea {
+  width: 100%; font-size: 16px;                     /* 16px stops iOS zooming on focus */
+  padding: 11px 12px; border: 1px solid var(--c-line); border-radius: 10px;
+  background: var(--c-surface); color: var(--c-ink); -webkit-appearance: none;
+}
+.c-field input:focus, .c-field textarea:focus { outline: 2px solid var(--c-accent); outline-offset: -1px; }
+.c-hint { color: var(--c-muted); font-size: 12px; margin-top: 6px; }
+.c-results { margin-top: 8px; max-height: 220px; overflow-y: auto; }
+.c-result {
+  display: block; width: 100%; text-align: left; min-height: var(--c-tap);
+  padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
+  border: 1px solid var(--c-line); border-radius: 10px;
+  background: var(--c-surface); color: var(--c-ink); font-size: 15px;
+}
+.c-selected {
+  background: var(--c-in-bg); color: var(--c-in);
+  border-radius: 10px; padding: 10px 12px; font-size: 14px;
+}
+.c-link {
+  border: 0; background: none; padding: 8px 0; cursor: pointer;
+  color: var(--c-accent); font-size: 14px; font-weight: 600;
+}
+
+.c-blocked {
+  background: var(--c-limited-bg); color: var(--c-limited);
+  border-radius: 10px; padding: 12px; font-size: 14px; margin-bottom: 12px;
+}
+.c-notice {
+  background: var(--c-out-bg); color: var(--c-out);
+  border-radius: 10px; padding: 12px; font-size: 14px; margin-bottom: 12px;
+}
+.c-drawer-actions { display: flex; gap: 10px; margin-top: 16px; }
+.c-drawer-actions .c-btn { flex: 1; }
+.c-smallprint { color: var(--c-muted); font-size: 12px; line-height: 1.45; margin-top: 12px; }
+.c-okbox { text-align: center; padding: 28px 12px; }
+.c-okbox h2 { margin: 0 0 10px; font-size: 19px; color: var(--c-in); }

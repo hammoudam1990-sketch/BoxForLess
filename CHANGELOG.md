@@ -2,6 +2,58 @@
 
 All notable changes to this project are documented here.
 
+## [0.3.0-rc.1] — 2026-10-03 — Stage 3: customer request cart & submission (CTN only)
+
+**Release candidate — NOT yet verified on a real iPhone**, so Stage 3 is not
+declared complete. Full detail: `STAGE_3_REQUESTS.md`.
+
+### Added
+- **Request cart and submission.** A customer builds a request from the catalog and
+  submits it. Quantities are **CTN only** — no PCS, no conversion, no `CTN24`
+  string parsing. A request is **not an order and not a reservation**; Stage 3
+  holds no stock, which is stated to the customer.
+- **Available Now / Full Catalogue.** Available Now (the default) = active products
+  with stock on hand (951); Full Catalogue = all active products (3,883).
+- **Stock freshness is a gate, not a warning.** Browsing always works, but
+  submission is **blocked** when stock data is older than
+  `config.stock.freshnessHours` (default 24) or missing entirely.
+- **Customer identity from Odoo's customer master**, keyed on the stable
+  `res.partner` id, backfilled onto name-matched records, never overwritten.
+  Phone is never an identity. Search is **search-only**: min 3 characters, capped,
+  no browse-all. Results carry an **opaque handle**, never the Odoo customer id.
+- **"My company is not listed"** path storing an unlinked request for staff to
+  reconcile — no accounts, no login, and no customer master record is ever created.
+- **Staff Requests screen** (read-only) with the last stock-import timestamp.
+- `scripts/checkpoint.js` — repeatable, verified data checkpoints.
+- `test/migration.test.js` — the schema UPGRADE path finally has coverage. Every
+  other test builds a fresh database, so a migration could be wholly broken with
+  the suite green; that trap had already bitten twice.
+
+### Security / data boundary
+- The customer API never returns exact stock, `free_to_use`, Odoo ids, internal
+  ids, import history, pricing/pricelist, or customer phone/email/country.
+- Rejection messages disclose **no figure** — which deliberately rules out a
+  "reduce to maximum available" button.
+- Products holding less than one whole carton keep their Limited Stock badge but
+  are **not requestable**; the payload carries a boolean, never a count.
+
+### Changed
+- `products` table **unchanged** — no new columns, so the Product Master and
+  catalog cannot regress. All migration is additive on the previously unused
+  `customers` / `requests` / `request_items` skeleton.
+
+### Not done
+- The 355-row contact export is **not imported**: it has no stable Customer ID.
+  The customer master ships empty by design.
+- Live Odoo API stock lookup: designed behind one interface, unimplemented.
+- Quotations, pricing, reservations, PCS: out of scope.
+
+### Tests
+- **188/188 pass.** Nine mutants introduced and all caught; two initially survived
+  and were killed by adding tests that exercise each guard in isolation.
+- Write path verified against a **copy** of the real database; production verified
+  byte-identical to the `v0.3.0-pre-stage3` checkpoint.
+
 ## [0.2.1] — 2026-10-02 — Odoo product categories + stable identity
 
 **✅ STAGE 2.1 COMPLETE — mobile-verified on a real iPhone, checkpoint `v0.2.1`.**

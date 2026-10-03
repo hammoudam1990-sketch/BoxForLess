@@ -36,6 +36,23 @@ export const config = {
     availabilityField: 'free_to_use',
     outOfStockAtOrBelow: 0,   // <= 0  => OUT_OF_STOCK
     limitedAtOrBelow: 5,      // <= 5  => LIMITED_STOCK  (else IN_STOCK)
+
+    // How old the last successful stock import may be before customer REQUEST
+    // SUBMISSION is blocked (browsing is never blocked). Odoo is the operational
+    // truth and this catalog holds a copy, so a stale copy must not be used to
+    // accept requests. Configurable, never hard-coded.
+    freshnessHours: Number(process.env.BFL_STOCK_FRESHNESS_HOURS || 24),
+  },
+
+  // Customer-facing search over the customer master. Search-only by design: there
+  // is no browse-all list, so the full customer list is never enumerable in one go.
+  customerSearch: {
+    minQueryLength: Number(process.env.BFL_CUSTOMER_SEARCH_MIN || 3),
+    maxResults: Number(process.env.BFL_CUSTOMER_SEARCH_MAX || 20),
+    // Keys the opaque customer handle sent to browsers, so the Odoo customer id
+    // never leaves the server. Set BFL_CUSTOMER_HANDLE_SECRET in any deployment
+    // where handles should not be reproducible from the source code.
+    handleSecret: process.env.BFL_CUSTOMER_HANDLE_SECRET || 'bfl-customer-handle-v1',
   },
 };
 

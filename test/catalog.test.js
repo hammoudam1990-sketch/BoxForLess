@@ -463,6 +463,47 @@ test('the catalog pages are served at /catalog and /catalog/product/:id', async 
   db.close();
 });
 
+// ===========================================================================
+// Available Now vs Full Catalogue
+// ===========================================================================
+test('Available Now shows active products with stock; Full Catalogue shows all active', () => {
+  const db = seed();
+  // CHICKEN 777 (in), BEEF 3 (limited), RICE 0 (out)
+  const available = searchCatalog(db, { availableOnly: true });
+  assert.equal(available.total, 2, 'the out-of-stock product is excluded');
+  assert.ok(!names(available).includes(RICE.name));
+  assert.ok(names(available).includes(BEEF.name), 'limited stock IS available now');
+
+  const full = searchCatalog(db, { availableOnly: false });
+  assert.equal(full.total, 3, 'full catalogue includes out-of-stock');
+  assert.ok(names(full).includes(RICE.name));
+  db.close();
+});
+
+test('Available Now never shows an INACTIVE product', () => {
+  const db = seed();
+  deactivateRice(db);
+  assert.equal(searchCatalog(db, { availableOnly: true }).total, 2);
+  assert.equal(searchCatalog(db, { availableOnly: false }).total, 2, 'inactive excluded from both views');
+  db.close();
+});
+
+test('the view is selected over HTTP by ?view=, defaulting to Available Now', async () => {
+  const db = seed();
+  const { server, base } = await startApp(db);
+  try {
+    const def = await (await fetch(`${base}/api/catalog/products`)).json();
+    assert.equal(def.total, 2, 'default view is Available Now');
+    const full = await (await fetch(`${base}/api/catalog/products?view=full`)).json();
+    assert.equal(full.total, 3);
+    const avail = await (await fetch(`${base}/api/catalog/products?view=available`)).json();
+    assert.equal(avail.total, 2);
+    const junk = await (await fetch(`${base}/api/catalog/products?view=../etc`)).json();
+    assert.equal(junk.total, 2, 'an unrecognised view falls back to Available Now');
+  } finally { server.close(); }
+  db.close();
+});
+
 test('with_image filter returns only products that have one', () => {
   const db = seed();
   const storageDir = tmpDir();

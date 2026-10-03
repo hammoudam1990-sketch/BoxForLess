@@ -10,6 +10,7 @@
 import { computeStockStatus } from './stock.js';
 import { StockStatus, STOCK_FIELDS } from './constants.js';
 import { parseCategoryPath } from './categories.js';
+import { wholeCartons } from './stock-source.js';
 import config from '../config.js';
 
 /**
@@ -25,6 +26,7 @@ export const CUSTOMER_SAFE_FIELDS = Object.freeze([
   'category',     // { top_level, parent, name, path } — NAMES only, never an id
   'availability', // { status, label } — never a quantity
   'image',        // { url } or null — never a filename or a storage path
+  'requestable',  // boolean: at least one WHOLE carton exists — never how many
 ]);
 
 /**
@@ -92,6 +94,10 @@ export function toCatalogProduct(row, thresholds = config.stock) {
     category: c ? { top_level: c.topLevel, parent: c.parent, name: c.name, path: c.path } : null,
     availability: { ...toAvailability(row, thresholds) },
     image: row.primary_image_id ? { url: catalogImageUrl(id) } : null,
+    // Requests are whole cartons only, so a product holding less than one full
+    // carton is not requestable even though it still shows as Limited Stock.
+    // A BOOLEAN, never the count — the exact figure stays server-side.
+    requestable: wholeCartons(row[thresholds.availabilityField]) >= 1,
   };
 }
 
@@ -136,6 +142,7 @@ export const DEFAULT_PAGE_SIZE = 24;
 export function searchCatalog(db, q = {}, thresholds = config.stock) {
   const {
     search = '', availability = 'ALL', withImage = false,
+    availableOnly = false,
     topLevel = null, categoryPath = null,
     sort = DEFAULT_SORT, limit, offset,
   } = q;
@@ -144,6 +151,16 @@ export function searchCatalog(db, q = {}, thresholds = config.stock) {
   // caller can turn off — it is the first clause of every catalog query.
   const where = ['p.is_active = 1'];
   const params = [];
+
+  // "Available Now" = active AND some stock on hand. Distinct from the In Stock
+  // BAND (which means plenty): a product with 1 carton is Limited Stock but is
+  // still available now. Note this is > 0, not >= 1 carton, so it can include a
+  // part-carton product that is visible but not requestable — the customer still
+  // deserves to see it exists.
+  if (availableOnly) {
+    where.push(`p.${thresholds.availabilityField} > ?`);
+    params.push(thresholds.outOfStockAtOrBelow);
+  }
 
   if (search && String(search).trim()) {
     // case-insensitive partial match on the two customer-safe identifiers

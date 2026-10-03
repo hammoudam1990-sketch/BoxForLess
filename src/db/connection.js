@@ -82,6 +82,53 @@ export function applyMigrations(db) {
   }
   db.exec('CREATE INDEX IF NOT EXISTS ix_products_category ON products(category_id)');
   db.exec('CREATE INDEX IF NOT EXISTS ix_products_odoo_category_path ON products(odoo_category_path)');
+
+  // --- Stage 3: customer requests (CTN only) --------------------------------
+  // Purely additive: new nullable columns on the previously unused skeleton
+  // tables. NOTHING is added to `products`, so the Product Master and the
+  // customer catalog cannot regress from this migration.
+  addColumns(db, 'customers', {
+    odoo_customer_ref: 'TEXT',   // stable res.partner id — the only stored identity
+    phone: 'TEXT',               // staff reference only, never customer-facing
+    country: 'TEXT',
+  });
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ux_customers_odoo_ref
+             ON customers(odoo_customer_ref) WHERE odoo_customer_ref IS NOT NULL`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_customers_name ON customers(name)');
+
+  addColumns(db, 'requests', {
+    reference: 'TEXT',
+    unlisted_company: 'TEXT',
+    unlisted_contact: 'TEXT',
+    unlisted_phone: 'TEXT',
+    needs_customer_match: 'INTEGER NOT NULL DEFAULT 0',
+    notes: 'TEXT',
+    submitted_at: 'TEXT',
+    stock_as_of: 'TEXT',
+  });
+  // UNIQUE on an added column needs its own index (ALTER cannot add the constraint).
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ux_requests_reference
+             ON requests(reference) WHERE reference IS NOT NULL`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_requests_customer ON requests(customer_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS ix_requests_status   ON requests(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS ix_requests_match    ON requests(needs_customer_match)');
+
+  addColumns(db, 'request_items', {
+    quantity_ctn: 'INTEGER',
+    product_name_at_request: 'TEXT',
+    barcode_at_request: 'TEXT',
+    box_uom_at_request: 'TEXT',
+    available_ctn_at_request: 'INTEGER',
+  });
+  db.exec('CREATE INDEX IF NOT EXISTS ix_request_items_request ON request_items(request_id)');
+}
+
+/** Add any of `columns` that the table does not already have. Idempotent. */
+function addColumns(db, table, columns) {
+  const existing = new Set(columnsOf(db, table));
+  for (const [name, decl] of Object.entries(columns)) {
+    if (!existing.has(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${decl}`);
+  }
 }
 
 export default openDatabase;

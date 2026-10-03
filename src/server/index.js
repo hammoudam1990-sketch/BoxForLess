@@ -12,6 +12,7 @@ import productsRouter from './routes/products.js';
 import importsRouter from './routes/imports.js';
 import changesRouter from './routes/changes.js';
 import catalogRouter from './routes/catalog.js';
+import { customerRouter as requestsCustomerRouter, staffRouter as requestsStaffRouter } from './routes/requests.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -27,7 +28,12 @@ export function createApp(db) {
   app.use('/api/products', productsRouter);
   app.use('/api/imports', importsRouter);
   app.use('/api/reviews', changesRouter);
-  // Customer-facing API — read-only, customer-safe payloads only.
+  // Staff view of submitted customer requests (internal detail).
+  app.use('/api/requests', requestsStaffRouter);
+  // Customer-facing API — customer-safe payloads only. The request routes mount
+  // FIRST so /api/catalog/requests and /api/catalog/customers are not shadowed by
+  // the catalog router's /products/:id style paths.
+  app.use('/api/catalog', requestsCustomerRouter);
   app.use('/api/catalog', catalogRouter);
 
   // static frontend

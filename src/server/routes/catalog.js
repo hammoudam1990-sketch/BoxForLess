@@ -24,11 +24,13 @@ const SORT_PARAM = Object.freeze({ name_asc: 'name_asc', name_desc: 'name_desc' 
 // GET /api/catalog/products?search=&availability=&with_image=&sort=&limit=&offset=
 router.get('/products', (req, res, next) => {
   try {
-    const { search = '', availability, with_image: withImage, top_level: topLevel, category_path: categoryPath, sort, limit, offset } = req.query;
+    const { search = '', availability, with_image: withImage, view, top_level: topLevel, category_path: categoryPath, sort, limit, offset } = req.query;
     res.json(searchCatalog(req.db, {
       search,
       availability: AVAILABILITY_PARAM[String(availability || '').toLowerCase()] || 'ALL',
       withImage: String(withImage) === 'true',
+      // view=full shows every active product; anything else is "Available Now"
+      availableOnly: String(view || '').toLowerCase() !== 'full',
       topLevel: topLevel || null,
       categoryPath: categoryPath || null,
       sort: SORT_PARAM[String(sort || '').toLowerCase()] || DEFAULT_SORT,

@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { renderProducts, renderProductDetail } from './products.js';
 import { renderImports, renderImportDetail } from './imports.js';
 import { renderChanges } from './changes.js';
+import { renderRequests, renderRequestDetail } from './requests.js';
 
 const view = document.getElementById('view');
 
@@ -32,6 +33,8 @@ async function route() {
     else if (path === 'imports' && arg) { setActiveNav('imports'); await renderImportDetail(view, arg); }
     else if (path === 'imports') { setActiveNav('imports'); await renderImports(view); }
     else if (path === 'changes') { setActiveNav('changes'); await renderChanges(view); }
+    else if (path === 'requests' && arg) { setActiveNav('requests'); await renderRequestDetail(view, arg); }
+    else if (path === 'requests') { setActiveNav('requests'); await renderRequests(view); }
     else { location.hash = '#/products'; }
   } catch (e) {
     view.innerHTML = `<div class="card errbox">Error: ${e.message}</div>`;
