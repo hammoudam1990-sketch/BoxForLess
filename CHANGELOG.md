@@ -2,6 +2,54 @@
 
 All notable changes to this project are documented here.
 
+## [0.3.1] — 2026-10-03 — Scanner: higher capture resolution + manual barcode fallback
+
+**✅ Verified on a real iPhone (2026-10-03).** Camera scan of the previously
+unreadable barcode, manual entry of the same barcode, unknown-barcode handling,
+Enter-key submission, and the onward product/photo workflow all pass.
+
+Internal Product Master scan page only. The customer catalog, cart, requests,
+customer architecture, stock logic, schema and product data are untouched.
+
+### Fixed
+- **Small EAN-13 barcodes could not be scanned.** The scanner requested no camera
+  resolution, so iOS Safari supplied its default 640×480. An EAN-13 symbol is 95
+  modules wide and needs roughly 2px per module to decode; a barcode filling a
+  fifth of the view yielded about 1.3px per module and was unreadable however
+  clear the print. Measured against the project's own ZXing decoder:
+  2.02px/module decoded, 1.35px/module failed. The scanner now asks for
+  `width/height: { ideal: 1920 × 1080 }` — about 3× the pixels for the same
+  physical barcode. `ideal` is a hint, so a device that cannot supply it falls
+  back to its own default rather than failing.
+  Real-device result: barcode `6281003101428`, previously unreadable at any
+  distance, now scans.
+
+### Added
+- **Manual barcode entry** on the scan page, for a label the camera cannot read
+  (damaged, tiny, awkwardly placed). Hidden behind "Can't scan the barcode?" so
+  camera scanning remains the primary method.
+  - Performs **no lookup of its own**: it calls `onDetected()`, the same function
+    a camera detection calls, so the server lookup, exact-match rule, product card
+    and photo workflow are one code path that cannot drift.
+  - Exact matching only — no fuzzy or partial match resolves a product.
+  - Never creates a product, never alters a barcode, never mutates anything.
+  - Enter/Return submits; 16px input and 44px targets for iPhone.
+- `prepareManualBarcode()` in `scan-core.js` — pure and unit-tested. Deliberately
+  gentler than `normalizeBarcode()`, which strips ALL whitespace: that is right
+  for a scanned 1D code but would make four real products untypeable, since their
+  barcodes contain spaces (e.g. `SIP CAKE 47*60*11`). Manual entry drops control
+  characters and trims the ends only, preserving internal characters and leading
+  zeros.
+
+### Tests
+- `test/manual-entry.test.js` — 16 tests: leading zeros preserved, whitespace
+  trimmed, internal characters kept, empty input rejected, unknown barcode
+  controlled, fuzzy/partial refused, no database mutation, no mutation via other
+  HTTP verbs, no customer/pricing exposure, and the manual path returning a record
+  identical to the scanned path.
+- **204/204 pass** (188 → 204). Four mutants of the new logic all caught. No
+  existing test weakened, skipped or removed.
+
 ## [0.3.0] — 2026-10-03 — Stage 3: customer request cart & submission (CTN only)
 
 **✅ STAGE 3 COMPLETE — verified on a real iPhone (2026-10-03).** All ten device

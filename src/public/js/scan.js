@@ -12,7 +12,7 @@
 // getUserMedia needs a SECURE CONTEXT: https:// or http://localhost. Over
 // http://<lan-ip> the camera is blocked; we detect that and point to the https URL.
 import { api, esc, num, toast, stockPill } from './api.js';
-import { chooseDecoder, normalizeBarcode, pickExactProduct, createDebouncer } from './scan-core.js';
+import { chooseDecoder, normalizeBarcode, prepareManualBarcode, pickExactProduct, createDebouncer } from './scan-core.js';
 import { mountPhoto } from './photo.js';
 
 const els = {
@@ -24,6 +24,12 @@ const els = {
   stopBtn: document.getElementById('stopBtn'),
   result: document.getElementById('result'),
   unsupported: document.getElementById('unsupported'),
+  manualToggle: document.getElementById('manualToggle'),
+  manualPanel: document.getElementById('manualPanel'),
+  manualBarcode: document.getElementById('manualBarcode'),
+  manualFind: document.getElementById('manualFind'),
+  manualCancel: document.getElementById('manualCancel'),
+  manualMsg: document.getElementById('manualMsg'),
 };
 
 const FORMATS_NATIVE = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'codabar'];
@@ -112,8 +118,21 @@ async function startCamera() {
   }
 
   try {
+    // Resolution matters for 1D decoding. An EAN-13 symbol is 95 modules wide and
+    // needs roughly 2px per module to decode reliably; at iOS Safari's default
+    // 640x480 a small barcode filling a fifth of the view yields about 1.3px per
+    // module, which cannot be read however clear the print is. Asking for 1080p
+    // gives the same physical barcode ~3x the pixels.
+    //
+    // `ideal` is a HINT, not a requirement: a device that cannot supply it falls
+    // back to its own default rather than failing, so this can only help.
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } }, audio: false,
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+      audio: false,
     });
   } catch (e) {
     els.unsupported.classList.remove('hidden');
@@ -246,6 +265,61 @@ function wireResultButtons() {
     }
   });
 }
+
+// ---------------------------------------------------------------------------
+// Manual barcode entry — the fallback when the camera cannot read a label.
+//
+// It performs NO lookup of its own: it hands the typed value to onDetected(),
+// the exact function a successful camera scan calls. So the server-side lookup,
+// the exact-match rule, the product card and the photo workflow are all literally
+// the same code path, and cannot drift from the scanner's behaviour.
+// ---------------------------------------------------------------------------
+
+function showManual(show) {
+  els.manualPanel.classList.toggle('hidden', !show);
+  els.manualToggle.setAttribute('aria-expanded', String(show));
+  els.manualMsg.textContent = '';
+  if (show) {
+    // Release the camera: holding it open behind a form wastes battery, and a
+    // live decode landing mid-typing would yank the screen away from the user.
+    pauseScanning();
+    els.manualBarcode.focus();
+    els.manualBarcode.select();
+  }
+}
+
+async function manualLookup() {
+  const { ok, code, error } = prepareManualBarcode(els.manualBarcode.value);
+  if (!ok) {
+    els.manualMsg.textContent = error;
+    els.manualBarcode.focus();
+    return;
+  }
+  els.manualMsg.textContent = 'Looking up…';
+  els.manualFind.disabled = true;
+  try {
+    debouncer.unlock();      // a manual lookup is always deliberate, never a repeat
+    await onDetected(code);  // identical path to a camera detection
+    els.manualMsg.textContent = '';
+    els.manualPanel.classList.add('hidden');
+    els.manualToggle.setAttribute('aria-expanded', 'false');
+  } finally {
+    els.manualFind.disabled = false;
+  }
+}
+
+els.manualToggle.addEventListener('click', () => {
+  showManual(els.manualPanel.classList.contains('hidden'));
+});
+els.manualFind.addEventListener('click', manualLookup);
+els.manualCancel.addEventListener('click', () => {
+  showManual(false);
+  els.manualBarcode.value = '';
+});
+// Enter/Return in the field submits the lookup (requirement 8).
+els.manualBarcode.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); manualLookup(); }
+});
 
 els.startBtn.addEventListener('click', startCamera);
 els.stopBtn.addEventListener('click', stopCamera);

@@ -34,6 +34,29 @@
       <button id="stopBtn" class="ghost hidden">Stop</button>
     </div>
 
+    <!-- Fallback for a barcode the camera cannot read: damaged, tiny, or awkwardly
+         placed. Camera scanning stays the primary method; this is hidden until asked
+         for, and uses the SAME lookup as a successful scan. -->
+    <div class="manual-entry">
+      <button id="manualToggle" class="linkbtn" type="button" aria-expanded="false" aria-controls="manualPanel">
+        Can't scan the barcode? <b>Enter barcode manually</b>
+      </button>
+
+      <div id="manualPanel" class="manual-panel hidden">
+        <label class="manual-label" for="manualBarcode">Enter barcode</label>
+        <!-- inputmode text, not numeric: a few real barcodes contain letters and
+             symbols, and type=number would strip leading zeros -->
+        <input id="manualBarcode" type="text" inputmode="text" autocomplete="off"
+               autocapitalize="off" autocorrect="off" spellcheck="false"
+               enterkeyhint="search" placeholder="e.g. 6281003101428" />
+        <div class="scan-actions">
+          <button id="manualFind" type="button">Find Product</button>
+          <button id="manualCancel" class="ghost" type="button">Back to camera</button>
+        </div>
+        <div id="manualMsg" class="scan-status"></div>
+      </div>
+    </div>
+
     <div id="result" class="scan-result"></div>
   </main>
 

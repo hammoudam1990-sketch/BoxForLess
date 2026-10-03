@@ -1,6 +1,6 @@
 {
   "name": "boxforless-sales-catalog",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Box for Less Digital Product Catalog & Sales Request Application - Phase 1 Product Master",
   "type": "module",

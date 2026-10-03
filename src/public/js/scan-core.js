@@ -32,6 +32,31 @@ export function isValidEan13(code) {
   return check === d[12];
 }
 
+/**
+ * Prepare a MANUALLY TYPED barcode for lookup.
+ *
+ * Deliberately gentler than normalizeBarcode(): that one strips ALL whitespace,
+ * which is correct for a scanned 1D code but wrong here — a few real products
+ * carry barcodes containing spaces (e.g. "SIP CAKE 47*60*11"), and squashing them
+ * would make those products impossible to find by typing.
+ *
+ * So: drop control/zero-width characters, trim the ends only, keep everything in
+ * between. Purely string work, so leading zeros survive untouched.
+ *
+ * @returns {{ok:boolean, code:string, error:string|null}}
+ */
+export function prepareManualBarcode(raw) {
+  if (raw === null || raw === undefined) {
+    return { ok: false, code: '', error: 'Enter a barcode.' };
+  }
+  const code = String(raw)
+    .replace(/[\u0000-\u001f\u007f​-‏﻿]/g, '')
+    .trim();
+  if (!code) return { ok: false, code: '', error: 'Enter a barcode.' };
+  if (code.length > 64) return { ok: false, code, error: 'That barcode is too long.' };
+  return { ok: true, code, error: null };
+}
+
 /** Exact barcode match from a list of products (null if none). */
 export function pickExactProduct(items, barcode) {
   if (!Array.isArray(items)) return null;
