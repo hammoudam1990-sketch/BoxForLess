@@ -163,8 +163,21 @@ body {
   background: var(--c-surface); color: var(--c-ink);
   font-size: 15px; font-weight: 600; cursor: pointer;
 }
-.c-btn[disabled] { opacity: .45; cursor: default; }
 .c-btn.primary { background: var(--c-accent); border-color: var(--c-accent); color: #fff; }
+
+/* A disabled button is GREY, not a faded version of its enabled colour.
+   `opacity: .45` on a blue primary left it still visibly blue, so there was no
+   moment where Submit "turned blue" after the access code was accepted — the
+   customer could not tell the request was now ready to send. The rule comes after
+   .primary so it wins over it. */
+.c-btn[disabled],
+.c-btn.primary[disabled] {
+  background: #eef1f5;
+  border-color: var(--c-line);
+  color: var(--c-muted);
+  opacity: 1;
+  cursor: default;
+}
 .c-page-of { color: var(--c-muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 
 /* ---------- product detail ---------- */
