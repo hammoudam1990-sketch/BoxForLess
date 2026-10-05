@@ -261,9 +261,23 @@ body {
 .c-noscroll { overflow: hidden; }
 .c-drawer { position: fixed; inset: 0; z-index: 40; }
 .c-drawer-backdrop { position: absolute; inset: 0; background: rgba(17, 22, 29, .45); }
+/* iOS keyboard notes — read before changing any of this.
+   `-webkit-overflow-scrolling: touch` used to be here. It is deprecated, and on a
+   focused input inside a position:fixed panel it makes Safari blur the field while
+   you type (the keyboard "falls down" after a few characters) because its separate
+   scroll layer fights Safari's scroll-into-view. iOS 13+ has momentum scrolling
+   natively, so removing it costs nothing.
+   `--c-kb` is the height the keyboard covers, measured from visualViewport in
+   request-ui.js. Without it, `bottom: 0` sits BEHIND the keyboard, so the field
+   being typed into is off-screen.
+   dvh follows the viewport as browser chrome and the keyboard come and go; the vh
+   line above it is the fallback for browsers without dvh. */
 .c-drawer-panel {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  position: absolute; left: 0; right: 0;
+  bottom: var(--c-kb, 0px);
+  max-height: 92vh;
+  max-height: calc(92dvh - var(--c-kb, 0px));
+  overflow-y: auto;
   background: var(--c-bg); border-radius: 16px 16px 0 0;
   padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
 }
@@ -316,6 +330,17 @@ body {
   border: 0; background: none; padding: 8px 0; cursor: pointer;
   color: var(--c-accent); font-size: 14px; font-weight: 600;
 }
+
+/* Access code entry. Monospaced and letter-spaced so a customer can check what
+   they typed against the code we sent them, character by character. 16px keeps
+   iOS Safari from zooming the page when the field is focused. */
+#accessCode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 18px; letter-spacing: 0.14em; text-transform: uppercase;
+}
+.c-accesserr { color: var(--c-out); font-size: 13px; margin-top: 6px; }
+.c-accesserr:empty { display: none; }
+.c-accessform { display: block; }
 
 .c-blocked {
   background: var(--c-limited-bg); color: var(--c-limited);

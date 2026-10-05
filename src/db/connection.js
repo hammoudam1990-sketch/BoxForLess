@@ -88,13 +88,27 @@ export function applyMigrations(db) {
   // tables. NOTHING is added to `products`, so the Product Master and the
   // customer catalog cannot regress from this migration.
   addColumns(db, 'customers', {
-    odoo_customer_ref: 'TEXT',   // stable res.partner id — the only stored identity
+    odoo_customer_ref: 'TEXT',   // Odoo res.partner id when we have one; NOT required
     phone: 'TEXT',               // staff reference only, never customer-facing
     country: 'TEXT',
+    // Customer-list import (2026-10-03). Both are STAFF-ONLY and must never reach
+    // a customer-facing payload — `pricelist` is a price-tier name, and pricing is
+    // excluded from everything the customer sees.
+    email: 'TEXT',
+    pricelist: 'TEXT',
+    // Per-customer access code (2026-10-05). Plain text ON PURPOSE: staff must be
+    // able to read a code back to send it to the customer, which a one-way hash
+    // would make impossible. See the threat model in domain/access-codes.js.
+    access_code: 'TEXT',
+    access_code_issued_at: 'TEXT',
   });
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ux_customers_odoo_ref
              ON customers(odoo_customer_ref) WHERE odoo_customer_ref IS NOT NULL`);
   db.exec('CREATE INDEX IF NOT EXISTS ix_customers_name ON customers(name)');
+  // Unique so two customers can never share a code — a collision would let one
+  // company submit requests as another.
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ux_customers_access_code
+             ON customers(access_code) WHERE access_code IS NOT NULL`);
 
   addColumns(db, 'requests', {
     reference: 'TEXT',
@@ -102,6 +116,8 @@ export function applyMigrations(db) {
     unlisted_contact: 'TEXT',
     unlisted_phone: 'TEXT',
     needs_customer_match: 'INTEGER NOT NULL DEFAULT 0',
+    // optional, New Customer path only — existing requests keep NULL
+    delivery_address: 'TEXT',
     notes: 'TEXT',
     submitted_at: 'TEXT',
     stock_as_of: 'TEXT',
@@ -121,6 +137,27 @@ export function applyMigrations(db) {
     available_ctn_at_request: 'INTEGER',
   });
   db.exec('CREATE INDEX IF NOT EXISTS ix_request_items_request ON request_items(request_id)');
+
+  // --- Access codes: "I don't have a code" requests --------------------------
+  // Created HERE rather than in schema.sql for the same reason as the Stage 3
+  // indexes: schema.sql runs before these migrations on an existing database.
+  // Nothing references products, so the Product Master cannot regress.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS access_requests (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      company          TEXT,
+      contact          TEXT NOT NULL,
+      phone            TEXT NOT NULL,
+      email            TEXT,
+      delivery_address TEXT,
+      note             TEXT,
+      status           TEXT NOT NULL DEFAULT 'PENDING',  -- PENDING | APPROVED | REJECTED
+      customer_id      INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+      created_at       TEXT NOT NULL,
+      reviewed_at      TEXT,
+      updated_at       TEXT
+    )`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_access_requests_status ON access_requests(status)');
 }
 
 /** Add any of `columns` that the table does not already have. Idempotent. */

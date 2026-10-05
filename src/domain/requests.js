@@ -180,21 +180,29 @@ export function submitRequest(db, payload = {}, opts = {}) {
   // A request must be attributable: either a customer master match, or the
   // controlled "not listed" capture. Never anonymous.
   let customerId = null;
-  if (customerRef) {
-    const c = db.prepare(
-      'SELECT id FROM customers WHERE odoo_customer_ref = ? AND is_active = 1'
-    ).get(String(customerRef));
+  // A customer may be identified by our INTERNAL id (what the route resolves an
+  // opaque handle to) or by an Odoo ref. The internal id is the general case:
+  // customers imported in this phase have no Odoo id at all, so keying only on
+  // odoo_customer_ref would make the Existing Customer path impossible to use.
+  const selectedId = payload.customerId ?? null;
+  if (selectedId != null || customerRef) {
+    const c = selectedId != null
+      ? db.prepare('SELECT id FROM customers WHERE id = ? AND is_active = 1').get(Number(selectedId))
+      : db.prepare('SELECT id FROM customers WHERE odoo_customer_ref = ? AND is_active = 1').get(String(customerRef));
     if (!c) {
       throw new RequestValidationError('Customer not found.', {
         errors: [{ code: RejectionCode.CUSTOMER_REQUIRED, message: 'Please select your company again.' }],
       });
     }
     customerId = c.id;
-  } else if (!unlisted || !String(unlisted.company || '').trim() || !String(unlisted.contact || '').trim()) {
+  } else if (!unlisted || !String(unlisted.contact || '').trim() || !String(unlisted.phone || '').trim()) {
+    // New Customer requires a NAME and a PHONE. Company is optional: an individual
+    // customer may not have one, and a request must still be reachable by phone —
+    // which is what the later Cash-on-Delivery workflow will depend on.
     throw new RequestValidationError('Customer details are required.', {
       errors: [{
         code: RejectionCode.CUSTOMER_REQUIRED,
-        message: 'Please select your company, or provide your company and contact name.',
+        message: 'Please select your customer, or provide your name and phone number.',
       }],
     });
   }
@@ -211,16 +219,22 @@ export function submitRequest(db, payload = {}, opts = {}) {
     }
 
     const reference = nextReference(db, now);
+    // Delivery address is captured on the New Customer path only; an existing
+    // customer's address lives in the customer record, not on the request.
+    const deliveryAddress = customerId
+      ? null
+      : (unlisted && String(unlisted.address || '').trim()) || null;
     const info = db.prepare(
       `INSERT INTO requests
          (reference, customer_id, unlisted_company, unlisted_contact, unlisted_phone,
-          needs_customer_match, notes, status, submitted_at, stock_as_of, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
+          delivery_address, needs_customer_match, notes, status, submitted_at, stock_as_of, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).run(
       reference, customerId,
       unlisted ? (unlisted.company ?? null) : null,
       unlisted ? (unlisted.contact ?? null) : null,
       unlisted ? (unlisted.phone ?? null) : null,
+      deliveryAddress,
       customerId ? 0 : 1,
       notes ?? null,
       'SUBMITTED', ts, verdict.stock.asOf, ts, ts
@@ -253,6 +267,60 @@ export function toCustomerReceipt(result) {
   return { reference: result.reference, items: result.lineCount, submitted: true };
 }
 
+/**
+ * The two customer paths a request can come from. There are exactly two, and they
+ * are decided by one fact: whether the request is linked to a row in the customer
+ * master.
+ *
+ * This replaces the earlier `needs_customer_match` framing, which described a
+ * request from an unlisted company as something awaiting an Odoo match. There is
+ * no Odoo API in this phase and no Odoo id is required, so that wording described
+ * work that does not exist. A New Customer is a complete, valid outcome — the
+ * details are captured and will feed the Cash-on-Delivery workflow later.
+ */
+export const CustomerType = Object.freeze({
+  EXISTING: 'EXISTING_CUSTOMER',
+  NEW: 'NEW_CUSTOMER',
+});
+
+export const CUSTOMER_TYPE_LABEL = Object.freeze({
+  EXISTING_CUSTOMER: 'EXISTING CUSTOMER',
+  NEW_CUSTOMER: 'NEW CUSTOMER',
+});
+
+/** EXISTING when the request is linked to the customer master, else NEW. */
+export function customerTypeOf(request) {
+  return request && request.customer_id ? CustomerType.EXISTING : CustomerType.NEW;
+}
+
+/** The customer as staff should see them, whichever path they came from. */
+export function customerSummary(request) {
+  const type = customerTypeOf(request);
+  if (type === CustomerType.EXISTING) {
+    return {
+      type,
+      label: CUSTOMER_TYPE_LABEL[type],
+      displayName: request.customer_name || '',
+      company: request.customer_name || null,
+      contact: null,
+      phone: null,
+      // an existing customer's address belongs on the customer record, not here
+      deliveryAddress: null,
+    };
+  }
+  const company = request.unlisted_company || null;
+  const contact = request.unlisted_contact || null;
+  return {
+    type,
+    label: CUSTOMER_TYPE_LABEL[type],
+    displayName: [company, contact].filter(Boolean).join(' · ') || 'Unnamed customer',
+    company,
+    contact,
+    phone: request.unlisted_phone || null,
+    deliveryAddress: request.delivery_address || null,
+  };
+}
+
 /** Staff view of requests. Internal by design — never served to customers. */
 export function listRequests(db, { limit = 50, offset = 0 } = {}) {
   const lim = Math.min(Math.max(Number(limit) || 50, 1), 200);
@@ -265,7 +333,12 @@ export function listRequests(db, { limit = 50, offset = 0 } = {}) {
        LEFT JOIN customers c ON c.id = r.customer_id
       ORDER BY r.id DESC LIMIT ? OFFSET ?`
   ).all(lim, off);
-  return { total, limit: lim, offset: off, items };
+  return {
+    total,
+    limit: lim,
+    offset: off,
+    items: items.map((r) => ({ ...r, customer: customerSummary(r) })),
+  };
 }
 
 export function getRequest(db, id) {
@@ -278,7 +351,30 @@ export function getRequest(db, id) {
   const items = db.prepare(
     'SELECT * FROM request_items WHERE request_id = ? ORDER BY id'
   ).all(Number(id));
-  return { request, items };
+  return { request, items, customer: customerSummary(request) };
 }
 
-export default { validateRequest, submitRequest, listRequests, getRequest };
+/** Accept a submitted request without changing or reserving stock. */
+export function acceptRequest(db, id, now = new Date()) {
+  const requestId = Number(id);
+  const existing = db.prepare('SELECT id, status FROM requests WHERE id = ?').get(requestId);
+  if (!existing) return null;
+  if (existing.status !== 'SUBMITTED' && existing.status !== 'ACCEPTED') {
+    const error = new Error('Only submitted requests can be accepted.');
+    error.code = 'REQUEST_STATUS_CONFLICT';
+    throw error;
+  }
+  if (existing.status === 'SUBMITTED') {
+    db.prepare("UPDATE requests SET status = 'ACCEPTED', updated_at = ? WHERE id = ? AND status = 'SUBMITTED'")
+      .run(now.toISOString(), requestId);
+  }
+  return getRequest(db, requestId);
+}
+
+/** Delete a request and its item rows (the schema's FK cascade handles items). */
+export function deleteRequest(db, id) {
+  const result = db.prepare('DELETE FROM requests WHERE id = ?').run(Number(id));
+  return Number(result.changes) > 0;
+}
+
+export default { validateRequest, submitRequest, listRequests, getRequest, acceptRequest, deleteRequest };

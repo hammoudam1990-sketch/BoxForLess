@@ -60,8 +60,19 @@ export function renderCartBar() {
 // drawer
 // ---------------------------------------------------------------------------
 
-let selectedCustomer = null; // { ref, name } | null
-let unlistedMode = false;
+// Who the server says we are, from the access-code session — NOT a choice made in
+// the browser. There is no customer search any more: the code identifies the
+// customer, so the catalog can stay public without exposing the customer list.
+let accessCustomer = null;   // { name } | null
+let askingForAccess = false; // showing the "I don't have a code" form
+
+async function refreshAccess() {
+  try {
+    const s = await getJSON('/api/catalog/access');
+    accessCustomer = s.authenticated ? s.customer : null;
+  } catch { accessCustomer = null; }
+  return accessCustomer;
+}
 
 function drawerEl() {
   let el = document.getElementById('cartDrawer');
@@ -74,7 +85,34 @@ function drawerEl() {
   return el;
 }
 
+/**
+ * Keep the drawer above the on-screen keyboard.
+ *
+ * iOS does NOT shrink the layout viewport when the keyboard opens — only the
+ * visual viewport — so a panel pinned to `bottom: 0` ends up behind the keyboard
+ * with the field you are typing into hidden. visualViewport reports how much is
+ * covered; `--c-kb` lifts the panel by exactly that much.
+ *
+ * Registered once, and a no-op on browsers without visualViewport (the panel then
+ * behaves as it always did).
+ */
+function trackKeyboardInset() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const apply = () => {
+    const el = document.getElementById('cartDrawer');
+    if (!el || el.classList.contains('hidden')) return;
+    // What the keyboard covers at the bottom of the layout viewport.
+    const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    el.style.setProperty('--c-kb', `${Math.round(covered)}px`);
+  };
+  vv.addEventListener('resize', apply);
+  vv.addEventListener('scroll', apply);
+}
+
 export function closeDrawer() {
+  // drop any keyboard offset so the panel is not left lifted next time it opens
+  drawerEl().style.removeProperty('--c-kb');
   drawerEl().classList.add('hidden');
   document.body.classList.remove('c-noscroll');
 }
@@ -113,22 +151,41 @@ async function renderDrawer(message = '') {
     canSubmit = s.canSubmit; blockedMessage = s.message;
   } catch { /* if unknown, let the submit attempt decide */ }
 
-  const customerBlock = unlistedMode
-    ? `<div class="c-field"><label for="uCompany">Company name</label>
-         <input id="uCompany" type="text" autocomplete="organization" placeholder="Your company" /></div>
-       <div class="c-field"><label for="uContact">Your name</label>
-         <input id="uContact" type="text" autocomplete="name" placeholder="Contact name" /></div>
-       <div class="c-field"><label for="uPhone">Phone (optional)</label>
-         <input id="uPhone" type="tel" autocomplete="tel" placeholder="Phone number" /></div>
-       <button type="button" class="c-link" data-listed>← Choose from the customer list instead</button>`
-    : selectedCustomer
-      ? `<div class="c-selected">Requesting as <b>${esc(selectedCustomer.name)}</b>
-           <button type="button" class="c-link" data-clear-customer>Change</button></div>`
-      : `<div class="c-field"><label for="custQ">Your company</label>
-           <input id="custQ" type="search" autocomplete="off" placeholder="Start typing your company name…" />
-           <div class="c-hint">Type at least 3 characters</div>
-           <div id="custResults" class="c-results"></div></div>
-         <button type="button" class="c-link" data-unlisted>My company is not listed</button>`;
+  await refreshAccess();
+
+  const customerBlock = askingForAccess
+    ? `<div class="c-accessform">
+         <p class="c-hint">Give us your details and Box for Less will send you an access code.</p>
+         <div class="c-field"><label for="uContact">Your name</label>
+           <input id="uContact" type="text" autocomplete="name" placeholder="Full name" /></div>
+         <div class="c-field"><label for="uPhone">Phone</label>
+           <input id="uPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Phone number" /></div>
+         <div class="c-field"><label for="uCompany">Company name (optional)</label>
+           <input id="uCompany" type="text" autocomplete="organization" placeholder="Company, if any" /></div>
+         <div class="c-field"><label for="uAddress">Delivery address (optional)</label>
+           <textarea id="uAddress" rows="3" autocomplete="street-address"
+             placeholder="Enter delivery address…"></textarea></div>
+         <button type="button" class="c-btn" data-send-access>Request an access code</button>
+         <button type="button" class="c-link" data-have-code>← I have a code</button>
+       </div>`
+    : accessCustomer
+      ? `<div class="c-selected">Requesting as <b>${esc(accessCustomer.name)}</b>
+           <button type="button" class="c-link" data-exit-access>Not you?</button></div>`
+      // iOS NOTE, and do not "tidy" these attributes away:
+      //   autocomplete="one-time-code" made Safari watch for an SMS passcode and
+      //     re-evaluate the field on every keystroke, which dropped focus and shut
+      //     the keyboard after each character. It must stay "off".
+      //   inputmode="latin" is not a valid value (dropped from the spec); "text"
+      //     is what gives a normal keyboard.
+      //   enterkeyhint="go" labels the phone's return key, since Enter submits.
+      : `<div class="c-field"><label for="accessCode">Your access code</label>
+           <input id="accessCode" type="text" name="bfl-access-code" inputmode="text"
+             autocapitalize="characters" autocomplete="off" autocorrect="off"
+             spellcheck="false" enterkeyhint="go" placeholder="e.g. 7K2M-9XQR" />
+           <div class="c-hint">Box for Less sent this to you with the catalogue link.</div>
+           <div id="accessErr" class="c-accesserr"></div></div>
+         <button type="button" class="c-btn" data-enter-code>Continue</button>
+         <button type="button" class="c-link" data-need-code>I don't have a code</button>`;
 
   el.innerHTML = `
     <div class="c-drawer-backdrop" data-close></div>
@@ -148,7 +205,8 @@ async function renderDrawer(message = '') {
           <textarea id="reqNotes" rows="2" placeholder="Anything we should know"></textarea></div>
         <div class="c-drawer-actions">
           <button type="button" class="c-btn" data-clear>Clear</button>
-          <button type="button" class="c-btn primary" data-submit ${canSubmit ? '' : 'disabled'}>Submit request</button>
+          <button type="button" class="c-btn primary" data-submit
+            ${canSubmit && accessCustomer ? '' : 'disabled'}>Submit request</button>
         </div>
         <p class="c-smallprint">Submitting a request is not an order and does not reserve stock.
           Our team will confirm availability with you.</p>` : ''}
@@ -178,33 +236,58 @@ function wireDrawer() {
   }));
   el.querySelector('[data-clear]')?.addEventListener('click', () => { clearCart(); renderDrawer(); });
 
-  el.querySelector('[data-unlisted]')?.addEventListener('click', () => { unlistedMode = true; renderDrawer(); });
-  el.querySelector('[data-listed]')?.addEventListener('click', () => { unlistedMode = false; renderDrawer(); });
-  el.querySelector('[data-clear-customer]')?.addEventListener('click', () => { selectedCustomer = null; renderDrawer(); });
+  el.querySelector('[data-need-code]')?.addEventListener('click', () => { askingForAccess = true; renderDrawer(); });
+  el.querySelector('[data-have-code]')?.addEventListener('click', () => { askingForAccess = false; renderDrawer(); });
 
-  const q = el.querySelector('#custQ');
-  if (q) {
-    let t;
-    q.addEventListener('input', () => {
-      clearTimeout(t);
-      t = setTimeout(async () => {
-        const box = el.querySelector('#custResults');
-        const term = q.value.trim();
-        if (term.length < 3) { box.innerHTML = ''; return; }
-        try {
-          const { items } = await getJSON(`/api/catalog/customers?q=${encodeURIComponent(term)}`);
-          box.innerHTML = items.length
-            ? items.map((c) => `<button type="button" class="c-result" data-handle="${esc(c.handle ?? '')}" data-name="${esc(c.name)}">${esc(c.name)}</button>`).join('')
-            : '<div class="c-hint">No match. You can choose “My company is not listed”.</div>';
-          box.querySelectorAll('[data-name]').forEach((b) => b.addEventListener('click', () => {
-            // an opaque handle — the browser never sees the Odoo customer id
-            selectedCustomer = { handle: b.dataset.handle || null, name: b.dataset.name };
-            renderDrawer();
-          }));
-        } catch { box.innerHTML = '<div class="c-hint">Search unavailable.</div>'; }
-      }, 220);
-    });
-  }
+  el.querySelector('[data-exit-access]')?.addEventListener('click', async () => {
+    await fetch('/api/catalog/access/exit', { method: 'POST' });
+    accessCustomer = null;
+    renderDrawer();
+  });
+
+  const codeInput = el.querySelector('#accessCode');
+  const enterCode = async () => {
+    const errBox = el.querySelector('#accessErr');
+    const btn = el.querySelector('[data-enter-code]');
+    if (errBox) errBox.textContent = '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+    try {
+      await getJSON('/api/catalog/access', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: codeInput?.value || '' }),
+      });
+      askingForAccess = false;
+      renderDrawer();
+    } catch (e) {
+      if (errBox) errBox.textContent = e.message || 'That access code was not recognised.';
+      if (btn) { btn.disabled = false; btn.textContent = 'Continue'; }
+    }
+  };
+  el.querySelector('[data-enter-code]')?.addEventListener('click', enterCode);
+  // Enter submits, so the phone keyboard's Go key works.
+  codeInput?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); enterCode(); } });
+
+  el.querySelector('[data-send-access]')?.addEventListener('click', async () => {
+    const btn = el.querySelector('[data-send-access]');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      const res = await getJSON('/api/catalog/access-requests', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company: el.querySelector('#uCompany')?.value?.trim() || '',
+          contact: el.querySelector('#uContact')?.value?.trim() || '',
+          phone: el.querySelector('#uPhone')?.value?.trim() || '',
+          address: el.querySelector('#uAddress')?.value?.trim() || '',
+        }),
+      });
+      askingForAccess = false;
+      renderDrawer(`<b>Thank you.</b> ${esc(res.message || '')}`);
+    } catch (e) {
+      // stay on the form so the details already typed are not lost behind an error
+      askingForAccess = true;
+      renderDrawer(`<span class="c-accesserr">${esc(e.message || 'Could not send your details.')}</span>`);
+    }
+  });
 
   el.querySelector('[data-submit]')?.addEventListener('click', submit);
 }
@@ -215,22 +298,17 @@ async function submit() {
   btn.disabled = true; btn.textContent = 'Submitting…';
   el.querySelectorAll('.c-line-err').forEach((n) => { n.textContent = ''; });
 
+  // Lines and notes only. WHO is requesting comes from the signed access-code
+  // session on the server — the browser cannot name a customer, so it cannot
+  // submit a request in another company's name.
   const payload = { lines: toRequestLines(), notes: el.querySelector('#reqNotes')?.value || null };
-  if (selectedCustomer && selectedCustomer.handle) payload.customerHandle = selectedCustomer.handle;
-  else {
-    payload.unlisted = {
-      company: el.querySelector('#uCompany')?.value?.trim() || selectedCustomer?.name || '',
-      contact: el.querySelector('#uContact')?.value?.trim() || '',
-      phone: el.querySelector('#uPhone')?.value?.trim() || '',
-    };
-  }
 
   try {
     const res = await getJSON('/api/catalog/requests', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
     });
     clearCart();
-    selectedCustomer = null; unlistedMode = false;
+    askingForAccess = false;
     el.innerHTML = `
       <div class="c-drawer-backdrop" data-close></div>
       <section class="c-drawer-panel" role="dialog" aria-label="Request submitted">
@@ -245,6 +323,14 @@ async function submit() {
     renderCartBar();
     onCartMutated();
   } catch (e) {
+    // The session expired or was never established — fall back to the code prompt
+    // with the cart intact, rather than showing a bare error.
+    if (e.body?.code === 'ACCESS_CODE_REQUIRED') {
+      accessCustomer = null; askingForAccess = false;
+      await renderDrawer('Please enter your access code to send this request.');
+      renderCartBar();
+      return;
+    }
     const errors = e.body?.errors || [];
     // drop what can never succeed, keep what the customer can still fix
     pruneUnavailable(errors);
@@ -263,6 +349,7 @@ async function submit() {
 export function mountRequestUI() {
   renderCartBar();
   onCartChange(() => renderCartBar());
+  trackKeyboardInset();
 }
 
 export default { mountRequestUI, openDrawer, renderCartBar, setCartMutationHandler };

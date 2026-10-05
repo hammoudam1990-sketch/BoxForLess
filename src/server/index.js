@@ -12,27 +12,42 @@ import productsRouter from './routes/products.js';
 import importsRouter from './routes/imports.js';
 import changesRouter from './routes/changes.js';
 import catalogRouter from './routes/catalog.js';
+import customerImportsRouter from './routes/customer-imports.js';
 import { customerRouter as requestsCustomerRouter, staffRouter as requestsStaffRouter } from './routes/requests.js';
+import { hasStaffSession, requireStaff, staffLogin, staffLogout, staffSessionStatus } from './staff-auth.js';
+import { enterAccessCode, accessStatus, exitAccess } from './customer-access.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function createApp(db) {
   const app = express();
+  app.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);
   app.use(express.json());
+  app.use(express.urlencoded({ extended: false }));
 
   // make db available to routers
   app.use((req, _res, next) => { req.db = db; next(); });
 
   app.get('/api/health', (_req, res) => res.json({ ok: true, phase: 1 }));
+  app.get('/api/staff/session', staffSessionStatus);
+  app.post('/api/staff/login', staffLogin);
+  app.post('/api/staff/logout', staffLogout);
+  // Customer access code — public by necessity: entering a code is how a customer
+  // identifies themselves. Rate-limited per IP in customer-access.js.
+  app.get('/api/catalog/access', accessStatus);
+  app.post('/api/catalog/access', enterAccessCode);
+  app.post('/api/catalog/access/exit', exitAccess);
   // Internal / admin API (Product Master) — unchanged.
-  app.use('/api/products', productsRouter);
-  app.use('/api/imports', importsRouter);
-  app.use('/api/reviews', changesRouter);
+  app.use('/api/products', requireStaff, productsRouter);
+  app.use('/api/imports', requireStaff, importsRouter);
+  app.use('/api/reviews', requireStaff, changesRouter);
+  // Customer-list import — staff only, and a separate audit from product imports.
+  app.use('/api/customer-imports', requireStaff, customerImportsRouter);
   // Staff view of submitted customer requests (internal detail).
-  app.use('/api/requests', requestsStaffRouter);
+  app.use('/api/requests', requireStaff, requestsStaffRouter);
   // Customer-facing API — customer-safe payloads only. The request routes mount
-  // FIRST so /api/catalog/requests and /api/catalog/customers are not shadowed by
-  // the catalog router's /products/:id style paths.
+  // FIRST so /api/catalog/requests is not shadowed by the catalog router's
+  // /products/:id style paths.
   app.use('/api/catalog', requestsCustomerRouter);
   app.use('/api/catalog', catalogRouter);
 
@@ -47,7 +62,21 @@ export function createApp(db) {
   app.get('/catalog', catalogPage);
   app.get('/catalog/product/:id', catalogPage);
 
-  app.use(express.static(publicDir));
+  // The staff shell and scanner are private; the catalog remains public.
+  const privatePage = (filename) => (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!hasStaffSession(req)) return res.redirect(`/staff/login?next=${encodeURIComponent(req.path)}`);
+    res.sendFile(path.join(publicDir, filename));
+  };
+  app.get('/', privatePage('index.html'));
+  app.get('/index.html', privatePage('index.html'));
+  app.get('/scan.html', privatePage('scan.html'));
+  app.get('/staff/login', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(publicDir, 'staff-login.html'));
+  });
+
+  app.use(express.static(publicDir, { index: false }));
 
   // central error handler
   // eslint-disable-next-line no-unused-vars

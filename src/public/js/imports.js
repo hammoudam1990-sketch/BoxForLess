@@ -13,6 +13,21 @@ export async function renderImports(view) {
       <div id="previewArea"></div>
     </div>
     <div class="card">
+      <h2>Customer list import</h2>
+      <p class="muted">Import the customer list from an Odoo <b>Contact (res.partner)</b> export.
+        Only <b>Display Name, Email, Pricelist, Phone and Country</b> are read —
+        avatar, activities and stats are ignored.</p>
+      <div class="drop" id="custDrop">
+        <p><b>Choose a customer Excel file</b> (.xlsx)</p>
+        <input type="file" id="custFile" accept=".xlsx,.xls" />
+        <p class="muted">Nothing is written until you review the preview and click
+          <b>Confirm Customer Import</b>.</p>
+      </div>
+      <div id="custPreviewArea"></div>
+      <div id="custHistory" class="muted" style="margin-top:12px">Loading…</div>
+    </div>
+
+    <div class="card">
       <h2>Import history</h2>
       <div id="history"><div class="muted">Loading…</div></div>
     </div>`;
@@ -45,7 +60,85 @@ export async function renderImports(view) {
   ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('drag'); }));
   drop.addEventListener('drop', (e) => doPreview(e.dataTransfer.files[0]));
 
-  await loadHistory(view.querySelector('#history'));
+  // --- customer list import (separate endpoint, separate audit) -------------
+  const custFile = view.querySelector('#custFile');
+  const custArea = view.querySelector('#custPreviewArea');
+  const custDrop = view.querySelector('#custDrop');
+
+  const doCustomerPreview = async (file) => {
+    if (!file) return;
+    custArea.innerHTML = '<div class="muted">Reading customer file…</div>';
+    try {
+      const res = await api.uploadCustomerPreview(file);
+      custArea.innerHTML = customerPreviewHtml(res);
+      custArea.querySelector('#custConfirmBtn')?.addEventListener('click', async (ev) => {
+        ev.target.disabled = true; ev.target.textContent = 'Importing…';
+        try {
+          const r = await api.confirmCustomerImport(res.batchId);
+          toast(`Customers imported: ${r.counts.created} new, ${r.counts.updated} updated, ${r.counts.unchanged} unchanged`, 'ok');
+          await doCustomerHistory();
+          custArea.innerHTML = `<div class="okbox">Customer import complete —
+            ${num(r.counts.created)} new, ${num(r.counts.updated)} updated,
+            ${num(r.counts.unchanged)} unchanged.</div>`;
+        } catch (e) {
+          toast(e.message, 'err');
+          ev.target.disabled = false; ev.target.textContent = 'Confirm Customer Import';
+        }
+      });
+    } catch (e) { custArea.innerHTML = `<div class="errbox">${esc(e.message)}</div>`; }
+  };
+
+  const doCustomerHistory = async () => {
+    const node = view.querySelector('#custHistory');
+    try {
+      const { items } = await api.customerImports();
+      node.innerHTML = items.length
+        ? `<table><thead><tr><th>File</th><th>Status</th><th>Rows</th><th>New</th><th>Updated</th><th>When</th></tr></thead><tbody>
+            ${items.slice(0, 10).map((b) => `<tr>
+              <td>${esc(b.filename)}</td>
+              <td>${b.status === 'COMPLETED' ? '<span class="pill ok">Applied</span>' : `<span class="pill muted">${esc(b.status)}</span>`}</td>
+              <td>${num(b.total_rows)}</td><td>${num(b.new_count)}</td><td>${num(b.updated_count)}</td>
+              <td>${esc((b.confirmed_at || b.created_at || '').replace('T', ' ').slice(0, 16))}</td>
+            </tr>`).join('')}</tbody></table>`
+        : '<div class="muted">No customer imports yet.</div>';
+    } catch { node.innerHTML = '<div class="muted">Could not load customer import history.</div>'; }
+  };
+
+  custFile.addEventListener('change', (e) => doCustomerPreview(e.target.files[0]));
+  ['dragover', 'dragenter'].forEach((ev) => custDrop.addEventListener(ev, (e) => { e.preventDefault(); custDrop.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach((ev) => custDrop.addEventListener(ev, (e) => { e.preventDefault(); custDrop.classList.remove('drag'); }));
+  custDrop.addEventListener('drop', (e) => doCustomerPreview(e.dataTransfer.files[0]));
+
+  await Promise.all([loadHistory(view.querySelector('#history')), doCustomerHistory()]);
+}
+
+/** Preview panel for a customer import. Confirmation is always explicit. */
+function customerPreviewHtml(res) {
+  const s = res.preview.summary;
+  const canApply = s.valid_rows > 0;
+  const row = (label, value, cls = '') => `<div class="stat"><div class="l">${label}</div><div class="v ${cls}">${num(value)}</div></div>`;
+  return `
+    <div class="stats" style="margin-top:12px">
+      ${row('Total rows', s.total_rows)}
+      ${row('Valid', s.valid_rows, 'ok')}
+      ${row('Invalid', s.invalid_rows, s.invalid_rows ? 'err' : '')}
+      ${row('Duplicates', s.duplicate_rows, s.duplicate_rows ? 'warn' : '')}
+      ${row('New customers', s.new_count)}
+      ${row('Existing / unchanged', s.unchanged_count)}
+      ${row('Existing / updated', s.updated_count)}
+      ${row('Warnings', s.warning_count, s.warning_count ? 'warn' : '')}
+    </div>
+    <p class="muted">Columns read: <b>${esc(Object.values(res.preview.mappedColumns).join(', '))}</b>.
+      Ignored: ${esc(res.preview.ignoredColumns.join(', ') || 'none')}.</p>
+    ${res.preview.errorRows.length ? `<div class="notice"><b>${res.preview.errorRows.length} row(s) will be skipped:</b><br>
+      ${res.preview.errorRows.slice(0, 10).map((r) => `Row ${r.rowNumber} ${esc(r.name || '')} — ${esc(r.errors.join('; '))}`).join('<br>')}</div>` : ''}
+    ${res.preview.warningRows.length ? `<div class="muted" style="margin:8px 0">
+      ${res.preview.warningRows.length} row(s) with warnings (still imported).</div>` : ''}
+    <div class="scan-actions" style="margin-top:12px">
+      ${canApply
+    ? '<button id="custConfirmBtn">Confirm Customer Import</button>'
+    : '<div class="errbox">No valid customer rows to import.</div>'}
+    </div>`;
 }
 
 function previewHtml(res) {

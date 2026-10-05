@@ -185,6 +185,33 @@ CREATE TABLE IF NOT EXISTS customers (
   created_at        TEXT,
   updated_at        TEXT
 );
+-- ---------------------------------------------------------------------------
+-- customer_imports — audit header for the CUSTOMER LIST import.
+--
+-- Deliberately a SEPARATE table from import_batches: mixing customer runs into
+-- the product import history would change what the existing Imports page lists
+-- and what /api/imports returns. Product import must stay byte-for-byte
+-- unaffected, so the two audits never share a table.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS customer_imports (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  filename        TEXT    NOT NULL,
+  file_hash       TEXT,
+  status          TEXT    NOT NULL DEFAULT 'PREVIEW',  -- PREVIEW | COMPLETED | FAILED
+  total_rows      INTEGER NOT NULL DEFAULT 0,
+  valid_rows      INTEGER NOT NULL DEFAULT 0,
+  invalid_rows    INTEGER NOT NULL DEFAULT 0,
+  duplicate_rows  INTEGER NOT NULL DEFAULT 0,
+  new_count       INTEGER NOT NULL DEFAULT 0,
+  updated_count   INTEGER NOT NULL DEFAULT 0,
+  unchanged_count INTEGER NOT NULL DEFAULT 0,
+  warning_count   INTEGER NOT NULL DEFAULT 0,
+  preview_json    TEXT,
+  created_at      TEXT    NOT NULL,
+  confirmed_at    TEXT,
+  notes           TEXT
+);
+
 -- Indexes for the Stage 3 columns are created by applyMigrations(), never here:
 -- on a pre-Stage-3 database this file runs BEFORE those columns are added, so an
 -- index here would fail the whole open. (Same trap as ix_products_odoo_category_path.)
@@ -211,6 +238,10 @@ CREATE TABLE IF NOT EXISTS requests (
   unlisted_company     TEXT,
   unlisted_contact     TEXT,
   unlisted_phone       TEXT,
+  -- Optional, captured for the New Customer path only. Present now because New
+  -- Customers will later support Cash on Delivery; nothing reads it yet beyond
+  -- the staff request view.
+  delivery_address     TEXT,
   needs_customer_match INTEGER NOT NULL DEFAULT 0,
   notes                TEXT,
   status               TEXT,

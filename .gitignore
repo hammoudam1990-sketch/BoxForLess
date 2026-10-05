@@ -14,3 +14,6 @@ data/data-quality-report.json
 # local data checkpoints / backups (filesystem snapshots, not source)
 data/checkpoints/
 data/backups/
+
+# local dev secrets (staff sign-in) — never committed
+.env.local

@@ -75,6 +75,13 @@ button.secondary { background: #fff; color: var(--brand); }
 button.ghost { background: #fff; color: var(--muted); border-color: var(--line); }
 button.danger { background: var(--err); border-color: var(--err); }
 button:disabled { opacity: .5; cursor: not-allowed; }
+.button-link { display: inline-block; padding: 9px 14px; border: 1px solid var(--brand); background: var(--brand); color: #fff; border-radius: 6px; font: inherit; font-weight: 600; }
+.staff-login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 20px; }
+.staff-login-card { width: min(100%, 420px); display: grid; gap: 12px; }
+.staff-login-card h1, .staff-login-card p { margin: 0; }
+.staff-login-card label { font-weight: 600; }
+.staff-login-card input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+.staff-login-logo { margin-bottom: 2px; }
 
 /* tables */
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -91,6 +98,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .pill.ok { background: var(--ok-bg); color: var(--ok); }
 .pill.warn { background: var(--warn-bg); color: var(--warn); }
 .pill.err { background: var(--err-bg); color: var(--err); }
+/* NEW CUSTOMER is a normal outcome, not a problem — informational, never a warning */
+.pill.info { background: #eaf1fc; color: #0f4ea8; }
 .pill.muted { background: #eef2f6; color: var(--muted); }
 .pill.info { background: var(--info-bg); color: var(--brand-dark); }
 
@@ -161,3 +170,16 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .manual-label { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
 /* 16px stops iOS Safari zooming the page when the field takes focus */
 .manual-panel input[type=text] { width: 100%; font-size: 16px; min-height: 44px; margin-bottom: 10px; }
+
+/* Access codes.
+   `.code` is selectable by hand on purpose: it is the fallback when a browser
+   refuses a clipboard write, so a code must always be readable and draggable. */
+.code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .08em;
+  user-select: all;
+  -webkit-user-select: all;
+}
+.code-large { font-size: 26px; font-weight: 700; margin: 10px 0 14px; }
+.nowrap { white-space: nowrap; }
+.nowrap button { margin-left: 4px; }

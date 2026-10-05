@@ -20,6 +20,23 @@ npm start            # http://localhost:3000
 
 Node **>= 22** is required (for the built-in `node:sqlite` module).
 
+### Staff sign-in before public use
+
+The customer catalog stays public. Product management, imports, customer
+details, and request actions require the staff sign-in. Configure these server
+environment variables before starting the app:
+
+- `BFL_STAFF_USERNAME` — staff sign-in name.
+- `BFL_STAFF_PASSWORD` — private password of at least 12 characters.
+- `BFL_SESSION_SECRET` — random secret of at least 32 characters, used to sign
+  the eight-hour staff session cookie.
+- `NODE_ENV=production` — enables secure cookies and proxy-aware HTTPS handling.
+
+If the staff credentials or session secret are missing or too short, staff
+endpoints fail closed. Keep these values in the hosting provider's secret
+settings; never commit them to this repository. Customer browsing and request
+submission continue to work without a staff account.
+
 ### Import the Odoo export
 
 **Via the UI:** open http://localhost:3000 → **Imports** → drop the `.xlsx` →

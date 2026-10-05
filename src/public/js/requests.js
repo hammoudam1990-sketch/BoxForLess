@@ -8,6 +8,7 @@ import { esc, num } from './api.js';
 
 async function getJSON(url) {
   const res = await fetch(url);
+  if (res.status === 401) window.location.assign('/staff/login');
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -31,10 +32,20 @@ function stockBanner(status) {
   return `<div class="okbox">Stock current as of <b>${fmt(status.asOf)}</b> — customers can submit requests.</div>`;
 }
 
+/**
+ * There are exactly two customer paths: EXISTING (selected from the imported
+ * customer master) and NEW (details captured on the request). A New Customer is a
+ * complete outcome, not a problem to resolve — no Odoo matching exists in this
+ * phase — so it gets a neutral badge, never a warning.
+ */
+function customerTypeBadge(c) {
+  const cls = c.type === 'EXISTING_CUSTOMER' ? 'ok' : 'info';
+  return `<span class="pill ${cls}">${esc(c.label)}</span>`;
+}
+
 function customerCell(r) {
-  if (r.customer_name) return esc(r.customer_name);
-  const who = [r.unlisted_company, r.unlisted_contact].filter(Boolean).map(esc).join(' · ');
-  return `${who || '—'} <span class="pill warn">Not in customer master</span>`;
+  const c = r.customer || { type: r.customer_id ? 'EXISTING_CUSTOMER' : 'NEW_CUSTOMER', label: r.customer_id ? 'EXISTING CUSTOMER' : 'NEW CUSTOMER', displayName: r.customer_name || [r.unlisted_company, r.unlisted_contact].filter(Boolean).join(' · ') };
+  return `${esc(c.displayName || '—')} ${customerTypeBadge(c)}`;
 }
 
 export async function renderRequests(view) {
@@ -71,7 +82,8 @@ export async function renderRequests(view) {
 }
 
 export async function renderRequestDetail(view, id) {
-  const { request, items } = await getJSON(`/api/requests/${encodeURIComponent(id)}`);
+  const { request, items, customer } = await getJSON(`/api/requests/${encodeURIComponent(id)}`);
+  const c = customer || { type: 'NEW_CUSTOMER', label: 'NEW CUSTOMER', displayName: '', company: null, contact: null, phone: null };
 
   const lines = items.map((i) => `
     <tr>
@@ -85,20 +97,35 @@ export async function renderRequestDetail(view, id) {
   view.innerHTML = `
     <a class="back" href="#/requests">← All requests</a>
     <h1>${esc(request.reference || `Request #${request.id}`)}</h1>
+    <div class="controls">
+      <button type="button" class="button-link" data-export-request>Download Excel</button>
+      ${request.status === 'SUBMITTED' ? '<button type="button" data-accept-request>Accept request</button>' : ''}
+      <button type="button" class="danger" data-delete-request>Delete request</button>
+    </div>
     <div class="card">
       <div class="kv">
-        <div class="k">Customer</div><div>${customerCell(request)}</div>
-        ${request.odoo_customer_ref ? `<div class="k">Odoo customer ID</div><div>${esc(request.odoo_customer_ref)}</div>` : ''}
-        ${request.unlisted_phone ? `<div class="k">Phone given</div><div>${esc(request.unlisted_phone)}</div>` : ''}
+        <div class="k">Customer</div><div><b>${esc(c.displayName || '—')}</b></div>
+        <div class="k">Customer type</div><div>${customerTypeBadge(c)}</div>
         <div class="k">Submitted</div><div>${fmt(request.submitted_at)}</div>
         <div class="k">Status</div><div>${esc(request.status || '—')}</div>
         <div class="k">Validated against stock from</div><div>${fmt(request.stock_as_of)}</div>
-        ${request.notes ? `<div class="k">Notes</div><div>${esc(request.notes)}</div>` : ''}
       </div>
     </div>
 
-    ${request.needs_customer_match ? `<div class="notice">This customer was <b>not in the customer master</b>.
-      Match them to an Odoo customer before processing.</div>` : ''}
+    <div class="section-title">${c.type === 'EXISTING_CUSTOMER' ? 'Customer (from the customer list)' : 'New customer details'}</div>
+    <div class="card">
+      <div class="kv">
+        ${c.company ? `<div class="k">${c.type === 'EXISTING_CUSTOMER' ? 'Customer' : 'Company'}</div><div>${esc(c.company)}</div>` : ''}
+        ${c.contact ? `<div class="k">Contact name</div><div>${esc(c.contact)}</div>` : ''}
+        ${c.phone ? `<div class="k">Phone</div><div>${esc(c.phone)}</div>` : ''}
+        ${request.delivery_address ? `<div class="k">Delivery address</div><div>${esc(request.delivery_address)}</div>` : ''}
+        ${request.notes ? `<div class="k">Notes</div><div>${esc(request.notes)}</div>` : ''}
+      </div>
+      ${c.type === 'NEW_CUSTOMER'
+    ? `<p class="muted" style="margin-top:10px">Captured on this request. These details are not
+         in the customer list; they will feed the Cash-on-Delivery workflow in a later phase.</p>`
+    : '<p class="muted" style="margin-top:10px">Selected from the imported customer list.</p>'}
+    </div>
 
     <div class="section-title">Requested items</div>
     <div class="card">
@@ -111,6 +138,52 @@ export async function renderRequestDetail(view, id) {
         so this request still reads correctly even if the product changes later.
       </p>
     </div>`;
+
+  view.querySelector('[data-accept-request]')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const res = await fetch(`/api/requests/${encodeURIComponent(id)}/accept`, { method: 'POST' });
+      if (res.status === 401) { window.location.assign('/staff/login'); return; }
+      if (!res.ok) throw new Error((await res.json()).error || `HTTP ${res.status}`);
+      await renderRequestDetail(view, id);
+    } catch (error) {
+      window.alert(`Could not accept this request: ${error.message}`);
+      button.disabled = false;
+    }
+  });
+
+  view.querySelector('[data-delete-request]')?.addEventListener('click', async (event) => {
+    if (!window.confirm(`Delete ${request.reference || 'this request'} and its item list? This cannot be undone.`)) return;
+    event.currentTarget.disabled = true;
+    try {
+      const res = await fetch(`/api/requests/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (res.status === 401) { window.location.assign('/staff/login'); return; }
+      if (!res.ok) throw new Error((await res.json()).error || `HTTP ${res.status}`);
+      window.location.hash = '#/requests';
+    } catch (error) {
+      window.alert(`Could not delete this request: ${error.message}`);
+      event.currentTarget.disabled = false;
+    }
+  });
+
+  view.querySelector('[data-export-request]')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const res = await fetch(`/api/requests/${encodeURIComponent(id)}/export.xlsx`);
+      if (res.status === 401) { window.location.assign('/staff/login'); return; }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const url = URL.createObjectURL(await res.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${request.reference || `request-${id}`}.xlsx`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      window.alert(`Could not download this request: ${error.message}`);
+    } finally { button.disabled = false; }
+  });
 }
 
 export default { renderRequests, renderRequestDetail };

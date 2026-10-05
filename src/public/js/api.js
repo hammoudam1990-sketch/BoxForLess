@@ -2,6 +2,7 @@
 async function handle(res) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 401) window.location.assign('/staff/login');
     const err = new Error(data.error || `HTTP ${res.status}`);
     err.code = data.code;
     err.status = res.status;
@@ -27,6 +28,15 @@ export const api = {
   },
   confirmImport: (id) => fetch(`/api/imports/${id}/confirm`, { method: 'POST' }).then(handle),
 
+  // customer list import (staff) — separate endpoint from the product import
+  customerImports: () => fetch('/api/customer-imports').then(handle),
+  uploadCustomerPreview: (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return fetch('/api/customer-imports', { method: 'POST', body: fd }).then(handle);
+  },
+  confirmCustomerImport: (id) => fetch(`/api/customer-imports/${id}/confirm`, { method: 'POST' }).then(handle),
+
   productImageUrl: (id) => `/api/products/${id}/image`,
   saveProductImage: (id, blob, { replace = false } = {}) => {
     const fd = new FormData();
@@ -45,6 +55,24 @@ export const api = {
     fetch(`/api/reviews/uom/${productId}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ decision }),
+    }).then(handle),
+
+  // Customer access codes. These responses carry real codes, so they are staff
+  // endpoints and must never be called from the catalog bundle.
+  customerCodes: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return fetch(`/api/requests/customers/codes?${q}`).then(handle);
+  },
+  issueCustomerCode: (id) => fetch(`/api/requests/customers/${id}/code`, { method: 'POST' }).then(handle),
+
+  accessRequests: (status = '') =>
+    fetch(`/api/requests/access-requests${status ? `?status=${encodeURIComponent(status)}` : ''}`).then(handle),
+  approveAccessRequest: (id) =>
+    fetch(`/api/requests/access-requests/${id}/approve`, { method: 'POST' }).then(handle),
+  rejectAccessRequest: (id, reason = null) =>
+    fetch(`/api/requests/access-requests/${id}/reject`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
     }).then(handle),
 };
 

@@ -54,6 +54,18 @@ export const config = {
     // where handles should not be reproducible from the source code.
     handleSecret: process.env.BFL_CUSTOMER_HANDLE_SECRET || 'bfl-customer-handle-v1',
   },
+
+  // Per-customer access codes. A code identifies the customer, which is what
+  // allowed the public customer-search endpoint to be removed entirely.
+  customerAccess: {
+    // How long a customer stays signed in after entering their code. Long on
+    // purpose: re-typing a code on every visit would push customers to write it
+    // somewhere less safe than their phone's cookie jar.
+    sessionDays: Number(process.env.BFL_CUSTOMER_SESSION_DAYS || 30),
+    // Signs the customer session cookie. SEPARATE from the staff secret so one
+    // can never forge the other. Set this in any real deployment.
+    sessionSecret: process.env.BFL_CUSTOMER_SESSION_SECRET || 'bfl-customer-session-v1',
+  },
 };
 
 export default config;

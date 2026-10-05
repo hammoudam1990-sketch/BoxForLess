@@ -2,6 +2,65 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.0] — 2026-10-05 — Stage 4: customer access codes
+
+**Closes the customer-master exposure.** Before this change the catalog was public
+AND carried a customer-search endpoint, so anyone holding the link could type
+letters and read back real company names — all 355 of them. The search endpoint is
+**gone**. A customer now proves who they are with a code instead of finding
+themselves in a list, so there is nothing left to enumerate.
+
+### Added
+- **Access codes.** 8 characters from a 31-symbol alphabet with `0/O/1/I/L`
+  removed, shown as `7K2M-9XQR`. Generated with rejection sampling so no symbol is
+  favoured. Stored in plain text **on purpose** — staff must read a code back to
+  send it, which a one-way hash would prevent.
+- **Customer sessions.** Entering a code sets a signed, HttpOnly cookie
+  (`BFL_CUSTOMER_SESSION_DAYS`, default 30). Separate cookie and secret from the
+  staff session, so neither can forge the other. The customer is re-read from the
+  database on every request, so deactivating one revokes access at once.
+- **Rate limiting** — 10 attempts per IP per 15 minutes on code entry.
+- **"I don't have a code"** — a company submits its details, which land in a new
+  `access_requests` table as PENDING. It creates no customer and places no request.
+- **Staff screens** — *Access Codes* (search, copy, issue/reissue) and
+  *Access Requests* (approve, which creates the customer and issues the code, or
+  reject). A nav badge counts anyone waiting.
+- `scripts/issue-access-codes.js` — previews by default, `--confirm` to issue.
+
+### Changed
+- **`GET /api/catalog/customers` REMOVED.** This was the enumeration hole.
+- **Request identity now comes from the session, never the request body.** A
+  customer cannot submit in another company's name even by crafting the payload;
+  `customerId`, `customerHandle`, `customerRef` and `unlisted` in the body are all
+  ignored.
+- The cart's company-search box is replaced by code entry; Submit stays disabled
+  until the customer is identified.
+- The old self-serve "unlisted customer" submission is replaced by the
+  staff-approved access-request path.
+
+### Data
+- `customers` += `access_code`, `access_code_issued_at` (unique index on the code).
+- New table `access_requests`.
+- `requests.delivery_address` is unchanged but no longer written by the customer
+  path; an address is captured when asking for access.
+- **355 codes issued** to the imported customers. Checkpoint
+  `v0.4.0-pre-access-codes` taken first.
+
+### Tests
+- `test/access-codes.test.js` — 24 tests covering alphabet safety, modulo-bias
+  coverage, forgiving input without substitution, revocation on reissue and on
+  deactivation, submitting without a code, **submitting in another customer's
+  name**, four kinds of forged cookie, rate limiting, code non-disclosure on every
+  customer endpoint, and the approve/reject flow.
+- `DA4b` asserts the removed search endpoint stays removed and leaks no name.
+- Four Stage 3/4 tests updated to the new contract — none weakened or skipped.
+- **269/269 pass** (245 → 269).
+
+### Not done yet
+- Not verified on a real iPhone.
+- `/catalog` browsing remains public by design; the code gates requesting only.
+
+
 ## [0.3.1] — 2026-10-03 — Scanner: higher capture resolution + manual barcode fallback
 
 **✅ Verified on a real iPhone (2026-10-03).** Camera scan of the previously

@@ -19,14 +19,37 @@ import {
 } from '../src/domain/customers.js';
 import { computeStockStatus } from '../src/domain/stock.js';
 import { createApp } from '../src/server/index.js';
+import { issueAccessCode } from '../src/domain/access-codes.js';
 
 function startApp(db) {
   const server = http.createServer(createApp(db));
   return new Promise((r) => server.listen(0, () => r({ server, base: `http://127.0.0.1:${server.address().port}` })));
 }
-const post = (base, path, body) => fetch(base + path, {
-  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+const post = (base, path, body, cookie = null) => fetch(base + path, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', origin: base, ...(cookie ? { cookie } : {}) },
+  body: JSON.stringify(body),
 });
+
+/**
+ * Identify as a customer with their access code, returning the session cookie.
+ * Submitting requires one now: the server reads WHO is requesting from this
+ * signed session rather than from anything the browser sends.
+ */
+async function asCustomer(base, db, customerId) {
+  const code = issueAccessCode(db, customerId);
+  const res = await post(base, '/api/catalog/access', { code });
+  assert.equal(res.status, 200, 'the access code should be accepted');
+  return (res.headers.getSetCookie?.() || []).join('; ').split(';')[0];
+}
+
+/** Create a bare customer and return its id — for tests that just need someone. */
+function someCustomer(db, name = 'Test Customer Ltd') {
+  const ts = new Date().toISOString();
+  return Number(db.prepare(
+    'INSERT INTO customers (name, is_active, created_at, updated_at) VALUES (?,1,?,?)'
+  ).run(name, ts, ts).lastInsertRowid);
+}
 
 // free = whole cartons available unless stated; FRACTIONAL mirrors the 40 real
 // products that are "Limited Stock" but hold less than one complete carton.
@@ -222,7 +245,7 @@ test('a stale-stock rejection happens BEFORE line checks and writes nothing', ()
   ageStockBy(db, 48);
   const before = counts(db);
   assert.throws(
-    () => submitRequest(db, { lines: [line(PLENTY, 1)], unlisted: { company: 'A', contact: 'B' } }),
+    () => submitRequest(db, { lines: [line(PLENTY, 1)], unlisted: { company: 'A', contact: 'B', phone: '0240000000' } }),
     (e) => e instanceof RequestValidationError && e.details.errors[0].code === RejectionCode.STOCK_STALE
   );
   assert.deepEqual(counts(db), before, 'nothing written');
@@ -262,7 +285,7 @@ test('ONE bad line rejects the WHOLE submission — nothing partially written', 
   assert.throws(
     () => submitRequest(db, {
       lines: [line(PLENTY, 1), line(THREE, 99)],   // second line impossible
-      unlisted: { company: 'A', contact: 'B' },
+      unlisted: { company: 'A', contact: 'B', phone: '0240000000' },
     }),
     (e) => e instanceof RequestValidationError
   );
@@ -275,7 +298,7 @@ test('a failure after insert rolls the whole submission back', () => {
   const before = counts(db);
   assert.throws(() => submitRequest(db, {
     lines: [line(PLENTY, 1)],
-    unlisted: { company: 'A', contact: 'B' },
+    unlisted: { company: 'A', contact: 'B', phone: '0240000000' },
   }, { faultHook: () => { throw new Error('boom'); } }), /boom/);
   assert.deepEqual(counts(db), before, 'transaction rolled back');
   db.close();
@@ -288,23 +311,26 @@ test('a request must be attributable — anonymous submission is refused', () =>
     () => submitRequest(db, { lines: [line(PLENTY, 1)] }),
     (e) => e instanceof RequestValidationError && e.details.errors[0].code === RejectionCode.CUSTOMER_REQUIRED
   );
-  assert.throws(() => submitRequest(db, { lines: [line(PLENTY, 1)], unlisted: { company: 'A' } }),
-    (e) => e instanceof RequestValidationError, 'contact name also required');
+  // New Customer requires a NAME and a PHONE; company is optional
+  assert.throws(() => submitRequest(db, { lines: [line(PLENTY, 1)], unlisted: { company: 'A', phone: '024' } }),
+    (e) => e instanceof RequestValidationError, 'customer name is required');
+  assert.throws(() => submitRequest(db, { lines: [line(PLENTY, 1)], unlisted: { contact: 'B' } }),
+    (e) => e instanceof RequestValidationError, 'phone is required');
   assert.deepEqual(counts(db), before);
   db.close();
 });
 
 test('an unlisted customer never creates a customer master record', () => {
   const db = seed();
-  submitRequest(db, { lines: [line(PLENTY, 1)], unlisted: { company: 'Brand New Co', contact: 'X' } });
+  submitRequest(db, { lines: [line(PLENTY, 1)], unlisted: { company: 'Brand New Co', contact: 'X', phone: '0240000000' } });
   assert.equal(counts(db).customers, 0, 'customer master untouched — staff reconcile instead');
   db.close();
 });
 
 test('references increment and stay unique', () => {
   const db = seed();
-  const a = submitRequest(db, { lines: [line(PLENTY, 1)], unlisted: { company: 'A', contact: 'B' } });
-  const b = submitRequest(db, { lines: [line(PLENTY, 1)], unlisted: { company: 'A', contact: 'B' } });
+  const a = submitRequest(db, { lines: [line(PLENTY, 1)], unlisted: { company: 'A', contact: 'B', phone: '0240000000' } });
+  const b = submitRequest(db, { lines: [line(PLENTY, 1)], unlisted: { company: 'A', contact: 'B', phone: '0240000000' } });
   assert.notEqual(a.reference, b.reference);
   assert.match(b.reference, /0002$/);
   assert.match(nextReference(db), /0003$/);
@@ -313,7 +339,7 @@ test('references increment and stay unique', () => {
 
 test('a request does NOT reserve stock — the same carton can be requested twice', () => {
   const db = seed();
-  submitRequest(db, { lines: [line(THREE, 3)], unlisted: { company: 'A', contact: 'B' } });
+  submitRequest(db, { lines: [line(THREE, 3)], unlisted: { company: 'A', contact: 'B', phone: '0240000000' } });
   // documented Stage 3 limitation: availability is unchanged by a request
   assert.equal(validateRequest(db, [line(THREE, 3)]).ok, true);
   assert.equal(getProduct(db, THREE.barcode).free_to_use, 3, 'stock untouched');
@@ -323,11 +349,12 @@ test('a request does NOT reserve stock — the same carton can be requested twic
 // ===========================================================================
 // Customer master
 // ===========================================================================
-const CUST_HEADERS = ['Customer ID', 'Display Name', 'Phone', 'Country', 'Pricelist', 'Avatar 128', 'Stats'];
+// Mirrors the real contact export's columns, plus the optional Customer ID.
+const CUST_HEADERS = ['Customer ID', 'Avatar 128', 'Display Name', 'Email', 'Pricelist', 'Phone', 'Activities', 'Country', 'Stats'];
 const custRow = (o) => ({
-  'Customer ID': o.ref ?? null, 'Display Name': o.name, Phone: o.phone ?? null,
-  Country: o.country ?? null, Pricelist: 'CLASS A (GHS)',
-  'Avatar 128': 'PD94bWwBLOB', Stats: '[{"label":"Opportunities"}]',
+  'Customer ID': o.ref ?? null, 'Display Name': o.name, Email: o.email ?? null,
+  Phone: o.phone ?? null, Country: o.country ?? null, Pricelist: 'CLASS A (GHS)',
+  'Avatar 128': 'PD94bWwBLOB', Activities: 'something', Stats: '[{"label":"Opportunities"}]',
 });
 function importCusts(db, rows, opts) {
   const { mapping } = mapCustomerHeaders(CUST_HEADERS);
@@ -338,20 +365,24 @@ test('contact header mapping reads only the allow-listed columns', () => {
   const { mapping, ignored, hasStableId } = mapCustomerHeaders(CUST_HEADERS);
   assert.equal(mapping.odoo_customer_ref, 'Customer ID');
   assert.equal(mapping.name, 'Display Name');
+  assert.equal(mapping.pricelist, 'Pricelist', 'imported for STAFF use (never customer-facing)');
   assert.equal(hasStableId, true);
-  for (const bad of ['Pricelist', 'Avatar 128', 'Stats']) {
+  for (const bad of ['Avatar 128', 'Stats', 'Activities']) {
     assert.ok(ignored.includes(bad), `${bad} must be ignored`);
   }
 });
 
-test('pricing, avatar and stats are NEVER imported', () => {
+test('avatar, stats and activities are NEVER imported; pricelist is staff-only', () => {
   const db = seed();
   importCusts(db, [{ ref: 'P1', name: 'Melcom Ltd', phone: '0240', country: 'Ghana' }]);
   const stored = db.prepare('SELECT * FROM customers').all();
   const text = JSON.stringify(stored);
-  for (const forbidden of ['CLASS A', 'GHS', 'PD94bWwBLOB', 'Opportunities']) {
+  for (const forbidden of ['PD94bWwBLOB', 'Opportunities']) {
     assert.ok(!text.includes(forbidden), `leaked ${forbidden} into the customer master`);
   }
+  // pricelist IS stored (approved 2026-10-03) — a price-TIER name for staff. The
+  // customer-facing leak tests below prove it never reaches a browser.
+  assert.equal(stored[0].pricelist, 'CLASS A (GHS)');
   const cols = db.prepare('PRAGMA table_info(customers)').all().map((c) => c.name.toLowerCase());
   for (const bad of CUSTOMER_FORBIDDEN_COLUMNS) {
     assert.ok(!cols.includes(bad), `customers table must not have a ${bad} column`);
@@ -359,13 +390,27 @@ test('pricing, avatar and stats are NEVER imported', () => {
   db.close();
 });
 
-test('an export without a stable Customer ID is REFUSED by default', () => {
+test('an export WITHOUT an Odoo Customer ID imports, and no id is invented', () => {
+  // Approved 2026-10-03: this phase has no Odoo API and does not require an Odoo
+  // id. Rows are keyed on display name; odoo_customer_ref stays NULL rather than
+  // being fabricated, so real ids can be backfilled later.
   const db = seed();
   const { mapping } = mapCustomerHeaders(['Display Name', 'Phone']);
   const recs = [normalizeCustomer({ 'Display Name': 'Melcom Ltd', Phone: '0240' }, mapping)];
-  assert.throws(() => importCustomers(db, recs), (e) => e instanceof CustomerImportError && /Customer ID/.test(e.message),
-    'name and phone are not permanent identities');
-  assert.equal(counts(db).customers, 0, 'nothing imported');
+  const r = importCustomers(db, recs);
+  assert.equal(r.created, 1);
+  const c = db.prepare('SELECT * FROM customers').get();
+  assert.equal(c.name, 'Melcom Ltd');
+  assert.equal(c.odoo_customer_ref, null, 'no Odoo id invented');
+  assert.equal(c.phone, '0240', 'phone stored as a string, never as identity');
+  db.close();
+});
+
+test('a row with no name is still refused', () => {
+  const db = seed();
+  assert.throws(() => importCustomers(db, [{ name: null, phone: '024' }]),
+    (e) => e instanceof CustomerImportError && /display name/i.test(e.message));
+  assert.equal(counts(db).customers, 0);
   db.close();
 });
 
@@ -399,10 +444,17 @@ test('re-importing identical customer data changes nothing (idempotent)', () => 
   db.close();
 });
 
-test('a customer absent from the export goes inactive, never deleted', () => {
+test('a customer absent from the export goes inactive ONLY when asked, never deleted', () => {
   const db = seed();
   importCusts(db, [{ ref: 'A', name: 'Alpha' }, { ref: 'B', name: 'Beta' }]);
-  const r = importCusts(db, [{ ref: 'A', name: 'Alpha' }]);
+
+  // default: absence is NOT treated as deletion — a contact export is often a
+  // filtered view, and a deactivated customer cannot be selected on a request
+  const soft = importCusts(db, [{ ref: 'A', name: 'Alpha' }]);
+  assert.equal(soft.deactivated, 0, 'left alone by default');
+  assert.equal(db.prepare("SELECT is_active FROM customers WHERE odoo_customer_ref='B'").get().is_active, 1);
+
+  const r = importCusts(db, [{ ref: 'A', name: 'Alpha' }], { deactivateMissing: true });
   assert.equal(r.deactivated, 1);
   assert.equal(counts(db).customers, 2, 'still present');
   assert.equal(db.prepare("SELECT is_active FROM customers WHERE odoo_customer_ref='B'").get().is_active, 0);
@@ -459,7 +511,7 @@ test('an inactive customer\'s handle stops resolving', () => {
   const db = seed();
   importCusts(db, [{ ref: 'RP-9', name: 'Melcom Ltd' }, { ref: 'RP-10', name: 'Other Co' }]);
   const h = customerHandle('RP-9');
-  importCusts(db, [{ ref: 'RP-10', name: 'Other Co' }]);  // RP-9 deactivated
+  importCusts(db, [{ ref: 'RP-10', name: 'Other Co' }], { deactivateMissing: true }); // RP-9 deactivated
   assert.equal(resolveCustomerHandle(db, h), null);
   db.close();
 });
@@ -467,7 +519,7 @@ test('an inactive customer\'s handle stops resolving', () => {
 test('an inactive customer is not findable', () => {
   const db = seed();
   importCusts(db, [{ ref: 'A', name: 'Alpha Co' }, { ref: 'B', name: 'Alpha Two' }]);
-  importCusts(db, [{ ref: 'A', name: 'Alpha Co' }]);           // B deactivated
+  importCusts(db, [{ ref: 'A', name: 'Alpha Co' }], { deactivateMissing: true }); // B deactivated
   assert.deepEqual(searchCustomers(db, 'Alpha').items.map((i) => i.name), ['Alpha Co']);
   db.close();
 });
@@ -500,14 +552,17 @@ test('the customer request API never returns stock figures or internal ids', asy
   importCusts(db, [{ ref: 'RP-1', name: 'Melcom Ltd', phone: '0540000000', country: 'Ghana' }]);
   const { server, base } = await startApp(db);
   try {
+    const customer = db.prepare('SELECT id FROM customers WHERE name = ?').get('Melcom Ltd');
+    const cookie = await asCustomer(base, db, customer.id);
+
     const texts = [];
-    texts.push(await (await fetch(`${base}/api/catalog/customers?q=Melcom`)).text());
     texts.push(await (await fetch(`${base}/api/catalog/requests/stock-status`)).text());
+    texts.push(await (await fetch(`${base}/api/catalog/access`, { headers: { cookie } })).text());
     texts.push(await (await post(base, '/api/catalog/requests/validate', { lines: [{ barcode: THREE.barcode, quantityCtn: 99 }] })).text());
     const created = await post(base, '/api/catalog/requests', {
-      lines: [{ barcode: PLENTY.barcode, quantityCtn: 1 }], customerHandle: customerHandle('RP-1'),
-    });
-    assert.equal(created.status, 201, 'submitting by opaque handle works');
+      lines: [{ barcode: PLENTY.barcode, quantityCtn: 1 }],
+    }, cookie);
+    assert.equal(created.status, 201, 'an identified customer can submit');
     texts.push(await created.text());
 
     for (const t of texts) {
@@ -528,11 +583,11 @@ test('an over-stock rejection returns 409 and discloses no number', async () => 
   const db = seed();
   const { server, base } = await startApp(db);
   try {
+    const cookie = await asCustomer(base, db, someCustomer(db));
     const before = counts(db);
     const res = await post(base, '/api/catalog/requests', {
       lines: [{ barcode: THREE.barcode, quantityCtn: 5 }],
-      unlisted: { company: 'A', contact: 'B' },
-    });
+    }, cookie);
     assert.equal(res.status, 409);
     const body = await res.json();
     assert.equal(body.errors[0].code, RejectionCode.INSUFFICIENT_STOCK);
@@ -562,7 +617,7 @@ test('the customer stock-status endpoint reveals the verdict but not the timesta
 
 test('staff DO see the stock timestamp and the submitted requests', async () => {
   const db = seed();
-  submitRequest(db, { lines: [line(PLENTY, 2)], unlisted: { company: 'Melcom', contact: 'Ama' } });
+  submitRequest(db, { lines: [line(PLENTY, 2)], unlisted: { company: 'Melcom', contact: 'Ama', phone: '0240000000' } });
   const { server, base } = await startApp(db);
   try {
     const status = await (await fetch(`${base}/api/requests/stock-status`)).json();
