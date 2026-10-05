@@ -101,6 +101,11 @@ export function applyMigrations(db) {
     // would make impossible. See the threat model in domain/access-codes.js.
     access_code: 'TEXT',
     access_code_issued_at: 'TEXT',
+    // Where this customer's orders go (2026-10-05). Captured when a new company
+    // asks for access, and pre-filled on their requests. Nullable because the
+    // customers imported from Odoo have no address — they are asked on their
+    // first request instead, never blocked.
+    delivery_address: 'TEXT',
   });
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ux_customers_odoo_ref
              ON customers(odoo_customer_ref) WHERE odoo_customer_ref IS NOT NULL`);

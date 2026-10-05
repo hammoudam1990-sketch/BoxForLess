@@ -712,30 +712,39 @@ test('DA4b. the customer-search endpoint that enumerated the customer master is 
   db.close();
 });
 
-test('DA5. the EXISTING customer flow is unchanged and stores no address', () => {
+test('DA5. an existing customer carries their stored address onto each request', () => {
   const db = freshDb();
   seedProductAndBatch(db);
   confirmCustomerImport(db, preview(db, [{ name: 'Melcom Ltd' }]).batchId);
-  const match = resolveCustomerHandle(db, searchCustomers(db, 'Melcom').items[0].handle);
+  const match = db.prepare('SELECT id FROM customers WHERE name = ?').get('Melcom Ltd');
 
-  const res = submitRequest(db, { lines: [{ barcode: '555', quantityCtn: 1 }], customerId: match.id });
-  const { request, customer } = getRequest(db, res.requestId);
-  assert.equal(customer.type, 'EXISTING_CUSTOMER');
-  assert.equal(request.delivery_address, null,
-    "an existing customer's address belongs on the customer record, not the request");
-  assert.equal(request.unlisted_contact, null);
+  // An imported customer has no address, and must NOT be blocked by that — the
+  // address requirement applies to a company ASKING for access, not to the 504
+  // already in the master.
+  const none = submitRequest(db, { lines: [{ barcode: '555', quantityCtn: 1 }], customerId: match.id });
+  assert.equal(getRequest(db, none.requestId).request.delivery_address, null);
 
-  // A client can send BOTH a selected customer and an address. The customer link
-  // wins: the address is a New Customer field, so it must not be attached to a
-  // request that belongs to a customer-master record.
-  const both = submitRequest(db, {
+  db.prepare('UPDATE customers SET delivery_address = ? WHERE id = ?').run('5 Stored Street, Accra', match.id);
+
+  const stored = submitRequest(db, { lines: [{ barcode: '555', quantityCtn: 1 }], customerId: match.id });
+  const r1 = getRequest(db, stored.requestId);
+  assert.equal(r1.customer.type, 'EXISTING_CUSTOMER');
+  assert.equal(r1.request.delivery_address, '5 Stored Street, Accra', 'the stored address is attached');
+  assert.equal(r1.customer.deliveryAddress, '5 Stored Street, Accra', 'and staff can see where it goes');
+
+  // A one-off redirection belongs to THAT request; it must not rewrite the
+  // address held on the customer record.
+  const redirected = submitRequest(db, {
     lines: [{ barcode: '555', quantityCtn: 1 }],
     customerId: match.id,
-    unlisted: { contact: 'Someone', phone: '024', address: 'IGNORED-ADDRESS' },
+    deliveryAddress: '9 Other Road, Tema',
   });
-  const r2 = getRequest(db, both.requestId);
-  assert.equal(r2.customer.type, 'EXISTING_CUSTOMER');
-  assert.equal(r2.request.delivery_address, null, 'address ignored for an existing customer');
+  assert.equal(getRequest(db, redirected.requestId).request.delivery_address, '9 Other Road, Tema');
+  assert.equal(
+    db.prepare('SELECT delivery_address FROM customers WHERE id = ?').get(match.id).delivery_address,
+    '5 Stored Street, Accra',
+    'the customer record is unchanged by a one-off delivery',
+  );
   db.close();
 });
 

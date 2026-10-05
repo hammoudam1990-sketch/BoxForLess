@@ -221,9 +221,16 @@ export function submitRequest(db, payload = {}, opts = {}) {
     const reference = nextReference(db, now);
     // Delivery address is captured on the New Customer path only; an existing
     // customer's address lives in the customer record, not on the request.
-    const deliveryAddress = customerId
-      ? null
-      : (unlisted && String(unlisted.address || '').trim()) || null;
+    // Where this order goes. The customer may edit it for a one-off delivery, in
+    // which case the change belongs to THIS request — their stored address is not
+    // rewritten, because a single redirected delivery is not a move.
+    const typedAddress = String(payload.deliveryAddress ?? '').trim().slice(0, 500);
+    const storedAddress = customerId
+      ? (db.prepare('SELECT delivery_address FROM customers WHERE id = ?').get(customerId)?.delivery_address || null)
+      : null;
+    const deliveryAddress = typedAddress
+      || storedAddress
+      || (unlisted && String(unlisted.address || '').trim()) || null;
     const info = db.prepare(
       `INSERT INTO requests
          (reference, customer_id, unlisted_company, unlisted_contact, unlisted_phone,
@@ -304,8 +311,10 @@ export function customerSummary(request) {
       company: request.customer_name || null,
       contact: null,
       phone: null,
-      // an existing customer's address belongs on the customer record, not here
-      deliveryAddress: null,
+      // The address this particular order goes to, which may differ from the one
+      // on the customer record if the customer redirected this delivery. It used
+      // to be null here, which hid the destination from the staff who pack it.
+      deliveryAddress: request.delivery_address || null,
     };
   }
   const company = request.unlisted_company || null;

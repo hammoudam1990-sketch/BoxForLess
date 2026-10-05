@@ -202,15 +202,24 @@ async function renderDrawer(message = '') {
            <input id="uPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Phone number" /></div>
          <div class="c-field"><label for="uCompany">Company name (optional)</label>
            <input id="uCompany" type="text" autocomplete="organization" placeholder="Company, if any" /></div>
-         <div class="c-field"><label for="uAddress">Delivery address (optional)</label>
-           <textarea id="uAddress" rows="3" autocomplete="street-address"
-             placeholder="Enter delivery address…"></textarea></div>
+         <div class="c-field"><label for="uAddress">Delivery address</label>
+           <textarea id="uAddress" rows="3" autocomplete="street-address" required
+             placeholder="Where should we deliver?"></textarea>
+           <div class="c-hint">We need this before we can supply you.</div></div>
          <button type="button" class="c-btn" data-send-access>Request an access code</button>
          <button type="button" class="c-link" data-have-code>← I have a code</button>
        </div>`
     : accessCustomer
+      // The saved address is pre-filled and editable: a customer can redirect one
+      // delivery without it rewriting the address held on their record.
       ? `<div class="c-selected">Requesting as <b>${esc(accessCustomer.name)}</b>
-           <button type="button" class="c-link" data-exit-access>Not you?</button></div>`
+           <button type="button" class="c-link" data-exit-access>Not you?</button></div>
+         <div class="c-field"><label for="reqAddress">Delivery address</label>
+           <textarea id="reqAddress" rows="3" autocomplete="street-address"
+             placeholder="Where should we deliver?">${esc(accessCustomer.deliveryAddress || '')}</textarea>
+           <div class="c-hint">${accessCustomer.deliveryAddress
+    ? 'Change it if this order goes somewhere else.'
+    : 'We do not have an address for you yet.'}</div></div>`
       // iOS NOTE, and do not "tidy" these attributes away:
       //   autocomplete="one-time-code" made Safari watch for an SMS passcode and
       //     re-evaluate the field on every keystroke, which dropped focus and shut
@@ -342,7 +351,11 @@ async function submit() {
   // Lines and notes only. WHO is requesting comes from the signed access-code
   // session on the server — the browser cannot name a customer, so it cannot
   // submit a request in another company's name.
-  const payload = { lines: toRequestLines(), notes: el.querySelector('#reqNotes')?.value || null };
+  const payload = {
+    lines: toRequestLines(),
+    notes: el.querySelector('#reqNotes')?.value || null,
+    deliveryAddress: el.querySelector('#reqAddress')?.value?.trim() || null,
+  };
 
   try {
     const res = await getJSON('/api/catalog/requests', {

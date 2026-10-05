@@ -113,10 +113,14 @@ export function resolveAccessCode(db, input) {
   const code = normalizeAccessCode(input);
   if (code.length !== CODE_LENGTH) return null;
   const rows = db.prepare(
-    'SELECT id, name, access_code FROM customers WHERE is_active = 1 AND access_code IS NOT NULL'
+    'SELECT id, name, access_code, delivery_address FROM customers WHERE is_active = 1 AND access_code IS NOT NULL'
   ).all();
   for (const row of rows) {
-    if (codesMatch(row.access_code, code)) return { id: row.id, name: row.name };
+    // delivery_address travels with the match so the sign-in reply can pre-fill
+    // it; the caller decides what reaches the browser.
+    if (codesMatch(row.access_code, code)) {
+      return { id: row.id, name: row.name, delivery_address: row.delivery_address || null };
+    }
   }
   return null;
 }

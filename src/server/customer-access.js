@@ -65,7 +65,9 @@ export function currentCustomer(req) {
   try {
     const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (!(Number(session.exp) > Date.now())) return null;
-    const row = req.db.prepare('SELECT id, name FROM customers WHERE id = ? AND is_active = 1').get(Number(session.cid));
+    const row = req.db.prepare(
+      'SELECT id, name, delivery_address FROM customers WHERE id = ? AND is_active = 1'
+    ).get(Number(session.cid));
     return row || null;
   } catch { return null; }
 }
@@ -101,14 +103,23 @@ export function enterAccessCode(req, res) {
 
   attempts.delete(ip);
   setCookie(res, Buffer.from(JSON.stringify({ cid: customer.id, exp: now + sessionSeconds() * 1000 })).toString('base64url'));
-  res.json({ ok: true, customer: { name: customer.name } });
+  res.json({ ok: true, customer: publicCustomer(customer) });
+}
+
+/**
+ * What a customer may see about themselves. Their own name and their own delivery
+ * address — never the internal id, the Odoo ref, the code, or anything belonging
+ * to another customer. Built field by field so a column added later cannot leak.
+ */
+function publicCustomer(row) {
+  return { name: row.name, deliveryAddress: row.delivery_address || null };
 }
 
 /** GET — who am I? The name only; never the id or the code. */
 export function accessStatus(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const customer = currentCustomer(req);
-  res.json(customer ? { authenticated: true, customer: { name: customer.name } } : { authenticated: false });
+  res.json(customer ? { authenticated: true, customer: publicCustomer(customer) } : { authenticated: false });
 }
 
 export function exitAccess(_req, res) {

@@ -36,8 +36,13 @@ const text = (v, max) => {
 export function createAccessRequest(db, payload = {}, now = new Date()) {
   const contact = text(payload.contact, 200);
   const phone = text(payload.phone, 60);
+  const address = text(payload.address, 500);
   if (!contact) throw new AccessRequestError('Please give a contact name.');
   if (!phone) throw new AccessRequestError('Please give a phone number.');
+  // Required since 2026-10-05: a company that cannot be delivered to cannot be
+  // supplied, so the address is collected before access is granted rather than
+  // chased later. Company stays optional — an individual buyer may not have one.
+  if (!address) throw new AccessRequestError('Please give a delivery address.');
 
   const ts = now.toISOString();
   const info = db.prepare(
@@ -45,7 +50,7 @@ export function createAccessRequest(db, payload = {}, now = new Date()) {
      VALUES (?,?,?,?,?,?,?,?,?)`
   ).run(
     text(payload.company, 200), contact, phone,
-    text(payload.email, 200), text(payload.address, 500), text(payload.note, 1000),
+    text(payload.email, 200), address, text(payload.note, 1000),
     AccessRequestStatus.PENDING, ts, ts,
   );
   return { id: Number(info.lastInsertRowid), status: AccessRequestStatus.PENDING };
@@ -105,11 +110,19 @@ export function approveAccessRequest(db, id, now = new Date()) {
     let customerId;
     if (existing) {
       customerId = existing.id;
+      // Fill a missing address from what they supplied; never overwrite one the
+      // customer master already holds.
+      if (request.delivery_address) {
+        db.prepare(
+          `UPDATE customers SET delivery_address = ?, updated_at = ?
+            WHERE id = ? AND (delivery_address IS NULL OR delivery_address = '')`
+        ).run(request.delivery_address, ts, customerId);
+      }
     } else {
       const info = db.prepare(
-        `INSERT INTO customers (name, phone, email, is_active, created_at, updated_at)
-         VALUES (?,?,?,1,?,?)`
-      ).run(name, request.phone, request.email, ts, ts);
+        `INSERT INTO customers (name, phone, email, delivery_address, is_active, created_at, updated_at)
+         VALUES (?,?,?,?,1,?,?)`
+      ).run(name, request.phone, request.email, request.delivery_address, ts, ts);
       customerId = Number(info.lastInsertRowid);
     }
 

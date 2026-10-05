@@ -270,10 +270,12 @@ test('the access session reveals the name only — never the internal id', async
   try {
     const entered = await post(base, '/api/catalog/access', { code: issueAccessCode(db, id) });
     const body = await entered.json();
-    assert.deepEqual(body, { ok: true, customer: { name: 'Melcom Ltd' } });
+    // name and their OWN delivery address — nothing else. No internal id, no Odoo
+    // ref, no code, nothing belonging to another customer.
+    assert.deepEqual(body, { ok: true, customer: { name: 'Melcom Ltd', deliveryAddress: null } });
 
     const status = await (await fetch(`${base}/api/catalog/access`, { headers: { cookie: cookieOf(entered) } })).json();
-    assert.deepEqual(status, { authenticated: true, customer: { name: 'Melcom Ltd' } });
+    assert.deepEqual(status, { authenticated: true, customer: { name: 'Melcom Ltd', deliveryAddress: null } });
   } finally { server.close(); }
   db.close();
 });
@@ -317,9 +319,35 @@ test('a contact name and phone are required to ask', () => {
   db.close();
 });
 
+test('a delivery address is required to ask for access', () => {
+  const db = freshDb();
+  // A company that cannot be delivered to cannot be supplied, so the address is
+  // collected before access is granted rather than chased afterwards.
+  assert.throws(
+    () => createAccessRequest(db, { company: 'No Address Co', contact: 'Sam', phone: '0244' }),
+    AccessRequestError,
+  );
+  assert.throws(
+    () => createAccessRequest(db, { company: 'Blank Address Co', contact: 'Sam', phone: '0244', address: '   ' }),
+    AccessRequestError,
+  );
+  assert.equal(listAccessRequests(db).total, 0, 'nothing was written');
+
+  // and it lands on the customer record when the request is approved
+  const { id } = createAccessRequest(db, {
+    company: 'Addressed Co', contact: 'Sam', phone: '0244', address: '12 Test Road, Accra',
+  });
+  const approved = approveAccessRequest(db, id);
+  assert.equal(
+    db.prepare('SELECT delivery_address FROM customers WHERE id = ?').get(approved.customerId).delivery_address,
+    '12 Test Road, Accra',
+  );
+  db.close();
+});
+
 test('approving creates the customer, issues a code, and links the two', () => {
   const db = freshDb();
-  const { id } = createAccessRequest(db, { company: 'New Co', contact: 'Sam', phone: '0244' });
+  const { id } = createAccessRequest(db, { company: 'New Co', contact: 'Sam', phone: '0244', address: 'Accra' });
   const result = approveAccessRequest(db, id);
 
   assert.equal(result.status, 'APPROVED');
@@ -336,7 +364,7 @@ test('approving creates the customer, issues a code, and links the two', () => {
 test('approving a company already in the master reuses it instead of duplicating', () => {
   const db = freshDb();
   const existing = customer(db, 'Melcom Ltd');
-  const { id } = createAccessRequest(db, { company: 'melcom ltd', contact: 'Ama', phone: '0244' });
+  const { id } = createAccessRequest(db, { company: 'melcom ltd', contact: 'Ama', phone: '0244', address: 'Accra' });
   const result = approveAccessRequest(db, id);
 
   assert.equal(result.customerId, existing, 'matched the existing customer');
@@ -346,7 +374,7 @@ test('approving a company already in the master reuses it instead of duplicating
 
 test('an approval cannot be applied twice', () => {
   const db = freshDb();
-  const { id } = createAccessRequest(db, { company: 'New Co', contact: 'Sam', phone: '0244' });
+  const { id } = createAccessRequest(db, { company: 'New Co', contact: 'Sam', phone: '0244', address: 'Accra' });
   const first = approveAccessRequest(db, id);
   assert.throws(() => approveAccessRequest(db, id), AccessRequestError);
   // the code issued the first time must still be the live one
@@ -357,7 +385,7 @@ test('an approval cannot be applied twice', () => {
 
 test('rejecting keeps the record and creates no customer', () => {
   const db = freshDb();
-  const { id } = createAccessRequest(db, { company: 'Not For Us', contact: 'Sam', phone: '0244' });
+  const { id } = createAccessRequest(db, { company: 'Not For Us', contact: 'Sam', phone: '0244', address: 'Accra' });
   assert.equal(rejectAccessRequest(db, id, 'duplicate account').status, 'REJECTED');
   assert.equal(db.prepare('SELECT COUNT(*) n FROM customers').get().n, 0);
   assert.equal(listAccessRequests(db).total, 1, 'the record of having asked is kept');

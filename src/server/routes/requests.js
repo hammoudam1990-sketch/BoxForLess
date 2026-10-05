@@ -87,6 +87,9 @@ customerRouter.post('/requests', requireCustomer, (req, res, next) => {
       // can no longer submit a request in another company's name.
       customerId: req.customer.id,
       unlisted: null,
+      // An address typed for THIS order. Empty falls back to the one stored on
+      // the customer; see submitRequest.
+      deliveryAddress: body.deliveryAddress ? String(body.deliveryAddress).slice(0, 500) : null,
       notes: body.notes ? String(body.notes).slice(0, 2000) : null,
     });
     // confirmation only — no internal request id
