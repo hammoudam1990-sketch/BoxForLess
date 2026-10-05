@@ -62,10 +62,12 @@ function invitation(name, code, catalogUrl) {
     + 'Enter this code when you send your request. Please keep it private — it is for your company only.';
 }
 
-export async function renderAccessCodes(view, query = '') {
-  const data = await api.customerCodes({ q: query, limit: 500 });
-
-  const rows = data.items.map((c) => `
+/**
+ * One customer's row. Kept separate from the page shell because the shell —
+ * crucially the search box — must survive a search.
+ */
+function codeRow(c) {
+  return `
     <tr data-id="${c.id}">
       <td>${esc(c.name)}${c.is_active ? '' : ' <span class="badge">inactive</span>'}</td>
       <td class="code-value code">${c.access_code_display ? esc(c.access_code_display) : '<span class="muted">none</span>'}</td>
@@ -76,7 +78,33 @@ export async function renderAccessCodes(view, query = '') {
           <button data-copy-msg>Copy message</button>` : ''}
         <button class="ghost" data-issue>${c.access_code ? 'Reissue' : 'Issue'}</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+}
+
+/**
+ * Replace ONLY the table body and the count.
+ *
+ * This used to re-run renderAccessCodes(), which rewrote view.innerHTML — and that
+ * destroyed the search box the operator was typing into. Searching is debounced, so
+ * the rebuild landed a moment AFTER they paused: the first few characters arrived,
+ * then focus vanished and everything typed next went nowhere. Never rebuild an
+ * ancestor of the field that triggered the update.
+ */
+async function refreshCodeRows(view, query) {
+  const data = await api.customerCodes({ q: query, limit: 500 });
+  const body = view.querySelector('#codeRows');
+  if (!body) return data;
+  body.innerHTML = data.items.map(codeRow).join('');
+  const count = view.querySelector('#codeCount');
+  if (count) count.textContent = `${data.total} customer${data.total === 1 ? '' : 's'}`;
+  wireCodeRows(view, data);
+  return data;
+}
+
+export async function renderAccessCodes(view, query = '') {
+  const data = await api.customerCodes({ q: query, limit: 500 });
+
+  const rows = data.items.map(codeRow).join('');
 
   view.innerHTML = `
     <h1>Customer access codes</h1>
@@ -88,7 +116,7 @@ export async function renderAccessCodes(view, query = '') {
     <div class="card">
       <div class="controls">
         <input id="codeSearch" type="search" placeholder="Search customer name…" value="${esc(query)}" />
-        <span class="muted">${data.total} customer${data.total === 1 ? '' : 's'}</span>
+        <span class="muted" id="codeCount">${data.total} customer${data.total === 1 ? '' : 's'}</span>
       </div>
       <p class="muted" style="margin:10px 0">
         <b>Copy message</b> puts a ready-to-send note on the clipboard — greeting,
@@ -98,7 +126,7 @@ export async function renderAccessCodes(view, query = '') {
       </p>
       <table>
         <thead><tr><th>Customer</th><th>Access code</th><th>Issued</th><th></th></tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody id="codeRows">${rows}</tbody>
       </table>
     </div>`;
 
@@ -110,9 +138,16 @@ export async function renderAccessCodes(view, query = '') {
   let t;
   search.addEventListener('input', () => {
     clearTimeout(t);
-    t = setTimeout(() => renderAccessCodes(view, search.value.trim()), 250);
+    // Refreshes the ROWS only. Re-rendering the whole view here would destroy this
+    // very input mid-search.
+    t = setTimeout(() => refreshCodeRows(view, search.value.trim()), 250);
   });
 
+  wireCodeRows(view, data);
+}
+
+/** Wire the per-row buttons. Re-run whenever the rows are replaced. */
+function wireCodeRows(view, data) {
   const codeOf = (btn) => btn.closest('tr').querySelector('.code-value').textContent.trim();
   const nameOf = (btn) => btn.closest('tr').querySelector('td').textContent.trim();
 
@@ -133,7 +168,7 @@ export async function renderAccessCodes(view, query = '') {
     b.disabled = true;
     try {
       await api.issueCustomerCode(row.dataset.id);
-      await renderAccessCodes(view, search.value.trim());
+      await refreshCodeRows(view, view.querySelector('#codeSearch')?.value.trim() || '');
     } catch (e) {
       b.disabled = false;
       window.alert(e.message);
