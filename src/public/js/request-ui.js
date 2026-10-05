@@ -307,7 +307,18 @@ function wireDrawer() {
         body: JSON.stringify({ code: codeInput?.value || '' }),
       });
       askingForAccess = false;
-      renderDrawer();
+      await renderDrawer();
+      // Move to the Submit button and show it.
+      //
+      // On a phone the button sits below the keyboard, so a customer who has just
+      // typed their code cannot see it come alive and assumes nothing happened.
+      // Focusing it closes the keyboard, scrolls it into view, and means the next
+      // Enter sends the request — a focused button activates on Enter natively.
+      const submitBtn = drawerEl().querySelector('[data-submit]:not([disabled])');
+      if (submitBtn) {
+        submitBtn.focus();
+        submitBtn.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
     } catch (e) {
       if (errBox) errBox.textContent = e.message || 'That access code was not recognised.';
       if (btn) { btn.disabled = false; btn.textContent = 'Continue'; }

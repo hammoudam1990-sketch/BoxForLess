@@ -45,18 +45,41 @@ export function quantityOf(barcode) {
   return line ? line.quantityCtn : 0;
 }
 
-/** Set an exact carton count; 0 or less removes the line. */
+/**
+ * Set an exact carton count; 0 or less removes the line.
+ *
+ * A line KEEPS ITS POSITION when its quantity changes. This used to filter the
+ * line out and push it back on, which sent it to the bottom of the cart: pressing
+ * − made the row jump away from under the customer's finger, and the next press
+ * landed on whatever had moved up into its place.
+ */
 export function setQuantity(product, quantityCtn) {
   const qty = Math.floor(Number(quantityCtn) || 0);
-  const lines = readCart().filter((l) => l.barcode !== product.barcode);
-  if (qty >= 1) {
-    lines.push({
-      barcode: product.barcode,
-      quantityCtn: qty,
-      name: product.name,     // display only; the server re-reads the real name
-      pack: product.pack || null,
-    });
+  const lines = readCart();
+  const at = lines.findIndex((l) => l.barcode === product.barcode);
+
+  if (qty < 1) {
+    if (at >= 0) lines.splice(at, 1);
+    return writeCart(lines);
   }
+
+  if (at >= 0) {
+    // update in place; keep the label already held if the caller did not pass one
+    lines[at] = {
+      ...lines[at],
+      quantityCtn: qty,
+      name: product.name ?? lines[at].name,
+      pack: product.pack ?? lines[at].pack ?? null,
+    };
+    return writeCart(lines);
+  }
+
+  lines.push({
+    barcode: product.barcode,
+    quantityCtn: qty,
+    name: product.name,     // display only; the server re-reads the real name
+    pack: product.pack || null,
+  });
   return writeCart(lines);
 }
 
