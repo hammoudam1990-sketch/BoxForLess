@@ -66,6 +66,13 @@ export function renderCartBar() {
 let accessCustomer = null;   // { name } | null
 let askingForAccess = false; // showing the "I don't have a code" form
 
+// Mirrors domain/access-codes.js. Only used to decide when a typed code is
+// COMPLETE enough to check; the server alone decides whether it is correct.
+const ACCESS_CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+const ACCESS_CODE_LENGTH = 8;
+const normalizeCodeInput = (v) => String(v ?? '').toUpperCase().split('')
+  .filter((c) => ACCESS_CODE_ALPHABET.includes(c)).join('');
+
 async function refreshAccess() {
   try {
     const s = await getJSON('/api/catalog/access');
@@ -324,9 +331,26 @@ function wireDrawer() {
       if (btn) { btn.disabled = false; btn.textContent = 'Continue'; }
     }
   };
-  el.querySelector('[data-enter-code]')?.addEventListener('click', enterCode);
+  el.querySelector('[data-enter-code]')?.addEventListener('click', () => enterCode());
   // Enter submits, so the phone keyboard's Go key works.
   codeInput?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); enterCode(); } });
+
+  // Check the code as soon as it is complete, without waiting for Continue.
+  //
+  // A code is a fixed eight characters, so there is nothing to wait for once the
+  // eighth is typed. Customers reported typing their code and seeing Submit stay
+  // grey — they had not pressed Continue, and had no reason to think they needed
+  // to. Continue stays for pasting and for retrying a refused code.
+  //
+  // `lastTried` stops a re-check firing on every keystroke past the eighth, which
+  // would otherwise burn the server's per-IP attempt limit.
+  let lastTried = null;
+  codeInput?.addEventListener('input', () => {
+    const complete = normalizeCodeInput(codeInput.value);
+    if (complete.length !== ACCESS_CODE_LENGTH || complete === lastTried) return;
+    lastTried = complete;
+    enterCode();
+  });
 
   el.querySelector('[data-send-access]')?.addEventListener('click', async () => {
     const btn = el.querySelector('[data-send-access]');
