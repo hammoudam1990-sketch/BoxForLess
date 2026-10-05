@@ -99,12 +99,18 @@ function drawerEl() {
 function trackKeyboardInset() {
   const vv = window.visualViewport;
   if (!vv) return;
+  // visualViewport fires `scroll` constantly while a phone keyboard settles.
+  // Writing the variable on every one of those would relayout the panel under the
+  // customer's fingers, so only an actual change is applied.
+  let lastCovered = -1;
   const apply = () => {
     const el = document.getElementById('cartDrawer');
     if (!el || el.classList.contains('hidden')) return;
     // What the keyboard covers at the bottom of the layout viewport.
-    const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-    el.style.setProperty('--c-kb', `${Math.round(covered)}px`);
+    const covered = Math.round(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+    if (covered === lastCovered) return;
+    lastCovered = covered;
+    el.style.setProperty('--c-kb', `${covered}px`);
   };
   vv.addEventListener('resize', apply);
   vv.addEventListener('scroll', apply);
@@ -140,9 +146,43 @@ function lineRow(l) {
     </div>`;
 }
 
+/**
+ * Capture what the customer has typed into the code field, so a re-render cannot
+ * throw it away.
+ *
+ * renderDrawer() rebuilds the whole panel with innerHTML, which destroys the input
+ * and with it the value, the caret and the focus. Anything that re-renders while
+ * someone is typing — a stepper, a late fetch, a resize-driven update — therefore
+ * interrupts them mid-code. Rather than hunt for every caller, the field is
+ * restored afterwards, which makes typing survive a re-render whatever caused it.
+ */
+function captureCodeField(el) {
+  const input = el.querySelector('#accessCode');
+  if (!input) return null;
+  return {
+    value: input.value,
+    start: input.selectionStart,
+    end: input.selectionEnd,
+    focused: document.activeElement === input,
+  };
+}
+
+function restoreCodeField(el, saved) {
+  if (!saved) return;
+  const input = el.querySelector('#accessCode');
+  if (!input) return;
+  input.value = saved.value;
+  if (!saved.focused) return;
+  input.focus({ preventScroll: true });
+  // preventScroll matters on a phone: without it the browser scrolls the field
+  // into view on every restore, which is itself enough to disturb typing.
+  try { input.setSelectionRange(saved.start, saved.end); } catch { /* not all inputs support it */ }
+}
+
 async function renderDrawer(message = '') {
   const el = drawerEl();
   const lines = readCart();
+  const typedCode = captureCodeField(el);
 
   // Ask the server whether requests can be submitted at all right now.
   let canSubmit = true; let blockedMessage = null;
@@ -213,6 +253,7 @@ async function renderDrawer(message = '') {
     </section>`;
 
   wireDrawer();
+  restoreCodeField(el, typedCode);
 }
 
 function wireDrawer() {
