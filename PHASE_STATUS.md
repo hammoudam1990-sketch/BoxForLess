@@ -90,25 +90,84 @@ Released as `v0.3.0`. Detail: `STAGE_3_REQUESTS.md`.
   → Still true for customers: an access code is not an account and has no password.
     Stage 4 did add a **staff** sign-in for the admin area.
 
+## Stage 4 — Customer Access, Customer Master & Staff Sign-in ✅ COMPLETE
+
+Implemented, server-verified and **verified on a real phone (2026-10-05 / 06)**.
+Released as `v0.4.1`. Detail: `STAGE_4_ACCESS.md`.
+
+- [x] **Closed the customer-master exposure.** `GET /api/catalog/customers` is
+      removed; it let anyone holding the public catalogue link enumerate all 504
+      customer names. A per-customer access code replaced it.
+- [x] Access codes — 8 characters, no ambiguous letters, rate-limited, reissuable,
+      revoked by deactivating the customer.
+- [x] **Submission identity comes from the signed session, never the request body** —
+      a customer cannot order in another company's name even by crafting the payload.
+- [x] **The session ends at submission**, enforced server-side by a session epoch —
+      one salesman's phone visits several customers a day.
+- [x] "I don't have a code" → staff approve → code issued. Asking and ordering are
+      separate acts.
+- [x] Delivery address required of a new company; carried onto their requests;
+      editable per order without rewriting the customer record.
+- [x] Customer master import with its own audit; codes issued automatically.
+- [x] Staff sign-in over the admin area; `/catalog` stays public by design.
+- [x] Request accept · Excel export · **withdraw (reversible) and restore**.
+- [x] 280/280 tests; write paths exercised against a COPY of production.
+- [x] **Real-device verification PASSED** — seven checks, see `STAGE_4_ACCESS.md`.
+
+### Explicitly NOT in Stage 4
+- ❌ No pricing displayed. A price TIER NAME is stored; no amount anywhere (D2).
+- ❌ No customer accounts, logins or passwords — a code is not an account.
+- ❌ No quotations or Odoo quotation export.
+- ❌ No stock reservation; a request still holds nothing.
+- ❌ No direct Odoo connection.
+- ❌ No PCS; quantities remain CTN only.
+
+### Decisions closed in Stage 4
+| | |
+|---|---|
+| **D1** | Odoo has no customer identity, so the access code IS the identity. New customers are coded automatically on import. |
+| **D2** | `pricelist` stores a tier NAME, never an amount. No price displayed pending a CEO decision. |
+| **D3** | Absence on a customer import does NOT deactivate — a contact export is often a filtered view. |
+| **D4** | Deleting a request withdraws it reversibly; nothing is destroyed. |
+| **D5** | `/catalog` browsing stays public; the code gates *requesting*. |
+
 ## Explicitly NOT in Phase 1 (stop conditions honored)
 - ❌ No customer pricing (not imported, stored, or displayed).
 - ❌ No customer ordering / request cart / sales dashboard.
 - ❌ No quotation creation or Odoo quotation export.
 - ❌ No direct Odoo connection.
 
-## Future phases (schema already prepared)
-| Phase | Scope | Prepared by |
+## Still to come
+
+> The old numbered "Future phases" table was removed on 2026-10-06. It used a
+> SECOND numbering that disagreed with the stage names used everywhere else — its
+> "Phase 4 — Request Cart" is what shipped as **Stage 3**, and most of its rows
+> were already delivered. Two numbering schemes for the same work is worse than
+> none. The stages above are the record; what is genuinely outstanding is below.
+
+| Not built yet | Prepared by | Note |
 |---|---|---|
-| 2 | Image Library | STARTED — product photo capture+save implemented (scan page) |
-| 3 | Customer Product Catalog | ✅ DONE — Stage 2, see `STAGE_2_CATALOG.md` |
-| 4 | Request Cart | `requests`, `request_items` skeleton |
-| 5 | Sales Dashboard | audit tables, `sales_users` |
-| 6 | Odoo Quotation Export | `quotations` skeleton |
-| 7 | Repeated Product Master updates | the import engine (done) |
-| 8 | Direct Odoo integration | `source_odoo_id` identity, column aliases |
+| **Deployment** | — | **The only thing between this and real customers.** Runs on a private LAN address today. See `CONTINUE_HERE.md`. |
+| Image Library | `product_images`, `primary_image_id` | Partly there: photo capture and save work from the scan page. |
+| Sales Dashboard | audit tables, `sales_users` | |
+| Odoo Quotation Export | `quotations` skeleton | Blocked by the pricing decision (D2). |
+| Direct Odoo integration | `source_odoo_id`, column aliases | Would also supply the stable customer id that D1 works around. |
+| Showing prices | `customers.pricelist` holds a tier name | Awaiting the CEO decision (D2). Multiple price classes per customer type is a separate piece of work. |
 
 ## Open business decisions
-See the "Issues requiring business decisions" section of the handover / README.
-Summary: (1) Odoo export has **no stable product ID** — recommend adding one;
-(2) 39 barcodes contain embedded pack-size suffixes e.g. `...(*12)`;
-(3) 11 unusually short barcodes; (4) 7 negative forecasted values.
+
+**D1–D5 were closed on 2026-10-06** — see the table under Stage 4.
+
+Still open, all from the Phase 1 data-quality review and none of them blocking:
+
+1. The Odoo product export has **no stable product ID** — recommend adding one.
+   (The same gap on the customer side is what D1 works around.)
+2. 39 barcodes contain embedded pack-size suffixes, e.g. `...(*12)`.
+3. 11 unusually short barcodes.
+4. 7 negative forecasted values.
+
+A fifth, newer one worth a look: the product imports on 2026-10-05 and 2026-10-06
+both reported **`unchanged: 3883`** — every row identical to what was already
+stored. Either stock genuinely has not moved, or the export is not carrying current
+quantities. A daily import that changes nothing puts a fresh timestamp on stale
+numbers, which is worse than not importing at all.
