@@ -2,6 +2,67 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.1] — 2026-10-06 — Access-code polish, delivery addresses, and the open decisions closed
+
+Everything reported from real customer sessions on a phone, plus the four
+decisions Stage 4 had left open.
+
+### Added
+- **Delivery address is required to ask for access.** A company that cannot be
+  delivered to cannot be supplied, so it is collected before access is granted
+  rather than chased later. Approving writes it onto the customer record
+  (`customers.delivery_address`), filling a missing address and never overwriting
+  one already held.
+- **The address follows the customer.** Pre-filled on their request and editable
+  for a one-off delivery, which is stored on THAT request and does not rewrite
+  their record. The 504 imported customers have no address and are deliberately
+  **not blocked** — they are asked, not stopped.
+- **Access codes are issued automatically on a customer import** (D1), reported as
+  `codesIssued`. A code already held is never regenerated, so re-importing cannot
+  invalidate a code already sent.
+- **Withdrawn requests** (D4). Deleting marks a request `DELETED` with a
+  `deleted_at` stamp instead of destroying it; reference, customer, lines,
+  quantities and snapshots are kept. A Withdrawn tab lists them with the customer
+  and full order, and `POST /api/requests/:id/restore` brings one back.
+- The access code now **checks itself on the eighth character** — typing it is
+  entering it. Continue remains for pasting and retrying.
+
+### Fixed
+- **Cart lines jumped to the bottom on every +/−.** `setQuantity()` filtered the
+  line out and pushed it back on, so the row moved out from under the customer's
+  finger and the next press hit whatever had shifted up. Lines now update in
+  place. `test/cart.test.js` covers it.
+- **Searching the access-code list destroyed the search box mid-typing.** Its
+  debounce rebuilt the whole view, including the input. "ali" survived; everything
+  after the pause was lost. Only the table body is replaced now.
+- **A disabled button was faded blue, not grey**, so Submit never visibly turned
+  blue when a code was accepted — reported twice as a broken button when the logic
+  was correct all along.
+- `requests.delivery_address` had become dead: it only filled on the "unlisted"
+  path the access codes replaced, so every request since had stored NULL.
+- `customerSummary()` returned a null address for existing customers, hiding the
+  destination from the staff packing the order.
+- `resolveAccessCode()` did not select the address, so a sign-in reply came back
+  without one even when stored.
+- The access-code field survives a drawer re-render, keeping its value, caret and
+  focus.
+
+### Decisions closed
+- **D1** — Odoo has no customer identity, so the code is the identity; new
+  customers are coded automatically on import.
+- **D2** — `pricelist` stores a price-TIER NAME, never an amount, and no price is
+  displayed pending CEO approval. Amendment recorded in `CLAUDE.md`.
+- **D3** — absence on a customer import still does **not** deactivate; a contact
+  export is often a filtered view. Documented in `IMPORT_RULES.md`.
+- **D4** — the hard delete is gone; see Withdrawn requests above.
+
+### Verified on a real phone (2026-10-06)
+Code entry, auto-validation on the eighth character, and Submit turning grey → blue.
+
+### Tests
+279/279 (277 → 279 this release; 269 at v0.4.0).
+
+
 ## [0.4.0] — 2026-10-05 — Stage 4: customer access codes
 
 **Closes the customer-master exposure.** Before this change the catalog was public
