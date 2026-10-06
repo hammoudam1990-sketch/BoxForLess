@@ -409,6 +409,48 @@ test('the acknowledgement reveals nothing about who is already a customer', asyn
 // staff side
 // ---------------------------------------------------------------------------
 
+test('importing a customer list issues codes to the NEW customers automatically', async () => {
+  const db = freshDb();
+  const { createCustomerPreview, confirmCustomerImport } = await import('../src/import/customer-service.js');
+  const xlsx = (await import('xlsx')).default;
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+
+  const write = (names) => {
+    const ws = xlsx.utils.json_to_sheet(names.map((n) => ({ 'Display Name': n, Phone: '0244' })));
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, 'Sheet1');
+    const file = path.join(os.tmpdir(), `contacts-${Date.now()}-${Math.random().toString(36).slice(2)}.xlsx`);
+    xlsx.writeFile(wb, file);
+    return file;
+  };
+  const uploads = path.join(os.tmpdir(), `bfl-uploads-${Date.now()}`);
+
+  // first list
+  const a = createCustomerPreview(db, write(['Alpha Ltd', 'Beta Ltd']), 'a.xlsx', { uploadsDir: uploads });
+  const firstRun = confirmCustomerImport(db, a.batchId);
+  assert.equal(firstRun.counts.codesIssued, 2, 'both new customers get a code');
+  const alphaCode = db.prepare('SELECT access_code FROM customers WHERE name = ?').get('Alpha Ltd').access_code;
+  assert.ok(alphaCode);
+
+  // a later export that ADDS a company
+  const b = createCustomerPreview(db, write(['Alpha Ltd', 'Beta Ltd', 'Gamma Ltd']), 'b.xlsx', { uploadsDir: uploads });
+  const secondRun = confirmCustomerImport(db, b.batchId);
+  assert.equal(secondRun.counts.codesIssued, 1, 'only the newly added company needs one');
+
+  assert.ok(db.prepare('SELECT access_code FROM customers WHERE name = ?').get('Gamma Ltd').access_code,
+    'the new company can be sent a code immediately');
+  assert.equal(
+    db.prepare('SELECT access_code FROM customers WHERE name = ?').get('Alpha Ltd').access_code,
+    alphaCode,
+    're-importing must NOT change a code already sent to a customer',
+  );
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM customers WHERE access_code IS NULL').get().n, 0);
+  fs.rmSync(uploads, { recursive: true, force: true });
+  db.close();
+});
+
 test('staff can read every customer code back in order to send it', () => {
   const db = freshDb();
   const id = customer(db, 'Melcom Ltd');

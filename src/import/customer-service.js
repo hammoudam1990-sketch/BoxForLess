@@ -12,6 +12,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { readWorkbook } from './reader.js';
 import { mapCustomerHeaders, normalizeCustomer, previewCustomerImport, importCustomers } from '../domain/customers.js';
+import { backfillAccessCodes } from '../domain/access-codes.js';
 import config from '../config.js';
 
 function nowIso() { return new Date().toISOString(); }
@@ -107,11 +108,19 @@ export function confirmCustomerImport(db, batchId, opts = {}) {
 
   try {
     const counts = importCustomers(db, records, { ...opts, deactivateMissing: opts.deactivateMissing === true });
+
+    // Give every customer who still lacks one an access code, so a company that
+    // arrives in a later export can be sent their code straight away instead of
+    // waiting for someone to remember to run a script. Codes already issued are
+    // untouched — backfill only fills gaps — so nothing a customer already holds
+    // is invalidated by re-importing the list.
+    const codesIssued = backfillAccessCodes(db);
+
     db.prepare(
       `UPDATE customer_imports SET status='COMPLETED', confirmed_at=?,
          new_count=?, updated_count=?, unchanged_count=? WHERE id=?`
     ).run(nowIso(), counts.created, counts.updated, counts.unchanged, batch.id);
-    return { batchId: batch.id, status: 'COMPLETED', counts };
+    return { batchId: batch.id, status: 'COMPLETED', counts: { ...counts, codesIssued } };
   } catch (e) {
     db.prepare('UPDATE customer_imports SET status=?, notes=? WHERE id=?')
       .run('FAILED', `Apply failed: ${e.message}`, batch.id);
