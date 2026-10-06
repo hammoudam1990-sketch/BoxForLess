@@ -197,6 +197,42 @@ test('a signed-in customer CANNOT submit in another customer\'s name', async () 
   db.close();
 });
 
+test('the session ends with the order, so the next customer must enter their own code', async () => {
+  // A salesman carries ONE phone between several customers in a day. If the
+  // session outlived the order, the next customer's request would be filed under
+  // whoever ordered last.
+  const db = freshDb();
+  product(db);
+  const melcom = customer(db, 'Melcom Ltd');
+  const akil = customer(db, 'Akil Company Limited');
+  const { server, base } = await startApp(db);
+  try {
+    const entered = await post(base, '/api/catalog/access', { code: issueAccessCode(db, melcom) });
+    const cookie = cookieOf(entered);
+
+    const first = await post(base, '/api/catalog/requests', { lines: [{ barcode: '555', quantityCtn: 1 }] }, cookie);
+    assert.equal(first.status, 201, 'the first order goes through');
+
+    // the response itself clears the cookie
+    const cleared = (first.headers.getSetCookie?.() || []).join('; ');
+    assert.match(cleared, /bfl_customer=;/, 'the submission must clear the session cookie');
+    assert.match(cleared, /Max-Age=0/);
+
+    // and the server refuses the old cookie even if the browser keeps sending it
+    const second = await post(base, '/api/catalog/requests', { lines: [{ barcode: '555', quantityCtn: 1 }] }, cookie);
+    assert.equal(second.status, 401, 'a second order on the same session is refused');
+    assert.equal((await second.json()).code, 'ACCESS_CODE_REQUIRED');
+    assert.equal(db.prepare('SELECT COUNT(*) n FROM requests').get().n, 1, 'only the first order exists');
+
+    // the next customer signs in normally and their order is filed under THEM
+    const next = await post(base, '/api/catalog/access', { code: issueAccessCode(db, akil) });
+    const third = await post(base, '/api/catalog/requests', { lines: [{ barcode: '555', quantityCtn: 1 }] }, cookieOf(next));
+    assert.equal(third.status, 201);
+    assert.equal(db.prepare('SELECT customer_id FROM requests ORDER BY id DESC LIMIT 1').get().customer_id, akil);
+  } finally { server.close(); }
+  db.close();
+});
+
 test('an expired or forged session cookie does not let a request through', async () => {
   const db = freshDb();
   product(db);

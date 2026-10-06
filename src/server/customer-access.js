@@ -66,9 +66,14 @@ export function currentCustomer(req) {
     const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (!(Number(session.exp) > Date.now())) return null;
     const row = req.db.prepare(
-      'SELECT id, name, delivery_address FROM customers WHERE id = ? AND is_active = 1'
+      'SELECT id, name, delivery_address, session_epoch FROM customers WHERE id = ? AND is_active = 1'
     ).get(Number(session.cid));
-    return row || null;
+    if (!row) return null;
+    // A token issued before the customer's sessions were ended is refused, even
+    // if the browser still has the cookie. This is what makes "the session ends
+    // with the order" a guarantee rather than a request to the browser.
+    if (Number(session.ep ?? 0) !== Number(row.session_epoch ?? 0)) return null;
+    return row;
   } catch { return null; }
 }
 
@@ -102,7 +107,12 @@ export function enterAccessCode(req, res) {
   if (!customer) return res.status(401).json({ error: 'That access code was not recognised.' });
 
   attempts.delete(ip);
-  setCookie(res, Buffer.from(JSON.stringify({ cid: customer.id, exp: now + sessionSeconds() * 1000 })).toString('base64url'));
+  const epoch = Number(
+    req.db.prepare('SELECT session_epoch FROM customers WHERE id = ?').get(customer.id)?.session_epoch ?? 0
+  );
+  setCookie(res, Buffer.from(JSON.stringify({
+    cid: customer.id, ep: epoch, exp: now + sessionSeconds() * 1000,
+  })).toString('base64url'));
   res.json({ ok: true, customer: publicCustomer(customer) });
 }
 
@@ -122,9 +132,29 @@ export function accessStatus(req, res) {
   res.json(customer ? { authenticated: true, customer: publicCustomer(customer) } : { authenticated: false });
 }
 
-export function exitAccess(_req, res) {
-  res.setHeader('Cache-Control', 'no-store');
+/**
+ * End the customer session.
+ *
+ * Called when someone taps "Not you?", and ALSO after every successful
+ * submission: a salesman visits several customers in a day carrying one phone, so
+ * a session that outlived the order would file the next customer's request under
+ * the previous one. Re-entering the code per order is the cost of that being
+ * impossible rather than merely unlikely.
+ */
+export function clearCustomerSession(res, db = null, customerId = null) {
   res.setHeader('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${isSecureCookie() ? '; Secure' : ''}`);
+  // Bumping the epoch is what actually ends it: the cookie header is only a
+  // request to the browser, and a browser that ignores it would otherwise keep a
+  // working session.
+  if (db && customerId != null) {
+    db.prepare('UPDATE customers SET session_epoch = COALESCE(session_epoch, 0) + 1 WHERE id = ?').run(Number(customerId));
+  }
+}
+
+export function exitAccess(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
+  const customer = currentCustomer(req);
+  clearCustomerSession(res, req.db, customer?.id ?? null);
   res.status(204).end();
 }
 
@@ -156,4 +186,7 @@ export function requireCustomer(req, res, next) {
  */
 export function resetAccessAttempts() { attempts.clear(); }
 
-export default { currentCustomer, enterAccessCode, accessStatus, exitAccess, requireCustomer };
+export default {
+  currentCustomer, enterAccessCode, accessStatus, exitAccess,
+  requireCustomer, clearCustomerSession,
+};

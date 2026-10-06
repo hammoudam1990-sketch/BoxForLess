@@ -106,6 +106,12 @@ export function applyMigrations(db) {
     // customers imported from Odoo have no address — they are asked on their
     // first request instead, never blocked.
     delivery_address: 'TEXT',
+    // Bumped whenever this customer's sessions must stop working — after they
+    // submit an order, and on "Not you?". A session token carries the epoch it
+    // was issued under, so an old token is refused even if a browser keeps
+    // sending it. Without this, ending a session would depend on the browser
+    // honouring a cleared cookie.
+    session_epoch: 'INTEGER NOT NULL DEFAULT 0',
   });
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ux_customers_odoo_ref
              ON customers(odoo_customer_ref) WHERE odoo_customer_ref IS NOT NULL`);

@@ -14,7 +14,7 @@ import {
   RequestValidationError, STALE_STOCK_MESSAGE,
 } from '../../domain/requests.js';
 import { getStockSource } from '../../domain/stock-source.js';
-import { requireCustomer } from '../customer-access.js';
+import { requireCustomer, clearCustomerSession } from '../customer-access.js';
 import {
   createAccessRequest, toAccessRequestReceipt, listAccessRequests,
   getAccessRequest, approveAccessRequest, rejectAccessRequest, AccessRequestError,
@@ -92,6 +92,11 @@ customerRouter.post('/requests', requireCustomer, (req, res, next) => {
       deliveryAddress: body.deliveryAddress ? String(body.deliveryAddress).slice(0, 500) : null,
       notes: body.notes ? String(body.notes).slice(0, 2000) : null,
     });
+    // The session ends with the order. A salesman carries one phone between
+    // several customers in a day, so the next person must enter their own code
+    // rather than inherit whoever ordered last. Cleared server-side, so it cannot
+    // be skipped by the browser.
+    clearCustomerSession(res, req.db, req.customer.id);
     // confirmation only — no internal request id
     res.status(201).json({ reference: result.reference, items: result.lineCount, submitted: true });
   } catch (e) {

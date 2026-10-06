@@ -398,6 +398,10 @@ async function submit() {
     });
     clearCart();
     askingForAccess = false;
+    // The server ended the session with the order, so the next customer on this
+    // phone must enter their own code. Mirror that here or the drawer would still
+    // show the previous customer's name.
+    accessCustomer = null;
     el.innerHTML = `
       <div class="c-drawer-backdrop" data-close></div>
       <section class="c-drawer-panel" role="dialog" aria-label="Request submitted">
@@ -405,6 +409,8 @@ async function submit() {
           <h2>Request submitted</h2>
           <p>Your reference is <b>${esc(res.reference)}</b> — ${res.items} product${res.items === 1 ? '' : 's'}.</p>
           <p class="c-smallprint">This is a request, not an order. Our team will confirm availability with you.</p>
+          <p class="c-smallprint"><b>The next request needs its own access code.</b>
+            This keeps one customer's order from being sent under another's name.</p>
           <button type="button" class="c-btn primary" data-close>Done</button>
         </div>
       </section>`;
