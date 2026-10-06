@@ -136,6 +136,9 @@ customerRouter.post('/access-requests', (req, res, next) => {
  * on their phone.
  */
 function catalogUrlFor(req) {
+  // BFL_PUBLIC_URL wins wherever it is set, because once this is hosted the
+  // machine's own address is an internal one no customer can reach.
+  if (config.publicUrl) return `${String(config.publicUrl).replace(/\/+$/, '')}/catalog`;
   const lan = lanAddresses()[0];
   return lan
     ? `http://${lan.address}:${config.port}/catalog`

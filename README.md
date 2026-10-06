@@ -31,6 +31,11 @@ environment variables before starting the app:
 - `BFL_SESSION_SECRET` — random secret of at least 32 characters, used to sign
   the eight-hour staff session cookie.
 - `NODE_ENV=production` — enables secure cookies and proxy-aware HTTPS handling.
+- `BFL_PUBLIC_URL` — the address customers reach the catalogue on, e.g.
+  `https://catalogue.example.com`. **Required once deployed:** the catalogue link
+  in the message staff send to customers is built from it. Without it the link
+  falls back to the machine's own network address, which on a hosted server is an
+  internal address no customer can open. On the LAN the fallback is correct.
 
 If the staff credentials or session secret are missing or too short, staff
 endpoints fail closed. Keep these values in the hosting provider's secret

@@ -57,6 +57,17 @@ export const config = {
 
   // Per-customer access codes. A code identifies the customer, which is what
   // allowed the public customer-search endpoint to be removed entirely.
+  // The address customers actually reach the catalogue on — the one that goes
+  // into the message staff send over WhatsApp.
+  //
+  // MUST be set once this is deployed. Without it the link is built from the
+  // machine's own network address, which on a hosted server is an internal
+  // address like 10.0.0.5 that no customer can open. On the LAN that fallback is
+  // correct and is what makes the link work on a phone today.
+  //
+  //   BFL_PUBLIC_URL=https://catalogue.boxforless.com
+  publicUrl: process.env.BFL_PUBLIC_URL || null,
+
   customerAccess: {
     // How long a customer stays signed in after entering their code. Long on
     // purpose: re-typing a code on every visit would push customers to write it
