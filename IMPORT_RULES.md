@@ -109,3 +109,50 @@ Headers are matched case/space-insensitively via aliases in
 > **backfills** `source_odoo_id` onto products matched by barcode: it only ever
 > fills a NULL and never overwrites an existing id. This is what makes
 > barcode-change detection possible, since that check requires a stable-id match.
+
+---
+
+## Customer list import (Stage 4)
+
+The customer importer is **separate** from the product importer and audits to its
+own table (`customer_imports`), so nothing it does can alter product import
+history or what `/api/imports` returns.
+
+### Identity is the display name
+Odoo has no stable customer id in the contact export, so rows are matched on the
+display name, case- and spacing-insensitive. `odoo_customer_ref` is read and
+matched FIRST when a row happens to carry one, so adding real Odoo ids later needs
+no migration — but today no customer has one.
+
+**The consequence to watch:** renaming a company in Odoo creates a SECOND customer
+record with a NEW code, while the old record keeps the code already sent out. The
+2026-10-05 import showed this live with `TATA Africa Holdings (Ghana) limted` and
+`...limited`. Fix a misspelling at source before re-importing, or merge the two
+records afterwards.
+
+### Absence does NOT deactivate — deliberately
+A customer missing from an imported file is **left active**. This differs from the
+product importer, where a missing product becomes inactive, and the difference is
+intentional: a contact export is often a filtered view (one salesperson, one
+region, active-this-year), so deactivating on absence would silently cut off
+customers who still trade with us — and a deactivated customer's access code stops
+working immediately.
+
+Pass `deactivate_missing=true` on the confirm call only when the file really is
+the complete customer book. Nothing is ever deleted either way.
+
+To stop supplying a customer, deactivate that customer directly. That is one
+deliberate action with an immediate, visible effect, rather than a side effect of
+whichever file was exported.
+
+### Access codes are issued automatically
+Confirming a customer import gives a code to every active customer that does not
+already have one, and reports `codesIssued`. A code already held is never
+regenerated, so re-importing the list cannot invalidate a code already sent to a
+customer.
+
+### What the import reads
+Allow-listed columns only: display name, email, phone, country, pricelist and an
+Odoo customer id when present. `pricelist` is a price-TIER name, not a price; it is
+stored for staff use and never reaches a customer-facing payload. Everything else
+in the export — avatars, activity counts, statistics — is ignored.

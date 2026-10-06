@@ -48,10 +48,12 @@ function customerCell(r) {
   return `${esc(c.displayName || '—')} ${customerTypeBadge(c)}`;
 }
 
-export async function renderRequests(view) {
-  const [status, list] = await Promise.all([
+export async function renderRequests(view, showDeleted = false) {
+  const [status, list, withdrawn] = await Promise.all([
     getJSON('/api/requests/stock-status'),
-    getJSON('/api/requests'),
+    getJSON(`/api/requests${showDeleted ? '?deleted=true' : ''}`),
+    // counted even when not shown, so the tab can say how many there are
+    getJSON('/api/requests?deleted=true&limit=1'),
   ]);
 
   const rows = list.items.map((r) => `
@@ -59,7 +61,7 @@ export async function renderRequests(view) {
       <td><a href="#/requests/${r.id}"><b>${esc(r.reference || `#${r.id}`)}</b></a></td>
       <td>${customerCell(r)}</td>
       <td>${num(r.item_count)}</td>
-      <td>${fmt(r.submitted_at)}</td>
+      <td>${fmt(showDeleted ? r.deleted_at : r.submitted_at)}</td>
       <td>${esc(r.status || '—')}</td>
     </tr>`).join('');
 
@@ -70,15 +72,29 @@ export async function renderRequests(view) {
       A request is <b>not an order and not a reservation</b>. Stock is not held, so two
       customers can request the same cartons. Confirm availability before committing.
     </div>
+    <div class="controls">
+      <button type="button" class="${showDeleted ? 'ghost' : ''}" data-show-active>Active requests</button>
+      <button type="button" class="${showDeleted ? '' : 'ghost'}" data-show-deleted>
+        Withdrawn${withdrawn.total ? ` (${withdrawn.total})` : ''}
+      </button>
+    </div>
+    ${showDeleted ? `<div class="notice" style="margin:12px 0">
+      Withdrawn requests are <b>kept, not destroyed</b>. The customer, the lines and the
+      quantities are all still here, and a request removed by mistake can be restored.
+    </div>` : ''}
     <div class="card">
       ${list.total === 0
-    ? '<p class="muted">No requests submitted yet.</p>'
+    ? `<p class="muted">${showDeleted ? 'Nothing has been withdrawn.' : 'No requests submitted yet.'}</p>`
     : `<table>
-            <thead><tr><th>Reference</th><th>Customer</th><th>Lines</th><th>Submitted</th><th>Status</th></tr></thead>
+            <thead><tr><th>Reference</th><th>Customer</th><th>Lines</th>
+              <th>${showDeleted ? 'Withdrawn' : 'Submitted'}</th><th>Status</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
           <p class="muted" style="margin-top:10px">${list.items.length} of ${list.total}</p>`}
     </div>`;
+
+  view.querySelector('[data-show-active]')?.addEventListener('click', () => renderRequests(view, false));
+  view.querySelector('[data-show-deleted]')?.addEventListener('click', () => renderRequests(view, true));
 }
 
 export async function renderRequestDetail(view, id) {
@@ -100,7 +116,9 @@ export async function renderRequestDetail(view, id) {
     <div class="controls">
       <button type="button" class="button-link" data-export-request>Download Excel</button>
       ${request.status === 'SUBMITTED' ? '<button type="button" data-accept-request>Accept request</button>' : ''}
-      <button type="button" class="danger" data-delete-request>Delete request</button>
+      ${request.status === 'DELETED'
+    ? '<button type="button" data-restore-request>Restore request</button>'
+    : '<button type="button" class="danger" data-delete-request>Withdraw request</button>'}
     </div>
     <div class="card">
       <div class="kv">
@@ -108,6 +126,8 @@ export async function renderRequestDetail(view, id) {
         <div class="k">Customer type</div><div>${customerTypeBadge(c)}</div>
         <div class="k">Submitted</div><div>${fmt(request.submitted_at)}</div>
         <div class="k">Status</div><div>${esc(request.status || '—')}</div>
+        ${request.deleted_at
+    ? `<div class="k">Withdrawn</div><div>${fmt(request.deleted_at)}</div>` : ''}
         <div class="k">Validated against stock from</div><div>${fmt(request.stock_as_of)}</div>
       </div>
     </div>
@@ -154,7 +174,11 @@ export async function renderRequestDetail(view, id) {
   });
 
   view.querySelector('[data-delete-request]')?.addEventListener('click', async (event) => {
-    if (!window.confirm(`Delete ${request.reference || 'this request'} and its item list? This cannot be undone.`)) return;
+    if (!window.confirm(
+      `Withdraw ${request.reference || 'this request'}?\n\n`
+      + 'It leaves the active list but is kept in full — customer, lines and quantities — '
+      + 'and can be restored from the Withdrawn tab.'
+    )) return;
     event.currentTarget.disabled = true;
     try {
       const res = await fetch(`/api/requests/${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -162,7 +186,20 @@ export async function renderRequestDetail(view, id) {
       if (!res.ok) throw new Error((await res.json()).error || `HTTP ${res.status}`);
       window.location.hash = '#/requests';
     } catch (error) {
-      window.alert(`Could not delete this request: ${error.message}`);
+      window.alert(`Could not withdraw this request: ${error.message}`);
+      event.currentTarget.disabled = false;
+    }
+  });
+
+  view.querySelector('[data-restore-request]')?.addEventListener('click', async (event) => {
+    event.currentTarget.disabled = true;
+    try {
+      const res = await fetch(`/api/requests/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+      if (res.status === 401) { window.location.assign('/staff/login'); return; }
+      if (!res.ok) throw new Error((await res.json()).error || `HTTP ${res.status}`);
+      await renderRequestDetail(view, id);
+    } catch (error) {
+      window.alert(`Could not restore this request: ${error.message}`);
       event.currentTarget.disabled = false;
     }
   });

@@ -1,4 +1,4 @@
-# AGENTS.md — Box for Less Sales Catalog
+# CLAUDE.md — Box for Less Sales Catalog
 
 ## PROJECT IDENTITY
 
@@ -73,6 +73,12 @@ Instead:
 Do **not**, in Phase 1:
 - build customer ordering, a request cart, or a sales dashboard
 - implement or display **any pricing**
+  - **Amendment (2026-10-06):** the customer import stores each customer's
+    price-TIER NAME (`customers.pricelist`, e.g. `CLASS A (GHS)`). It is a label,
+    not a price: no amount is imported, stored or calculated, and it never reaches
+    a customer-facing payload — the leak tests assert this. It is held so that the
+    tier is already known if the CEO approves showing prices. **Displaying any
+    price, to staff or to customers, remains out of scope until that approval.**
 - build quotation creation / Odoo quotation export
 - connect directly to production Odoo
 - modify Shipment Manager or any other project

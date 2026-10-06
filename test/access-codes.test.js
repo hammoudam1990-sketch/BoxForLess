@@ -451,6 +451,51 @@ test('importing a customer list issues codes to the NEW customers automatically'
   db.close();
 });
 
+test('withdrawing a request keeps it in full and it can be restored', async () => {
+  const db = freshDb();
+  product(db);
+  const id = customer(db, 'Melcom Ltd');
+  const { submitRequest, getRequest, listRequests, deleteRequest, restoreRequest } =
+    await import('../src/domain/requests.js');
+
+  const res = submitRequest(db, {
+    lines: [{ barcode: '555', quantityCtn: 3 }], customerId: id, notes: 'keep me',
+  });
+  const reference = getRequest(db, res.requestId).request.reference;
+
+  assert.equal(deleteRequest(db, res.requestId), true);
+
+  // the row, the snapshots and the link to the customer all survive
+  const after = getRequest(db, res.requestId);
+  assert.ok(after, 'a withdrawn request is still readable');
+  assert.equal(after.request.status, 'DELETED');
+  assert.ok(after.request.deleted_at, 'when it was withdrawn is recorded');
+  assert.equal(after.request.reference, reference, 'it keeps its reference');
+  assert.equal(after.request.notes, 'keep me');
+  assert.equal(after.customer.displayName, 'Melcom Ltd', 'the customer is still named');
+  assert.equal(after.items.length, 1, 'the lines are kept');
+  assert.equal(after.items[0].quantity_ctn, 3, 'and so are the quantities');
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM request_items WHERE request_id = ?').get(res.requestId).n, 1);
+
+  // it leaves the working list but appears in the withdrawn one
+  assert.equal(listRequests(db).items.length, 0, 'hidden from the active list');
+  const binned = listRequests(db, { deleted: true });
+  assert.equal(binned.total, 1);
+  assert.equal(binned.items[0].reference, reference);
+  assert.equal(binned.items[0].customer.displayName, 'Melcom Ltd');
+
+  // and it comes back
+  const restored = restoreRequest(db, res.requestId);
+  assert.equal(restored.request.status, 'SUBMITTED');
+  assert.equal(restored.request.deleted_at, null);
+  assert.equal(listRequests(db).total, 1, 'back in the active list');
+  assert.equal(listRequests(db, { deleted: true }).total, 0);
+
+  assert.equal(restoreRequest(db, res.requestId), null, 'restoring a live request does nothing');
+  assert.equal(deleteRequest(db, 999999), false, 'withdrawing an unknown request reports it');
+  db.close();
+});
+
 test('staff can read every customer code back in order to send it', () => {
   const db = freshDb();
   const id = customer(db, 'Melcom Ltd');

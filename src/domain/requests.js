@@ -331,21 +331,31 @@ export function customerSummary(request) {
 }
 
 /** Staff view of requests. Internal by design — never served to customers. */
-export function listRequests(db, { limit = 50, offset = 0 } = {}) {
+/**
+ * Staff view of requests. Internal by design — never served to customers.
+ *
+ * Withdrawn requests are HIDDEN by default and listed on their own with
+ * `deleted: true`, so the working list stays clean while nothing is lost.
+ */
+export function listRequests(db, { limit = 50, offset = 0, deleted = false } = {}) {
   const lim = Math.min(Math.max(Number(limit) || 50, 1), 200);
   const off = Math.max(Number(offset) || 0, 0);
-  const total = db.prepare('SELECT COUNT(*) AS n FROM requests').get().n;
+  const where = deleted ? 'WHERE r.status = ?' : 'WHERE r.status IS NULL OR r.status != ?';
+  const countWhere = deleted ? 'WHERE status = ?' : 'WHERE status IS NULL OR status != ?';
+  const total = db.prepare(`SELECT COUNT(*) AS n FROM requests ${countWhere}`).get(DELETED_STATUS).n;
   const items = db.prepare(
     `SELECT r.*, c.name AS customer_name,
             (SELECT COUNT(*) FROM request_items i WHERE i.request_id = r.id) AS item_count
        FROM requests r
        LEFT JOIN customers c ON c.id = r.customer_id
+       ${where}
       ORDER BY r.id DESC LIMIT ? OFFSET ?`
-  ).all(lim, off);
+  ).all(DELETED_STATUS, lim, off);
   return {
     total,
     limit: lim,
     offset: off,
+    deleted,
     items: items.map((r) => ({ ...r, customer: customerSummary(r) })),
   };
 }
@@ -380,10 +390,42 @@ export function acceptRequest(db, id, now = new Date()) {
   return getRequest(db, requestId);
 }
 
-/** Delete a request and its item rows (the schema's FK cascade handles items). */
-export function deleteRequest(db, id) {
-  const result = db.prepare('DELETE FROM requests WHERE id = ?').run(Number(id));
-  return Number(result.changes) > 0;
+export const DELETED_STATUS = 'DELETED';
+
+/**
+ * Withdraw a request — a SOFT delete.
+ *
+ * This used to be `DELETE FROM requests`, which destroyed the row, its item
+ * snapshots and any record that the request had ever existed. Nothing else in
+ * this project destroys data: products go inactive, imports never delete, items
+ * keep snapshots so a request still reads correctly months later. A hard delete
+ * was the one exception, and it has already cost information — two requests
+ * disappeared and there was nothing left to show who removed them or when.
+ *
+ * The request keeps its reference, its customer, its lines and its snapshots. It
+ * leaves the normal list, and can be read and restored.
+ */
+export function deleteRequest(db, id, now = new Date()) {
+  const requestId = Number(id);
+  const existing = db.prepare('SELECT id, status FROM requests WHERE id = ?').get(requestId);
+  if (!existing) return false;
+  if (existing.status === DELETED_STATUS) return true; // already withdrawn
+  db.prepare('UPDATE requests SET status = ?, deleted_at = ?, updated_at = ? WHERE id = ?')
+    .run(DELETED_STATUS, now.toISOString(), now.toISOString(), requestId);
+  return true;
 }
 
-export default { validateRequest, submitRequest, listRequests, getRequest, acceptRequest, deleteRequest };
+/** Put a withdrawn request back. Returns it, or null if there was nothing to restore. */
+export function restoreRequest(db, id, now = new Date()) {
+  const requestId = Number(id);
+  const existing = db.prepare('SELECT id, status FROM requests WHERE id = ?').get(requestId);
+  if (!existing || existing.status !== DELETED_STATUS) return null;
+  db.prepare("UPDATE requests SET status = 'SUBMITTED', deleted_at = NULL, updated_at = ? WHERE id = ?")
+    .run(now.toISOString(), requestId);
+  return getRequest(db, requestId);
+}
+
+export default {
+  validateRequest, submitRequest, listRequests, getRequest,
+  acceptRequest, deleteRequest, restoreRequest,
+};

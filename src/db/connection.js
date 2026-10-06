@@ -126,6 +126,10 @@ export function applyMigrations(db) {
     notes: 'TEXT',
     submitted_at: 'TEXT',
     stock_as_of: 'TEXT',
+    // When a request was withdrawn (2026-10-06). Deleting is a SOFT delete: the
+    // row and its item snapshots are kept, so a deleted request can still be read
+    // and restored. See deleteRequest().
+    deleted_at: 'TEXT',
   });
   // UNIQUE on an added column needs its own index (ALTER cannot add the constraint).
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ux_requests_reference

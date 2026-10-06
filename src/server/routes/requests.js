@@ -10,7 +10,7 @@
 import express from 'express';
 import xlsx from 'xlsx';
 import {
-  validateRequest, submitRequest, listRequests, getRequest, acceptRequest, deleteRequest,
+  validateRequest, submitRequest, listRequests, getRequest, acceptRequest, deleteRequest, restoreRequest,
   RequestValidationError, STALE_STOCK_MESSAGE,
 } from '../../domain/requests.js';
 import { getStockSource } from '../../domain/stock-source.js';
@@ -197,8 +197,11 @@ staffRouter.get('/stock-status', (req, res, next) => {
   try { res.json(getStockSource().getStockStatus(req.db)); } catch (e) { next(e); }
 });
 
+// ?deleted=true lists the withdrawn ones instead of the working list.
 staffRouter.get('/', (req, res, next) => {
-  try { res.json(listRequests(req.db, req.query)); } catch (e) { next(e); }
+  try {
+    res.json(listRequests(req.db, { ...req.query, deleted: req.query.deleted === 'true' }));
+  } catch (e) { next(e); }
 });
 
 staffRouter.get('/:id', (req, res, next) => {
@@ -254,10 +257,20 @@ staffRouter.post('/:id/accept', (req, res, next) => {
   }
 });
 
+// A SOFT delete — the request is withdrawn, not destroyed, and is returned so the
+// screen can show what was removed.
 staffRouter.delete('/:id', (req, res, next) => {
   try {
     if (!deleteRequest(req.db, req.params.id)) return res.status(404).json({ error: 'Request not found' });
-    res.status(204).end();
+    res.json(getRequest(req.db, req.params.id));
+  } catch (e) { next(e); }
+});
+
+staffRouter.post('/:id/restore', (req, res, next) => {
+  try {
+    const restored = restoreRequest(req.db, req.params.id);
+    if (!restored) return res.status(404).json({ error: 'No withdrawn request with that id' });
+    res.json(restored);
   } catch (e) { next(e); }
 });
 
