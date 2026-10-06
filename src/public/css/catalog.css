@@ -335,10 +335,24 @@ body {
   border: 1px solid var(--c-line); border-radius: 10px;
   background: var(--c-surface); color: var(--c-ink); font-size: 15px;
 }
+/* Who the request will be filed under.
+   Deliberately the most prominent thing in the drawer: it is the only
+   confirmation that the right access code was used, and a salesman moving
+   between customers on one phone reads it before every submission. */
 .c-selected {
   background: var(--c-in-bg); color: var(--c-in);
-  border-radius: 10px; padding: 10px 12px; font-size: 14px;
+  border: 1px solid currentColor; border-radius: 12px;
+  padding: 14px 16px;
 }
+.c-selected-label {
+  font-size: 12px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; opacity: .75;
+}
+.c-selected-name {
+  font-size: 22px; font-weight: 800; line-height: 1.25;
+  margin: 4px 0 2px; overflow-wrap: anywhere;
+}
+.c-selected .c-link { color: inherit; text-decoration: underline; padding-top: 4px; }
 .c-link {
   border: 0; background: none; padding: 8px 0; cursor: pointer;
   color: var(--c-accent); font-size: 14px; font-weight: 600;

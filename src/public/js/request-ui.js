@@ -219,8 +219,14 @@ async function renderDrawer(message = '') {
     : accessCustomer
       // The saved address is pre-filled and editable: a customer can redirect one
       // delivery without it rewriting the address held on their record.
-      ? `<div class="c-selected">Requesting as <b>${esc(accessCustomer.name)}</b>
-           <button type="button" class="c-link" data-exit-access>Not you?</button></div>
+      // The company name is the confirmation that the RIGHT code was used, and a
+      // salesman moving between customers reads it before every submission — so
+      // it is the largest thing in the panel, not a line of body text.
+      ? `<div class="c-selected">
+           <div class="c-selected-label">Requesting as</div>
+           <div class="c-selected-name">${esc(accessCustomer.name)}</div>
+           <button type="button" class="c-link" data-exit-access>Not you? Use a different code</button>
+         </div>
          <div class="c-field"><label for="reqAddress">Delivery address</label>
            <textarea id="reqAddress" rows="3" autocomplete="street-address"
              placeholder="Where should we deliver?">${esc(accessCustomer.deliveryAddress || '')}</textarea>
