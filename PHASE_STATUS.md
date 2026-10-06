@@ -75,14 +75,20 @@ Released as `v0.3.0`. Detail: `STAGE_3_REQUESTS.md`.
 - [x] Staff read-only Requests view.
 - [x] 188/188 tests; 9 mutants caught; production DB byte-identical to checkpoint.
 - [x] **Real-iPhone verification PASSED (2026-10-03)** — all ten checks.
-- [ ] Customer master import — BLOCKED pending an export with stable Customer IDs.
+- [x] ~~Customer master import — BLOCKED pending an export with stable Customer IDs.~~
+      **Unblocked in Stage 4** by dropping the stable-id requirement and matching
+      on display name instead (decision D1). 504 customers imported 2026-10-05.
 
 ### Explicitly NOT in Stage 3
 - ❌ No pricing, cost, margin, discounts or pricelists.
+  → Stage 4 stores a price-TIER NAME per customer (`customers.pricelist`). It is a
+    label, never an amount, and no price is displayed anywhere. See `CLAUDE.md`.
 - ❌ No quotations or Odoo quotation export.
 - ❌ No stock reservation, backorders or waitlists.
 - ❌ No PCS or CTN↔PCS conversion.
 - ❌ No customer accounts, login or passwords.
+  → Still true for customers: an access code is not an account and has no password.
+    Stage 4 did add a **staff** sign-in for the admin area.
 
 ## Explicitly NOT in Phase 1 (stop conditions honored)
 - ❌ No customer pricing (not imported, stored, or displayed).

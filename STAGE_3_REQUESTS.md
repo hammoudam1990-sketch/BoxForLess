@@ -3,6 +3,22 @@
 **Status:** ✅ **COMPLETE** — implemented, server-verified, and **verified on a real
 iPhone (2026-10-03)**. Released as `v0.3.0`. See [Verification](#verification).
 
+> ## ⚠️ Read this first — parts of this document are history, not current behaviour
+>
+> This describes Stage 3 **as built on 2026-10-03**. Stage 4 changed four things it
+> states, and each is marked `SUPERSEDED IN STAGE 4` where it appears:
+>
+> | This document says | What is true now |
+> |---|---|
+> | The customer master is intentionally EMPTY | 504 customers are imported and active |
+> | An export without a stable Customer ID is refused | matched on display name instead (**D1**) |
+> | `GET /api/catalog/customers` lists customers | **removed** — it made the customer book enumerable |
+> | The staff router is read-only | it has accept, restore, export and a soft delete |
+>
+> The reasoning here is kept because it still explains *why* things are as they
+> are. For how the system behaves today, read `IMPORT_RULES.md`, `CHANGELOG.md`
+> from `0.4.0` onward, and `CONTINUE_HERE.md`.
+
 Quantities are **CTN only**. No PCS, no unit selection, no CTN↔PCS conversion, no
 parsing of `CTN24` strings, no loose-piece logic.
 
@@ -85,10 +101,32 @@ has no Odoo API connection.
 - **Phone is never an identity.** The real export contains `"0"` five times and
   `"Office"`.
 - An export without a stable Customer ID is **refused** by the importer.
+  → ⚠️ **SUPERSEDED IN STAGE 4.** The refusal was removed. See below.
 - `odoo_customer_ref` is **backfilled** onto a name-matched record — fills a NULL,
   never overwrites — the pattern already proven for `products.source_odoo_id`.
 
-### 🔒 The customer master is intentionally EMPTY
+### ⚠️ SUPERSEDED IN STAGE 4 — the customer master is NOT empty
+
+> **This section described Stage 3 as built on 2026-10-03 and is no longer true.**
+> It is kept because the reasoning still matters; see `IMPORT_RULES.md` and the
+> `0.4.0` entry in `CHANGELOG.md` for what actually happens now.
+>
+> Odoo never supplied a stable customer id, so rather than wait, the refusal was
+> dropped and rows are matched on the **display name**, case- and
+> spacing-insensitive. **504 customers are imported and active.** `odoo_customer_ref`
+> stays nullable and is still matched first when present, so adding real Odoo ids
+> later needs no migration — today no customer has one.
+>
+> The trade this accepts: renaming a company in Odoo creates a SECOND record with a
+> NEW code, while the old record keeps the code already sent. That is the known
+> cost of name-based identity (decision **D1**), and Odoo data is never edited or
+> merged here to compensate.
+>
+> The **"My company is not listed"** path below is also gone. A company without a
+> code now *asks* for one, staff approve, and a code is issued — asking and
+> ordering are separate acts.
+
+#### What Stage 3 originally said
 
 The available `Contact (res.partner).xlsx` (355 rows) has **no stable Customer ID
 column**, so it has **not** been imported and must not be. The architecture, schema
@@ -184,13 +222,33 @@ added, and an index there fails the whole open. This trap has now bitten twice;
 | Route | Audience |
 |---|---|
 | `GET /api/catalog/products?view=available\|full` | customer |
-| `GET /api/catalog/customers?q=` | customer — name + opaque handle only |
+| ~~`GET /api/catalog/customers?q=`~~ | ⚠️ **REMOVED IN STAGE 4** — see below |
 | `GET /api/catalog/requests/stock-status` | customer — verdict only, no timestamp |
 | `POST /api/catalog/requests/validate` | customer — dry run, writes nothing |
 | `POST /api/catalog/requests` | customer — validate **then** submit, one transaction |
 | `GET /api/requests`, `/api/requests/:id`, `/api/requests/stock-status` | **staff** — internal detail |
 
 The staff router is read-only: POST/PUT/PATCH/DELETE all return 404.
+
+> ### ⚠️ SUPERSEDED IN STAGE 4 — both statements above
+>
+> **`GET /api/catalog/customers` no longer exists.** Because the catalog is public,
+> that endpoint let anyone holding the link type letters and read back real company
+> names — the whole customer book was enumerable. A per-customer **access code**
+> replaced it: the customer proves who they are instead of finding themselves in a
+> list, so there is nothing left to search. Do not reintroduce a customer lookup on
+> the customer router.
+>
+> **The staff router is no longer read-only.** It now has
+> `POST /api/requests/:id/accept`, `POST /api/requests/:id/restore`,
+> `GET /api/requests/:id/export.xlsx`, `DELETE /api/requests/:id` (a soft delete —
+> the request is withdrawn, never destroyed), and the access-code and
+> access-request routes. Every one of them sits behind the staff sign-in.
+>
+> Submission identity also changed: it comes from the signed access-code session,
+> never from the request body, so a customer cannot submit in another company's
+> name even by crafting the payload. The session ends at submission, because one
+> salesman's phone visits several customers in a day.
 
 ---
 
@@ -233,6 +291,13 @@ leaks · staff read-only view.
 
 **Production database:** product, image and category data verified **byte-identical**
 to the `v0.3.0-pre-stage3` checkpoint. Zero requests, zero customers.
+
+> ⚠️ **That count was true when Stage 3 was verified on 2026-10-03 and is a record
+> of that moment, not of today.** The customer list was imported on 2026-10-05 and
+> real requests have been placed since. For the live figures, read the database —
+> never this line. The byte-identical product, image and category data is the part
+> worth preserving here: it is the evidence that Stage 3 added a request cart
+> without disturbing the Product Master.
 
 ### ✅ Real-device verification — PASSED (iPhone, 2026-10-03)
 
