@@ -308,7 +308,26 @@ journey 25/25.
 
 ---
 
-## 15. Known limits
+## 15. The catalogue is deliberately the FULL range
+
+As of 2026-10-06 the catalogue holds **8,933 products, of which 8,035 are out of
+stock** — roughly 90%. **This is intentional, confirmed by the business:** a
+customer should be able to see the whole range and ask about anything, not only
+what happens to be on the shelf today.
+
+So a large out-of-stock proportion is **not a fault and not a sign of a bad export
+filter**. The design already carries it:
+
+- **Available Now** is the default tab and shows only what can be ordered (898).
+- **Full Catalogue** shows everything, with honest Out of Stock badges.
+- An out-of-stock product cannot be added to a request, so nothing can be ordered
+  that is not there.
+
+Do not "fix" this by narrowing the import.
+
+---
+
+## 16. Known limits
 
 - **A renamed company in Odoo becomes a second record with a new code**, while the
   old record keeps the code already sent (**D1**). Not yet observed — the master
