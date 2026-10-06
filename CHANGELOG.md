@@ -2,6 +2,58 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.2] — 2026-10-06 — Stage 4 closed: one code per order, and the documentation to match
+
+Everything here came out of real customer sessions on a phone, or from reading the
+documentation back and finding it no longer true.
+
+### Added
+- **The session ends at submission.** A salesman carries one phone between several
+  customers in a day; a session that outlived the order would file the next
+  customer's request under the previous one. Enforced server-side by a
+  `session_epoch` on the customer — clearing the cookie alone would only have been
+  a request to the browser. "Not you?" bumps it too, so that genuinely revokes.
+- **`BFL_PUBLIC_URL`.** The catalogue link staff send over WhatsApp was built from
+  the machine's own network address. Correct on the LAN; on a hosted server it
+  would have been an internal address no customer could open. **Required once
+  deployed.**
+- **`scripts/import-customers-cli.js`** and **`scripts/daily-update.js`** — the
+  daily routine in one command. It names the files it chose and how old they are,
+  previews both, and writes nothing without `--confirm`.
+- **`STAGE_4_ACCESS.md`** — Stage 4 documented to the standard of Stages 2 and 3.
+
+### Fixed
+- **Clearing a request left every product still marked in the catalogue.** Clear,
+  the per-line ×, and the +/− steppers all changed the cart from inside the drawer
+  without telling the grid behind it; only submitting refreshed it. Closing the
+  drawer now re-renders the catalogue, but only when the cart actually changed, so
+  closing it to carry on browsing does not lose your place.
+- **The customer name was shown but not seen** — 14px body text in a small bar. It
+  is the only confirmation that the right code was used, and with the session now
+  ending each order a salesman reads it before every submission. It is now the
+  largest element in the drawer.
+
+### Documentation
+- `STAGE_3_REQUESTS.md` stated four things Stage 4 had made false — an empty
+  customer master, a refused import, a customer-search endpoint, a read-only staff
+  router. Each is marked `SUPERSEDED IN STAGE 4` in place, with the original kept
+  beneath: the reasoning still explains why things are as they are.
+- `PHASE_STATUS.md` gains a Stage 4 section and the D1–D5 table. The old "Future
+  phases" table is removed — it used a second numbering in which "Phase 4" was what
+  shipped as Stage 3.
+- `IMPORT_RULES.md` records that Odoo data is never edited, merged or
+  de-duplicated here, and corrects an earlier claim that two TATA records were a
+  renamed-company pair. They are three different accounts; the duplicate the import
+  reported was two identical rows inside the file.
+
+### Verified on a real phone (2026-10-06)
+Delivery address required · session ending per order · the customer name ·
+withdraw and restore · access code entry and Submit turning blue.
+
+### Tests
+280/280 (279 → 280; 269 at v0.4.0).
+
+
 ## [0.4.1] — 2026-10-06 — Access-code polish, delivery addresses, and the open decisions closed
 
 Everything reported from real customer sessions on a phone, plus the four
