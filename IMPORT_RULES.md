@@ -125,10 +125,26 @@ matched FIRST when a row happens to carry one, so adding real Odoo ids later nee
 no migration — but today no customer has one.
 
 **The consequence to watch:** renaming a company in Odoo creates a SECOND customer
-record with a NEW code, while the old record keeps the code already sent out. The
-2026-10-05 import showed this live with `TATA Africa Holdings (Ghana) limted` and
-`...limited`. Fix a misspelling at source before re-importing, or merge the two
-records afterwards.
+record with a NEW code, while the old record keeps the code already sent out.
+
+This has NOT happened yet — the customer master holds 504 records with no
+near-duplicate names. (An earlier note here claimed `TATA Africa Holdings (Ghana)
+limted` and `...limited` were such a pair. They are not: the only TATA records are
+three genuinely different accounts, and the "duplicate row 484 of row 483" the
+import reported was two identical rows *inside the uploaded file*, which the
+preview refused. File row numbers are not customer ids.)
+
+### We do not edit what comes from Odoo
+Odoo is the source of truth for customer data, so this application **never**
+rewrites, merges or de-duplicates it. If the same company arrives twice under
+slightly different names, both records are kept, both get their own access code,
+and both appear in the staff list. That is accepted: changing imported data here
+would put the two systems out of step, and the version in Odoo would win at the
+next import anyway.
+
+The practical effect to be aware of: send a code to the wrong one of a pair and the
+requests arrive under that record. Correct it in Odoo and re-import; do not edit
+the customer here.
 
 ### Absence does NOT deactivate — deliberately
 A customer missing from an imported file is **left active**. This differs from the
