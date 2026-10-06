@@ -46,7 +46,13 @@ const NO_IMAGE_TEXT = 'No product image available';
 
 /** Thumbnail or the explicit placeholder. The filename is never rendered. */
 function thumb(product, { eager = false } = {}) {
-  if (!product.image) return `<div class="c-thumb"><div class="c-noimg">${NO_IMAGE_TEXT}</div></div>`;
+  // Almost nothing in this catalogue has a photo — 8,932 of 8,933 at the time of
+  // writing. A 1:1 placeholder for each one filled most of every card with empty
+  // grey and pushed the product name, the only real information, into a strip at
+  // the bottom. A card with no photo now carries a slim accent bar instead and
+  // gives its space to the name. The square is kept for products that do have an
+  // image, so those still look right.
+  if (!product.image) return '<div class="c-thumb-bare" aria-hidden="true"></div>';
   return `<div class="c-thumb">
     <img src="${esc(product.image.url)}" alt="${esc(product.name)}"
          loading="${eager ? 'eager' : 'lazy'}" decoding="async"
@@ -308,11 +314,14 @@ async function renderDetail(id) {
   view.innerHTML = `
     <a class="c-back" href="/catalog">← Back to Catalog</a>
     <div class="c-detail">
-      <div class="c-detail-grid">
-        <div class="c-hero">${p.image
-    ? `<img src="${esc(p.image.url)}" alt="${esc(p.name)}" decoding="async"
-            onerror="this.parentNode.innerHTML='&lt;div class=&quot;c-noimg&quot;&gt;${NO_IMAGE_TEXT}&lt;/div&gt;'" />`
-    : `<div class="c-noimg">${NO_IMAGE_TEXT}</div>`}</div>
+      <div class="c-detail-grid${p.image ? '' : ' c-detail-grid-noimg'}">
+        ${/* No image: the picture column is left out entirely rather than shown as
+              a large empty box beside the facts. Almost nothing has a photo, and
+              half a blank screen reads as a broken page. */''}
+        ${p.image
+    ? `<div class="c-hero"><img src="${esc(p.image.url)}" alt="${esc(p.name)}" decoding="async"
+            onerror="this.parentNode.innerHTML='&lt;div class=&quot;c-noimg&quot;&gt;${NO_IMAGE_TEXT}&lt;/div&gt;'" /></div>`
+    : ''}
         <div>
           <h1>${esc(p.name)}</h1>
           <div class="c-facts">
