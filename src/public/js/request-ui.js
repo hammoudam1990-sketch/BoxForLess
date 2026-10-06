@@ -123,15 +123,32 @@ function trackKeyboardInset() {
   vv.addEventListener('scroll', apply);
 }
 
+// What the cart held when the drawer was opened, so closing it can tell whether
+// anything actually changed.
+let cartOnOpen = null;
+const cartSnapshot = () => JSON.stringify(readCart());
+
 export function closeDrawer() {
   // drop any keyboard offset so the panel is not left lifted next time it opens
   drawerEl().style.removeProperty('--c-kb');
   drawerEl().classList.add('hidden');
   document.body.classList.remove('c-noscroll');
+  renderCartBar();
+
+  // Re-render the catalogue if the cart changed while the drawer was open.
+  //
+  // Clearing the request, removing a line or changing a quantity happens INSIDE
+  // the drawer, over a catalogue that is still showing the old controls. Without
+  // this, a customer who cleared their request went back to a grid where every
+  // product still looked added. Only re-rendered on a real change, so closing the
+  // drawer to carry on browsing does not throw away their place on the page.
+  if (cartOnOpen !== null && cartSnapshot() !== cartOnOpen) onCartMutated();
+  cartOnOpen = null;
 }
 
 export async function openDrawer() {
   const el = drawerEl();
+  cartOnOpen = cartSnapshot();
   el.classList.remove('hidden');
   document.body.classList.add('c-noscroll');
   await renderDrawer();
@@ -420,7 +437,8 @@ async function submit() {
           <button type="button" class="c-btn primary" data-close>Done</button>
         </div>
       </section>`;
-    el.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { closeDrawer(); onCartMutated(); }));
+    // closeDrawer() re-renders the catalogue itself now that the cart has emptied
+    el.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => closeDrawer()));
     renderCartBar();
     onCartMutated();
   } catch (e) {
