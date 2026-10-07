@@ -46,8 +46,9 @@ router.get('/facets', (req, res, next) => {
 });
 
 // GET /api/catalog/categories — the Odoo category tree with counts (names only).
+// ?view=available|full — the counts must match the list being shown.
 router.get('/categories', (req, res, next) => {
-  try { res.json({ items: categoryFacets(req.db) }); } catch (e) { next(e); }
+  try { res.json({ items: categoryFacets(req.db, { view: req.query.view }) }); } catch (e) { next(e); }
 });
 
 // GET /api/catalog/products/:id — :id is the PUBLIC id (barcode), never products.id.

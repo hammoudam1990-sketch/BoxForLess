@@ -385,6 +385,33 @@ test('14c. a deeper path filter selects that subtree only', () => {
   db.close();
 });
 
+test('14e. a category chip counts the SAME products the list beneath it shows', () => {
+  // Reported from a real session: HOT DRINKS read "5" above a list of 2. The
+  // chips counted the whole catalogue while the list was filtered to Available
+  // Now, so the three products without stock were counted but not shown. A count
+  // that disagrees with its own list makes the customer distrust both.
+  const db = seed();
+
+  for (const view of ['available', 'full']) {
+    for (const chip of categoryFacets(db, { view })) {
+      const listed = searchCatalog(db, { categoryPath: chip.path, view }).total;
+      assert.equal(
+        chip.count, listed,
+        `${view}: chip "${chip.path}" says ${chip.count} but the list shows ${listed}`,
+      );
+    }
+  }
+
+  // and the two views genuinely differ, or the check above proves nothing
+  const available = categoryFacets(db, { view: 'available' });
+  const full = categoryFacets(db, { view: 'full' });
+  assert.ok(
+    full.some((f) => (available.find((a) => a.path === f.path)?.count ?? 0) < f.count),
+    'Available Now should count fewer products than Full Catalogue somewhere',
+  );
+  db.close();
+});
+
 test('14d. category filters exclude INACTIVE products', () => {
   const db = seed();
   runImport(db, [row(SHAMPOO), row(JUICE), row(PETFOOD)]); // FOOD product dropped

@@ -265,11 +265,21 @@ export function catalogFacets(db, thresholds = config.stock) {
  * @returns {Array<{top_level:string, path:string, name:string, parent:string|null,
  *                  level:number, count:number}>}
  */
-export function categoryFacets(db) {
+/**
+ * Counts for the category chips.
+ *
+ * `view` MUST match the list the customer is looking at. On Available Now the
+ * chips used to count the whole catalogue, so HOT DRINKS read "5" above a list of
+ * 2 — the three without stock were counted but not shown. A count that disagrees
+ * with the list beneath it makes the customer distrust both.
+ */
+export function categoryFacets(db, { view = 'full' } = {}) {
+  const availableOnly = view === 'available';
   const rows = db.prepare(
     `SELECT odoo_category_path AS path, COUNT(*) AS n
      FROM products
      WHERE is_active = 1 AND odoo_category_path IS NOT NULL
+       ${availableOnly ? 'AND free_to_use > 0' : ''}
      GROUP BY odoo_category_path`
   ).all();
 

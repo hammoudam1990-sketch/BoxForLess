@@ -235,7 +235,10 @@ async function renderList() {
   let facets = null;
   let categories = [];
   try { facets = await getJSON('/api/catalog/facets'); } catch { /* chips degrade to no counts */ }
-  try { categories = (await getJSON('/api/catalog/categories')).items; } catch { /* category chips omitted */ }
+  // the view travels with the request so the chip counts match the list below them
+  try {
+    categories = (await getJSON(`/api/catalog/categories?view=${encodeURIComponent(state.view)}`)).items;
+  } catch { /* category chips omitted */ }
 
   view.innerHTML = listShell(facets, categories);
 
