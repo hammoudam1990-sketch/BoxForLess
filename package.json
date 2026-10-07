@@ -12,6 +12,7 @@
     "dev": "node --watch src/server/index.js",
     "migrate": "node src/db/migrate.js",
     "gen-cert": "node scripts/gen-cert.js",
+    "vendor-react": "node scripts/vendor-react.js",
     "import": "node scripts/import-cli.js",
     "data-quality": "node scripts/data-quality-report.js",
     "test": "node --test"
@@ -19,7 +20,10 @@
   "dependencies": {
     "@zxing/library": "^0.21.3",
     "express": "^4.21.2",
+    "htm": "3.1.1",
     "multer": "^1.4.5-lts.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "xlsx": "^0.18.5"
   }
 }

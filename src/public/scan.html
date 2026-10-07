@@ -7,60 +7,13 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="logo">BFL</span>
-      <div>
-        <div class="brand-title">Box for Less</div>
-        <div class="brand-sub">Barcode Scan · Mobile</div>
-      </div>
-    </div>
-    <nav class="mainnav">
-      <a href="index.html">← Product Master</a>
-    </nav>
-  </header>
+  <div id="root"></div>
 
-  <main class="scan-wrap">
-    <div id="unsupported" class="notice hidden"></div>
-
-    <div class="scan-stage" id="stage">
-      <video id="video" playsinline muted></video>
-      <div class="scan-reticle hidden" id="reticle"></div>
-    </div>
-    <div class="scan-status" id="status">Camera not started.</div>
-
-    <div class="scan-actions">
-      <button id="startBtn">Start camera</button>
-      <button id="stopBtn" class="ghost hidden">Stop</button>
-    </div>
-
-    <!-- Fallback for a barcode the camera cannot read: damaged, tiny, or awkwardly
-         placed. Camera scanning stays the primary method; this is hidden until asked
-         for, and uses the SAME lookup as a successful scan. -->
-    <div class="manual-entry">
-      <button id="manualToggle" class="linkbtn" type="button" aria-expanded="false" aria-controls="manualPanel">
-        Can't scan the barcode? <b>Enter barcode manually</b>
-      </button>
-
-      <div id="manualPanel" class="manual-panel hidden">
-        <label class="manual-label" for="manualBarcode">Enter barcode</label>
-        <!-- inputmode text, not numeric: a few real barcodes contain letters and
-             symbols, and type=number would strip leading zeros -->
-        <input id="manualBarcode" type="text" inputmode="text" autocomplete="off"
-               autocapitalize="off" autocorrect="off" spellcheck="false"
-               enterkeyhint="search" placeholder="e.g. 6281003101428" />
-        <div class="scan-actions">
-          <button id="manualFind" type="button">Find Product</button>
-          <button id="manualCancel" class="ghost" type="button">Back to camera</button>
-        </div>
-        <div id="manualMsg" class="scan-status"></div>
-      </div>
-    </div>
-
-    <div id="result" class="scan-result"></div>
-  </main>
-
-  <div id="toast" class="toast hidden"></div>
+  <!-- React, ReactDOM and htm are vendored locally (no CDN, no build step). -->
+  <script src="js/boot-guard.js"></script>
+  <script src="vendor/react.min.js"></script>
+  <script src="vendor/react-dom.min.js"></script>
+  <script src="vendor/htm.min.js"></script>
   <!-- Vendored locally (no CDN) — provides window.ZXing for the fallback decoder -->
   <script src="vendor/zxing.min.js"></script>
   <script type="module" src="js/scan.js"></script>

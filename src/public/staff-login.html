@@ -8,19 +8,13 @@
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
-  <main class="staff-login-wrap">
-    <form id="staffLoginForm" class="card staff-login-card">
-      <div class="logo staff-login-logo">BFL</div>
-      <h1>Staff sign in</h1>
-      <p class="muted">Sign in to manage products and customer requests.</p>
-      <label for="username">Username</label>
-      <input id="username" name="username" type="text" autocomplete="username" required />
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" required />
-      <p id="loginError" class="errbox hidden" role="alert"></p>
-      <button id="loginButton" type="submit">Sign in</button>
-    </form>
-  </main>
+  <div id="root"></div>
+
+  <!-- React, ReactDOM and htm are vendored locally (no CDN, no build step). -->
+  <script src="/js/boot-guard.js"></script>
+  <script src="/vendor/react.min.js"></script>
+  <script src="/vendor/react-dom.min.js"></script>
+  <script src="/vendor/htm.min.js"></script>
   <script type="module" src="/js/staff-login.js"></script>
 </body>
 </html>
