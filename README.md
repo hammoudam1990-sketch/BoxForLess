@@ -80,7 +80,7 @@ src/
   domain/    constants.js, normalize.js, stock.js, products.js, review.js
   import/    reader → headers → validate → planner → commit → service
   server/    index.js (Express) + routes/{products,imports,changes}.js
-  public/    index.html + css + js modules (no single giant HTML file)
+  public/    index.html + css + js (React, loaded from /vendor, no build step)
 scripts/     import-cli.js, data-quality-report.js, make-fixtures.js
 test/        36 tests covering the 18 required scenarios + edge cases
 fixtures/    sample-products.xlsx (derived from the real export)
@@ -96,7 +96,7 @@ See `ARCHITECTURE.md`, `DATA_MODEL.md`, and `IMPORT_RULES.md` for detail.
 | Database | SQLite via `node:sqlite` | Real persistent SQL, **zero native build**, one file, deployable |
 | Backend | Express | Minimal, standard, maintainable |
 | Excel | SheetJS (`xlsx`) | De-facto XLSX reader |
-| Frontend | Static HTML/CSS/vanilla-JS modules | No build step, easy to maintain |
+| Frontend | React 18 + htm, plain ES modules | No build step: React is vendored under `src/public/vendor`, so it works offline on any network |
 | Tests | `node --test` | Built-in, no extra tooling |
 
 > **Security note:** `xlsx` carries a known npm advisory. Phase 1 parses only

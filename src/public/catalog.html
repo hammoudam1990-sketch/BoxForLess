@@ -9,22 +9,15 @@
   <link rel="stylesheet" href="/css/catalog.css" />
 </head>
 <body>
-  <header class="c-header">
-    <div class="c-header-inner">
-      <a class="c-brand" href="/catalog">
-        <span class="c-logo">BFL</span>
-        <span class="c-brand-text">
-          <span class="c-brand-title">Box for Less</span>
-          <span class="c-brand-sub">Digital Product Catalog</span>
-        </span>
-      </a>
-    </div>
-  </header>
+  <!-- The catalogue is React, mounted here. See js/catalog/. -->
+  <div id="root"></div>
+  <noscript><p style="padding:16px">The Box for Less catalogue needs JavaScript. Please enable it and reload.</p></noscript>
 
-  <main id="view" class="c-main" aria-live="polite"></main>
-
-  <div id="toast" class="c-toast hidden" role="status"></div>
-
+  <!-- React, ReactDOM and htm are vendored locally (no CDN, no build step). -->
+  <script src="/js/boot-guard.js"></script>
+  <script src="/vendor/react.min.js"></script>
+  <script src="/vendor/react-dom.min.js"></script>
+  <script src="/vendor/htm.min.js"></script>
   <script type="module" src="/js/catalog.js"></script>
 </body>
 </html>

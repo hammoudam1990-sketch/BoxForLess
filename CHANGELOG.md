@@ -2,6 +2,36 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased] — Front end rewritten in React
+
+The whole front end — customer catalogue, staff screens, staff sign-in and the
+barcode scanner — is now React. Behaviour, URLs, API calls and CSS are unchanged.
+
+### Changed
+- **React 18 with htm tagged templates, no build step.** Pages load `vendor/react.min.js`,
+  `react-dom.min.js` and `htm.min.js` with plain script tags, then a module entry point.
+  They are vendored (`npm run vendor-react`), not fetched from a CDN, so a phone on an
+  unfamiliar network still gets a working app.
+- Entry points keep their paths (`js/catalog.js`, `js/app.js`, `js/scan.js`,
+  `js/staff-login.js`); the screens now live in `js/catalog/`, `js/staff/`, `js/scan/`,
+  with shared helpers in `js/lib/`. The pure modules the tests import (`cart.js`,
+  `scan-core.js`, `orientation.js`, `product-image.js`) are untouched.
+- `js/api.js` is now the staff client only and gained the request endpoints that
+  `requests.js` used to call by hand. The catalogue has its own tiny `catalog/http.js`
+  and still imports nothing from `api.js` or `staff/`.
+- Removed `request-ui.js`, `products.js`, `imports.js`, `changes.js`, `requests.js`,
+  `access.js`, `photo.js` (replaced by components).
+
+### Fixed (as a side effect of not rebuilding the DOM with innerHTML)
+- Editing the delivery address or notes in the request drawer, then pressing +/−, no
+  longer throws the edit away.
+- "Back to camera" on the manual barcode panel now resumes scanning; it used to leave
+  the camera on screen with the decoder paused.
+
+### Known, unchanged
+- After asking for an access code the drawer says "Thank you. Thank you. …": the
+  server's message already begins with "Thank you." (present before this change).
+
 ## [0.4.2] — 2026-10-06 — Stage 4 closed: one code per order, and the documentation to match
 
 Everything here came out of real customer sessions on a phone, or from reading the

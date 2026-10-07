@@ -63,7 +63,7 @@ Instead:
 - **Backend:** Express REST API.
 - **Database:** SQLite file (`data/*.db`) via the built-in `node:sqlite` module.
 - **Excel import:** SheetJS (`xlsx`).
-- **Frontend:** Static HTML/CSS/vanilla-JS modules under `src/public` (no single giant HTML file).
+- **Frontend:** React 18 with htm tagged templates (no JSX, no bundler), as plain ES modules under `src/public/js`. React, ReactDOM and htm are vendored in `src/public/vendor` (refresh with `npm run vendor-react`) — never loaded from a CDN. Pure logic (`cart.js`, `scan-core.js`, `orientation.js`, `product-image.js`) stays DOM-free and is covered by the Node tests.
 - **Tests:** Node built-in test runner (`node --test`).
 
 ---
