@@ -204,9 +204,7 @@ export function mountList(container) {
     const f = facets;
     setChildren(filterRegion,
       FILTERS.map((x) => chip(x.label, state.availability === x.key, f ? f[x.facet] : null,
-        () => change({ availability: x.key, offset: 0 }))),
-      f && f.with_image > 0 ? chip('With Image', state.withImage, f.with_image,
-        () => change({ withImage: !state.withImage, offset: 0 })) : null);
+        () => change({ availability: x.key, offset: 0 }))));
   }
 
   function renderSortRow() {
