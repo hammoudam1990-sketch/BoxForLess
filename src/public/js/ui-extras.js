@@ -1,5 +1,4 @@
 // Small features every page shares, in plain JavaScript:
-//   - a thin scroll-progress bar at the top
 //   - a dark-mode toggle and a scroll-to-top button, floating at the bottom right
 //   - a simple cookie notice
 // They are injected into <body>, so no page needs its own markup for them.
@@ -43,15 +42,11 @@ themeBtn.addEventListener('click', () => window.bflTheme.toggle());
 const topBtn = $('button', { class: 'bfl-fab bfl-top', type: 'button', 'aria-label': 'Scroll to top', title: 'Scroll to top' }, UP);
 topBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
-// ---- progress bar ----
-const progress = $('div', { class: 'bfl-progress', 'aria-hidden': 'true' }, '<i></i>');
-const bar = progress.firstChild;
+// ---- scroll position (drives the scroll-to-top button) ----
 let ticking = false;
 function onScroll() {
   ticking = false;
-  const max = document.documentElement.scrollHeight - window.innerHeight;
   const y = window.scrollY;
-  bar.style.transform = `scaleX(${max > 0 ? Math.min(1, y / max) : 0})`;
   topBtn.classList.toggle('show', y > 600);
 }
 window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
@@ -74,7 +69,7 @@ function start() {
   syncThemeButton();
   const fabs = $('div', { class: 'bfl-fabs' });
   fabs.append(topBtn, themeBtn);
-  document.body.append(progress, fabs);
+  document.body.append(fabs);
   const notice = cookieNotice();
   if (notice) document.body.appendChild(notice);
   onScroll();
