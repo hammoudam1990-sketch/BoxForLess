@@ -858,3 +858,9 @@ html, body, button, input, select, textarea { font-family: "Segoe UI", -apple-sy
   .c-controls { gap: 8px; margin-bottom: 12px; }
   .c-grid { gap: 10px; }
 }
+
+/* Customer catalogue: all text is 16px. Set last so it overrides the sizes above. */
+body, .c-main, .c-main *, .c-header, .c-header *, .c-tabbar, .c-tabbar *, .c-drawer, .c-drawer *,
+.c-request-fab, .c-toast, .c-menu, .c-menu * {
+  font-size: 16px !important;
+}
