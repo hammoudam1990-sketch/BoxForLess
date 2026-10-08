@@ -100,6 +100,7 @@ export function ListView({ state, update }) {
     : '';
 
   return html`
+    ${total == null ? html`<div class="c-stat" role="status" aria-label="Loading"><span class="sk-block" style=${{ width: 190, height: 96, borderRadius: 18 }}></span></div>` : null}
     ${total != null ? html`
       <div class="c-stat">
         <span class="c-stat-n">${(shownTotal ?? total).toLocaleString()}</span>
@@ -122,7 +123,8 @@ export function ListView({ state, update }) {
         onClick=${() => { update({ search: '', offset: 0 }); searchRef.current?.focus(); }}>×</button>
     </div>
     <div class="c-controls">
-      ${showTiles ? html`
+      ${!cats.length && categories.loading ? html`
+        <div class="c-tiles" role="status" aria-label="Loading">${[0, 1, 2].map((i) => html`<div key=${i} class="sk-block" style=${{ height: 150, borderRadius: 24 }}></div>`)}</div>` : showTiles ? html`
         <section>
           <h2 class="c-section" id="shop-by-category">Shop by Category</h2>
           <div class="c-tiles">

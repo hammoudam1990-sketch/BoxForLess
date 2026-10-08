@@ -37,7 +37,7 @@ async function refreshBadge() {
 async function route() {
   const hash = location.hash || '#/products';
   const [, path, arg] = hash.split('/'); // "#", "products", "123"
-  view.innerHTML = '<div class="card muted"><span class="spinner" aria-hidden="true"></span>Loading…</div>';
+  view.innerHTML = '<div class="card"><div class="sk-lines" role="status" aria-label="Loading"><i></i><i></i><i></i><i></i></div></div>';
   try {
     if (path === 'products' && arg) { setActiveNav('products'); await renderProductDetail(view, arg); }
     else if (path === 'products') { setActiveNav('products'); await renderProducts(view); }

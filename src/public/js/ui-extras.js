@@ -1,6 +1,5 @@
 // Small features every page shares, in plain JavaScript:
 //   - a thin scroll-progress bar at the top
-//   - a loading bar (driven by the fetch wrapper in theme-init.js)
 //   - a dark-mode toggle and a scroll-to-top button, floating at the bottom right
 //   - a simple cookie notice
 // They are injected into <body>, so no page needs its own markup for them.
@@ -46,7 +45,6 @@ topBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smoo
 
 // ---- progress bar ----
 const progress = $('div', { class: 'bfl-progress', 'aria-hidden': 'true' }, '<i></i>');
-const loadbar = $('div', { class: 'bfl-loadbar', 'aria-hidden': 'true' }, '<i></i>');
 const bar = progress.firstChild;
 let ticking = false;
 function onScroll() {
@@ -76,7 +74,7 @@ function start() {
   syncThemeButton();
   const fabs = $('div', { class: 'bfl-fabs' });
   fabs.append(topBtn, themeBtn);
-  document.body.append(progress, loadbar, fabs);
+  document.body.append(progress, fabs);
   const notice = cookieNotice();
   if (notice) document.body.appendChild(notice);
   onScroll();

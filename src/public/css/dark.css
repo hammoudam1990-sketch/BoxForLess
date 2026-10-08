@@ -73,4 +73,3 @@ html[data-theme="dark"] .img-ph, html[data-theme="dark"] .pill.muted { backgroun
 html[data-theme="dark"] .hub-head p { background: transparent; color: var(--c-ink, #f5efe8); }
 html[data-theme="dark"] .hub-yellow { background: #1f1b17; color: #f5efe8; }
 html[data-theme="dark"] .hub-magenta { background: #f5efe8; color: #14110e; }
-html[data-theme="dark"] .bfl-loadbar i { background: #f5efe8; }

@@ -53,7 +53,7 @@ export async function renderProducts(view) {
         </select>
         <span class="muted" id="count"></span>
       </div>
-      <div id="tableWrap"><div class="muted">Loading…</div></div>
+      <div id="tableWrap"><div class="sk-lines" role="status" aria-label="Loading"><i></i><i></i><i></i><i></i></div></div>
     </div>`;
 
   const q = view.querySelector('#q');

@@ -14,7 +14,7 @@ export function DetailView({ id }) {
     if (p) document.title = `${p.name} — Box for Less`;
   }, [p]);
 
-  if (state.loading) return html`<div class="c-skeleton" style=${{ height: 320 }}></div>`;
+  if (state.loading) return html`<div class="c-detail" role="status" aria-label="Loading"><div class="sk-block" style=${{ height: 180, marginBottom: 18 }}></div><div class="sk-lines"><i></i><i></i><i></i><i></i></div></div>`;
 
   if (state.error) {
     return html`

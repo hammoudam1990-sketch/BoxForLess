@@ -24,12 +24,12 @@ export async function renderImports(view) {
           <b>Confirm Customer Import</b>.</p>
       </div>
       <div id="custPreviewArea"></div>
-      <div id="custHistory" class="muted" style="margin-top:12px">Loading…</div>
+      <div id="custHistory" style="margin-top:12px"><div class="sk-lines" role="status" aria-label="Loading"><i></i><i></i><i></i><i></i></div></div>
     </div>
 
     <div class="card">
       <h2>Import history</h2>
-      <div id="history"><div class="muted">Loading…</div></div>
+      <div id="history"><div class="sk-lines" role="status" aria-label="Loading"><i></i><i></i><i></i><i></i></div></div>
     </div>`;
 
   const drop = view.querySelector('#drop');
@@ -38,7 +38,7 @@ export async function renderImports(view) {
 
   const doPreview = async (file) => {
     if (!file) return;
-    previewArea.innerHTML = '<div class="muted">Validating…</div>';
+    previewArea.innerHTML = '<div class="sk-lines" role="status" aria-label="Loading"><i></i><i></i><i></i><i></i></div>';
     try {
       const res = await api.uploadPreview(file);
       previewArea.innerHTML = previewHtml(res);
@@ -67,7 +67,7 @@ export async function renderImports(view) {
 
   const doCustomerPreview = async (file) => {
     if (!file) return;
-    custArea.innerHTML = '<div class="muted">Reading customer file…</div>';
+    custArea.innerHTML = '<div class="sk-lines" role="status" aria-label="Loading"><i></i><i></i><i></i><i></i></div>';
     try {
       const res = await api.uploadCustomerPreview(file);
       custArea.innerHTML = customerPreviewHtml(res);

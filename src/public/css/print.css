@@ -9,7 +9,7 @@
   .c-header, .c-tabbar, .c-request-fab, .c-drawer, .c-controls, .c-search, .c-views, .c-pager, .c-card-actions,
   .c-menu, .c-icon-btn, .c-doodle-chip, .c-arrow, .c-mark, .c-clear, .c-skeleton,
   .topbar, .toast, .scan-actions, .manual-entry, .drop, button, .menu-toggle,
-  .bfl-progress, .bfl-loadbar, .bfl-fabs, .bfl-cookie { display: none !important; }
+  .bfl-progress, .bfl-fabs, .bfl-cookie { display: none !important; }
 
   /* the page */
   .c-main, .view { max-width: none !important; margin: 0 !important; padding: 0 !important; }
