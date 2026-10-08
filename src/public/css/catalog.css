@@ -821,3 +821,8 @@ html[data-theme="dark"] .c-add, html[data-theme="dark"] .c-stepper {
   border: 1px solid var(--c-orange); box-shadow: none;
 }
 .c-add:hover { border-color: var(--c-orange); }
+
+/* ...and that one line is black */
+.c-add, .c-stepper,
+html[data-theme="dark"] .c-add, html[data-theme="dark"] .c-stepper { border-color: var(--c-ink); }
+.c-add:hover { border-color: var(--c-ink); }
