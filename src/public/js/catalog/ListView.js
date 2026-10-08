@@ -154,9 +154,6 @@ export function ListView({ state, update }) {
         ${FILTERS.map((x) => html`
           <${Chip} key=${x.key} pressed=${state.availability === x.key} count=${f ? f[x.facet] : null}
             onClick=${() => update({ availability: x.key, offset: 0 })}>${x.label}<//>`)}
-        ${f && f.with_image > 0 ? html`
-          <${Chip} pressed=${state.withImage} count=${f.with_image}
-            onClick=${() => update({ withImage: !state.withImage, offset: 0 })}>With Image<//>` : null}
       </div>
       <div class="c-sortrow">
         <span class="c-sort-left">
