@@ -1,8 +1,4 @@
-// Thin fetch wrapper around the STAFF REST API.
-//
-// Staff screens and the scanner only. Several of these calls return real customer
-// access codes, so the customer catalogue must never import this file — it has its
-// own, much smaller client in catalog/http.js.
+// Thin fetch wrapper around the REST API.
 async function handle(res) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -15,13 +11,11 @@ async function handle(res) {
   return data;
 }
 
-const json = (method, body) => ({
-  method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-});
-const query = (params = {}) => new URLSearchParams(params).toString();
-
 export const api = {
-  products: (params = {}) => fetch(`/api/products?${query(params)}`).then(handle),
+  products: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return fetch(`/api/products?${q}`).then(handle);
+  },
   product: (id) => fetch(`/api/products/${id}`).then(handle),
   stats: () => fetch('/api/products/stats').then(handle),
 
@@ -53,31 +47,22 @@ export const api = {
 
   reviews: () => fetch('/api/reviews').then(handle),
   resolveBarcode: (productId, decision) =>
-    fetch(`/api/reviews/barcode/${productId}`, json('POST', { decision })).then(handle),
+    fetch(`/api/reviews/barcode/${productId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision }),
+    }).then(handle),
   resolveUom: (productId, decision) =>
-    fetch(`/api/reviews/uom/${productId}`, json('POST', { decision })).then(handle),
-
-  // Customer requests (staff view)
-  requestStockStatus: () => fetch('/api/requests/stock-status').then(handle),
-  requests: ({ deleted = false, limit } = {}) => {
-    const q = query({ ...(deleted ? { deleted: 'true' } : {}), ...(limit ? { limit } : {}) });
-    return fetch(`/api/requests${q ? `?${q}` : ''}`).then(handle);
-  },
-  request: (id) => fetch(`/api/requests/${encodeURIComponent(id)}`).then(handle),
-  acceptRequest: (id) => fetch(`/api/requests/${encodeURIComponent(id)}/accept`, { method: 'POST' }).then(handle),
-  withdrawRequest: (id) => fetch(`/api/requests/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(handle),
-  restoreRequest: (id) => fetch(`/api/requests/${encodeURIComponent(id)}/restore`, { method: 'POST' }).then(handle),
-  /** The request as an .xlsx file. Resolves to a Blob. */
-  exportRequest: async (id) => {
-    const res = await fetch(`/api/requests/${encodeURIComponent(id)}/export.xlsx`);
-    if (res.status === 401) window.location.assign('/staff/login');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.blob();
-  },
+    fetch(`/api/reviews/uom/${productId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision }),
+    }).then(handle),
 
   // Customer access codes. These responses carry real codes, so they are staff
   // endpoints and must never be called from the catalog bundle.
-  customerCodes: (params = {}) => fetch(`/api/requests/customers/codes?${query(params)}`).then(handle),
+  customerCodes: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return fetch(`/api/requests/customers/codes?${q}`).then(handle);
+  },
   issueCustomerCode: (id) => fetch(`/api/requests/customers/${id}/code`, { method: 'POST' }).then(handle),
 
   accessRequests: (status = '') =>
@@ -85,16 +70,25 @@ export const api = {
   approveAccessRequest: (id) =>
     fetch(`/api/requests/access-requests/${id}/approve`, { method: 'POST' }).then(handle),
   rejectAccessRequest: (id, reason = null) =>
-    fetch(`/api/requests/access-requests/${id}/reject`, json('POST', { reason })).then(handle),
-
-  // Signing in is the one call that must NOT bounce to the sign-in page on a 401.
-  staffLogin: async (username, password) => {
-    const res = await fetch('/api/staff/login', json('POST', { username, password }));
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error || `Sign in failed (${res.status}).`);
-    return body;
-  },
-  staffLogout: () => fetch('/api/staff/logout', { method: 'POST' }),
+    fetch(`/api/requests/access-requests/${id}/reject`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    }).then(handle),
 };
 
-export default api;
+// tiny DOM helpers
+export const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; };
+export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export const num = (n) => (n === null || n === undefined || n === '' ? '' : Number(n).toLocaleString());
+
+export function toast(msg, kind = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${kind}`;
+  setTimeout(() => t.classList.add('hidden'), 3200);
+}
+
+export function stockPill(status) {
+  const map = { IN_STOCK: ['ok', 'In stock'], LIMITED_STOCK: ['warn', 'Limited'], OUT_OF_STOCK: ['muted', 'Out of stock'] };
+  const [cls, label] = map[status] || ['muted', status || '—'];
+  return `<span class="pill ${cls}">${label}</span>`;
+}

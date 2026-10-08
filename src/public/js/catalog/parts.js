@@ -27,11 +27,13 @@ export const NoImage = () => html`<div class="c-noimg">${NO_IMAGE_TEXT}</div>`;
 export function ProductImage({ image, name, eager = false }) {
   // remembered by URL, so a component reused for a different image starts fresh
   const [failedUrl, setFailedUrl] = useState(null);
-  if (failedUrl === image.url) return html`<${NoImage} />`;
   const [loaded, setLoaded] = useState(false);
   const ref = useRef(null);
   // a cached image can finish loading before React has attached onLoad
   useEffect(() => { if (ref.current?.complete && ref.current.naturalWidth) setLoaded(true); }, []);
+  // every hook above runs on every render; only AFTER them may this return early, or React
+  // sees fewer hooks when an image fails to load and throws
+  if (failedUrl === image.url) return html`<${NoImage} />`;
   return html`<img ref=${ref} class=${`c-img${loaded ? ' c-img-in' : ''}`} src=${image.url} alt=${name}
     loading=${eager ? 'eager' : 'lazy'} decoding="async"
     onLoad=${() => setLoaded(true)} onError=${() => setFailedUrl(image.url)} />`;

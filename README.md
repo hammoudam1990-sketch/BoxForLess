@@ -1,5 +1,6 @@
-# Box for Less — Product Master (Phase 1)
+# BoxForLess
 
+Digital product catalogue and sales-request app for a wholesale distributor. Imports Odoo product and contact exports into an audited Product Master, serves a customer-facing catalogue gated by per-customer access codes, and collects carton-only requests for staff to action. Node + SQLite, no build step.
 The foundational **Product Master** for the Box for Less Digital Product
 Catalog & Sales Request Application. Phase 1 delivers a safe, repeatable,
 fully audited import pipeline from the Odoo *Product Variant* export, plus an
