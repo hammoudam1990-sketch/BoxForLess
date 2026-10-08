@@ -8,6 +8,8 @@ The whole front end — customer catalogue, staff screens, staff sign-in and the
 barcode scanner — is now React. Behaviour, URLs, API calls and CSS are unchanged.
 
 ### Added
+- **Staff dashboard restyled after the Tailgrids reference:** summary cards with icons, a bar chart of products by stock level, a product-health donut, a recent-orders table, and sidebar sections. Every number is read from the server; no change percentages are shown, because the system keeps no history to compare them with.
+
 - **Staff admin redesigned.** A sidebar with icons, a top bar with a product search (with the "/" key), a notifications bell, and a **dashboard** as the home page. The dashboard shows real figures only: active products, changes to review, access requests waiting, active requests, stock freshness, product health, recent requests, and the access requests waiting. On phones and small laptops the sidebar becomes a drawer.
 
 - **Staff Product Master improved.** Products now page 50 at a time (it used to stop at 200 with no way to see more). New filters: stock level (in, limited, out) and sorting (name, most or least free stock, barcode). An **Export CSV** button downloads the current filtered list as a spreadsheet, read-only, with the spreadsheet-formula guard and Excel-friendly encoding. Nothing is changed in the database by any of this.
