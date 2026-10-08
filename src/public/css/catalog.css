@@ -710,8 +710,8 @@ body {
   --logo-size: 40px; width: var(--logo-size); height: var(--logo-size);
   font-size: 0; color: transparent; overflow: visible;
   background: #fff url("/img/logo.png") no-repeat;
-  background-size: calc(var(--logo-size) * 3.134) auto;
-  background-position: calc(var(--logo-size) * -1.213) calc(var(--logo-size) * -0.352);
+  background-size: calc(var(--logo-size) * 2.821) auto;
+  background-position: calc(var(--logo-size) * -1.0875) calc(var(--logo-size) * -0.2958);
   border: 1px solid var(--c-line); box-shadow: 0 2px 8px rgba(26, 22, 18, .12);
 }
 .c-logo::after { display: none; }
