@@ -71,7 +71,7 @@ export function App() {
   return html`
     <${Header} hidden=${headerHidden} />
     <main class="c-main" ref=${mainRef} tabIndex="-1">
-      <div class="c-page" key=${route.name === 'detail' ? route.id : 'list'}>
+      <div class=${`c-page${route.name === 'detail' ? '' : ' c-page-list'}`} key=${route.name === 'detail' ? route.id : 'list'}>
         ${route.name === 'detail'
     ? html`<${DetailView} id=${route.id} />`
     : html`<${ListView} state=${list} update=${update} />`}

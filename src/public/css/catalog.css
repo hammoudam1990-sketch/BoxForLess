@@ -732,3 +732,68 @@ body {
   .c-request-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; }
   .c-request-fab .c-tab-badge { position: static; }
 }
+
+/* ===========================================================================
+   Product tiles, redesigned: a clearer hierarchy, and a proper desktop layout.
+   Each tile reads top to bottom as: drawing + pack size, SHELF (small caps), the product's
+   name, whether it is in stock, then the request control. On a wide screen the page becomes
+   two columns: filters in a sticky sidebar, products in a flowing grid.
+   =========================================================================== */
+.c-card { padding: 12px 12px 14px; }
+.c-card-top { padding: 4px 4px 0; gap: 12px; }
+.c-doodle-chip { width: 56px; height: 56px; padding: 9px; }
+.c-card-pack {
+  flex: none; padding: 4px 10px; border-radius: 999px; background: var(--c-tile);
+  color: var(--c-ink); font-size: 12px; font-weight: 700; letter-spacing: .06em;
+}
+.c-card-top .c-arrow { margin-left: auto; font-size: 20px; }
+.c-card-body { padding: 14px 4px 4px; gap: 8px; }
+.c-card-body .c-cat { order: -1; margin-top: 0; font-size: 12px; letter-spacing: .08em; color: var(--c-muted); }
+.c-card-body .c-name {
+  font-size: 19px; line-height: 1.12; -webkit-line-clamp: 3; margin-top: 0;
+  min-height: calc(3 * 1.12em);               /* every tile's name takes the same space, so the buttons line up */
+}
+.c-card-body .c-pill { margin-top: 4px; }
+.c-card-actions { padding: 12px 4px 0; }
+.c-noreq {
+  display: grid; place-items: center; min-height: 44px; padding: 8px 12px; border-radius: 10px;
+  background: var(--c-tile); color: var(--c-muted); font-size: 13px; font-weight: 600; text-align: center;
+}
+
+/* wider than a phone: a fluid grid that fills the width in whole tiles */
+@media (min-width: 560px) {
+  .c-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+}
+
+/* desktop: sidebar + products */
+@media (min-width: 1024px) {
+  .c-main { max-width: 1320px; padding: 16px 32px 40px; }
+  .c-header-inner { max-width: 1320px; padding-left: 32px; padding-right: 32px; }
+  .c-page-list {
+    display: grid; grid-template-columns: 300px minmax(0, 1fr); column-gap: 40px; align-items: start;
+  }
+  .c-page-list > .c-stat, .c-page-list > .c-views, .c-page-list > .c-search { grid-column: 1 / -1; }
+  .c-page-list > .c-search { max-width: 620px; }
+  .c-page-list > .c-controls {
+    grid-column: 1; position: sticky; top: 84px; margin: 0;
+    max-height: calc(100vh - 104px); overflow-y: auto; padding: 4px 4px 16px 0;
+  }
+  .c-page-list > div:last-child { grid-column: 2; min-width: 0; }
+  /* the sidebar: chips wrap instead of scrolling sideways, tiles stack */
+  .c-page-list .c-chips { flex-wrap: wrap; overflow: visible; scroll-snap-type: none; }
+  .c-page-list .c-tiles { grid-template-columns: 1fr; gap: 10px; }
+  .c-page-list .c-tile { min-height: 96px; padding: 14px 16px; justify-content: center; }
+  .c-page-list .c-tile-doodle { top: 50%; transform: translateY(-50%); left: auto; right: 44px; width: 44px; height: 44px; }
+  .c-page-list .c-tile-name { font-size: 20px; }
+  .c-page-list .c-sortrow { flex-direction: column; align-items: stretch; gap: 10px; }
+  .c-page-list .c-sort { width: 100%; }
+  .c-page-list .c-section { font-size: 22px; }
+}
+@media (min-width: 1400px) {
+  .c-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+}
+
+/* the page is plain white now, so the pills need their own tint to be seen */
+.c-chip, .c-sort { background: var(--c-tile); }
+.c-chip[aria-pressed="true"] { background: var(--c-ink); }
+.c-search input { background: var(--c-tile); }
