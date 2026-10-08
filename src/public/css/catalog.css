@@ -814,3 +814,10 @@ body {
 .c-add:hover { border-color: var(--c-ink); }
 html[data-theme="dark"] .c-card { box-shadow: 0 8px 22px rgba(0, 0, 0, .5); }
 html[data-theme="dark"] .c-add, html[data-theme="dark"] .c-stepper { box-shadow: inset 0 0 0 2px var(--c-surface), inset 0 0 0 3px var(--c-ink); }
+
+/* the request button and the − / + control: ONE thin orange line */
+.c-add, .c-stepper,
+html[data-theme="dark"] .c-add, html[data-theme="dark"] .c-stepper {
+  border: 1px solid var(--c-orange); box-shadow: none;
+}
+.c-add:hover { border-color: var(--c-orange); }
