@@ -7,6 +7,7 @@ import { html, Fragment, useState, useEffect, useRef } from '../lib/react.js';
 import { setQuantity, removeFromCart, clearCart, toRequestLines, pruneUnavailable } from '../cart.js';
 import { getJSON, postJSON } from './http.js';
 import { useCartLines } from './useCart.js';
+import { QtyStepper } from './parts.js';
 
 // Mirrors domain/access-codes.js. Only used to decide when a typed code is COMPLETE
 // enough to check; the server alone decides whether it is correct.
@@ -15,28 +16,47 @@ const ACCESS_CODE_LENGTH = 8;
 const normalizeCodeInput = (v) => String(v ?? '').toUpperCase().split('')
   .filter((c) => ACCESS_CODE_ALPHABET.includes(c)).join('');
 
-export function RequestUI() {
+// Plain line icons, one stroke weight, hidden from assistive tech (each tab has a text label).
+const ICONS = {
+  home: 'M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z',
+  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  request: 'M7 3h10a1 1 0 0 1 1 1v17l-3.5-2-2.5 2-2.5-2L6 21V4a1 1 0 0 1 1-1zM9.5 8h5M9.5 12h5',
+};
+const Icon = ({ name }) => html`
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-linecap="round" stroke-linejoin="round">
+    <path d=${ICONS[name]} />
+  </svg>`;
+
+/**
+ * The bottom tab bar — Home, Categories, My request — and the request drawer it opens.
+ * `tab` says which of Home / Categories the list is showing ('' on a product page).
+ */
+export function RequestUI({ tab, onHome, onCategories }) {
   const lines = useCartLines();
   const [open, setOpen] = useState(false);
   const cartons = lines.reduce((n, l) => n + l.quantityCtn, 0);
 
   return html`
-    ${cartons ? html`
-      <div id="cartBar" class="c-cartbar">
-        <div class="c-cartbar-info"><b>${cartons}</b> CTN · ${lines.length} product${lines.length === 1 ? '' : 's'}</div>
-        <button class="c-btn primary" type="button" onClick=${() => setOpen(true)}>Review request</button>
-      </div>` : null}
+    <nav class="c-tabbar" aria-label="Catalogue">
+      <button type="button" class="c-tab" aria-current=${tab === 'home' ? 'page' : null} onClick=${onHome}>
+        <${Icon} name="home" /><span>Home</span>
+      </button>
+      <button type="button" class="c-tab" aria-current=${tab === 'categories' ? 'page' : null} onClick=${onCategories}>
+        <${Icon} name="grid" /><span>Categories</span>
+      </button>
+      <button type="button" class="c-tab" aria-haspopup="dialog" aria-expanded=${open} onClick=${() => setOpen(true)}>
+        <span class="c-tab-icon">
+          <${Icon} name="request" />
+          ${cartons ? html`<span key=${cartons} class="c-tab-badge" role="status" aria-label=${`${cartons} cartons in your request`}>${cartons}</span>` : null}
+        </span>
+        <span>My request</span>
+      </button>
+    </nav>
     <${Drawer} open=${open} onClose=${() => setOpen(false)} />`;
 }
 
 function Stepper({ line }) {
-  const set = (n) => setQuantity({ barcode: line.barcode, name: line.name, pack: line.pack }, n);
-  return html`
-    <div class="c-stepper">
-      <button type="button" class="c-step" aria-label="Fewer cartons" onClick=${() => set(line.quantityCtn - 1)}>−</button>
-      <span class="c-qty"><b>${line.quantityCtn}</b> CTN</span>
-      <button type="button" class="c-step" aria-label="More cartons" onClick=${() => set(line.quantityCtn + 1)}>+</button>
-    </div>`;
+  return html`<${QtyStepper} item=${{ barcode: line.barcode, name: line.name, pack: line.pack }} qty=${line.quantityCtn} />`;
 }
 
 function LineRow({ line, error }) {
@@ -160,6 +180,22 @@ function Drawer({ open, onClose }) {
       button.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   }, [customer]);
+
+  // A dialog: focus moves into it when it opens, Escape closes it, and focus goes back
+  // to whatever opened it.
+  const panelRef = useRef(null);
+  const opener = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    opener.current = document.activeElement;
+    panelRef.current?.focus({ preventScroll: true });
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      if (opener.current && document.contains(opener.current)) opener.current.focus({ preventScroll: true });
+    };
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const close = () => {
     setMessage(null);
@@ -346,7 +382,7 @@ function Drawer({ open, onClose }) {
     <div ref=${drawerRef} id="cartDrawer" class=${`c-drawer${open ? '' : ' hidden'}`}>
       <div class="c-drawer-backdrop" onClick=${close}></div>
       ${submitted ? html`
-        <section class="c-drawer-panel" role="dialog" aria-label="Request submitted">
+        <section class="c-drawer-panel" role="dialog" aria-modal="true" aria-label="Request submitted" tabIndex="-1" ref=${panelRef}>
           <div class="c-okbox">
             <h2>Request submitted</h2>
             <p>Your reference is <b>${submitted.reference}</b> — ${submitted.items} product${submitted.items === 1 ? '' : 's'}.</p>
@@ -356,7 +392,7 @@ function Drawer({ open, onClose }) {
             <button type="button" class="c-btn primary" onClick=${close}>Done</button>
           </div>
         </section>` : html`
-        <section class="c-drawer-panel" role="dialog" aria-label="Your request">
+        <section class="c-drawer-panel" role="dialog" aria-modal="true" aria-label="Your request" tabIndex="-1" ref=${panelRef}>
           <header class="c-drawer-head">
             <h2>Your request</h2>
             <button type="button" class="c-remove" aria-label="Close" onClick=${close}>×</button>

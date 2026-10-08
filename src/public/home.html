@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Box for Less</title>
+  <link rel="preload" as="image" href="/img/doodles-bg.webp" type="image/webp" />
+  <link rel="stylesheet" href="/css/backdrop.css" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    .hub { max-width: 560px; margin: 0 auto; padding: 28px 16px 40px; }
+    .hub-head { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .hub-head h1 { margin: 0; font-size: 30px; color: var(--on-bg); }
+    .hub-head p { margin: 4px 0 0; color: var(--ink); font-weight: 600; background: rgba(255, 255, 255, .88); border-radius: 999px; padding: 2px 12px; width: fit-content; }
+    .hub-head h1 { text-shadow: 0 0 20px rgba(255, 255, 255, .8); }
+    .hub-grid { display: grid; gap: 14px; }
+    .hub-link {
+      display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
+      min-height: 130px; padding: 18px; border-radius: 24px; color: var(--ink); text-decoration: none;
+      box-shadow: 0 10px 26px rgba(26, 22, 18, .22); transition: box-shadow .18s ease, transform .18s ease;
+    }
+    @media (hover: hover) { .hub-link:hover { transform: translateY(-4px); box-shadow: 0 16px 34px rgba(26, 22, 18, .3); } }
+    .hub-link:active { transform: scale(.99); }
+    .hub-link h2 { margin: 0; font-family: var(--display); font-size: 26px; font-weight: 400; letter-spacing: -0.02em; }
+    .hub-link p { margin: 0; font-size: 14px; font-weight: 500; }
+    @media (prefers-reduced-motion: no-preference) {
+      html { scroll-behavior: smooth; }
+      .hub-link { animation: hub-rise .45s cubic-bezier(.2, .8, .2, 1) both; }
+      .hub-link:nth-child(2) { animation-delay: .08s; }
+      .hub-link:nth-child(3) { animation-delay: .16s; }
+    }
+    @keyframes hub-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+    .hub-yellow { background: #ffffff; }
+    .hub-magenta { background: #1a1612; color: #ffffff; }
+    .hub-tangerine { background: #e4571a; }
+  </style>
+</head>
+<body>
+  <!-- One address for everything. Nothing here is private: the staff links go to the
+       sign-in page first, and the customer catalogue is public by design. -->
+  <main class="hub">
+    <div class="hub-head">
+      <span class="logo">BFL</span>
+      <div>
+        <h1>Box for Less</h1>
+        <p>Digital catalogue and sales requests</p>
+      </div>
+    </div>
+
+    <div class="hub-grid">
+      <a class="hub-link hub-yellow" href="/catalog">
+        <h2>Customer catalogue</h2>
+        <p>Browse the range and send a request. Open to customers.</p>
+      </a>
+      <a class="hub-link hub-magenta" href="/index.html">
+        <h2>Staff</h2>
+        <p>Products, imports, requests and access codes. Staff sign-in required.</p>
+      </a>
+      <a class="hub-link hub-tangerine" id="scanLink" href="/scan.html">
+        <h2>Barcode scanner</h2>
+        <p>Scan a product and take its photo. Staff sign-in required.</p>
+      </a>
+    </div>
+  </main>
+
+  <script>
+    // The camera only works over HTTPS. When this page was opened over plain http on
+    // the network, send the scanner link to the HTTPS address of the same computer.
+    (function () {
+      var h = location.hostname;
+      if (location.protocol === 'http:' && h !== 'localhost' && h !== '127.0.0.1') {
+        document.getElementById('scanLink').href = 'https://' + h + ':3443/scan.html';
+      }
+    }());
+  </script>
+</body>
+</html>

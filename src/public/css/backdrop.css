@@ -1,0 +1,49 @@
+/* The doodle wallpaper shared by every page (catalogue, staff, sign-in, scanner, front door):
+   a repeat-free pattern of black line drawings on white, like a chat wallpaper.
+
+   - On a phone it is one layer, cover-fitted.
+   - From 900px the screen is split into two halves and the right half is the same picture
+     mirrored, so a wide window is covered without stretching a 572px-wide picture.
+   - Black line art is the busiest background there is, so it is veiled in white (70%) and
+     reads as a faint texture; on wide screens it stays stronger at the outer edges and is
+     veiled to 92% towards the centre where the content sits.
+   - It drifts very slowly (a scale and a nudge, transform only, 60s). Off under
+     prefers-reduced-motion.
+   Text never sits on the pattern itself: panels, the header, the tab bar and every small label
+   are white; only the big serif words stand on the veiled pattern, in near-black. */
+html { background: #f6f4f0; }
+/* The picture layers sit at z-index -1, which is BELOW the body's own background, so the
+   body must not paint one: the html element above provides the base colour. */
+html body { background: transparent; }
+
+body::before,
+body::after {
+  content: ""; position: fixed; top: 0; bottom: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(rgba(255, 255, 255, .7), rgba(255, 255, 255, .7)),
+    #f6f4f0 url("/img/doodles-bg.webp") center / cover no-repeat;
+  will-change: transform; transform-origin: 50% 50%;
+}
+body::before { left: 0; right: 0; animation: bg-drift 60s ease-in-out infinite alternate; }
+body::after { display: none; }
+
+@media (min-width: 900px) {
+  body::before, body::after {
+    background:
+      linear-gradient(to left, rgba(255, 255, 255, .92) 0%, rgba(255, 255, 255, .72) 45%, rgba(255, 255, 255, .45) 100%),
+      #f6f4f0 url("/img/doodles-bg.webp") center / cover no-repeat;
+  }
+  body::before { right: 50%; }
+  body::after {
+    display: block; left: 50%; right: 0; transform: scaleX(-1);
+    animation: bg-drift-flip 60s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes bg-drift { from { transform: scale(1.03); } to { transform: scale(1.1) translate3d(-1.5%, -1.2%, 0); } }
+@keyframes bg-drift-flip { from { transform: scaleX(-1) scale(1.03); } to { transform: scaleX(-1) scale(1.1) translate3d(-1.5%, -1.2%, 0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  body::before, body::after { animation: none; transform: none; }
+  body::after { transform: scaleX(-1); }
+}

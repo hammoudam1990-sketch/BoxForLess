@@ -53,3 +53,84 @@ export function useHash() {
   }, []);
   return hash;
 }
+
+/**
+ * Reveal-on-scroll. Returns [ref, className]: put both on an element and it fades and
+ * rises into place the first time it scrolls into view.
+ *
+ * Nothing is hidden unless JavaScript runs, IntersectionObserver exists and the person
+ * has not asked for reduced motion; in every other case the element is simply shown.
+ */
+export function useReveal() {
+  const ref = useRef(null);
+  const canAnimate = typeof window !== 'undefined'
+    && 'IntersectionObserver' in window
+    && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [seen, setSeen] = useState(!canAnimate);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (seen || !el) return undefined;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { setSeen(true); io.disconnect(); }
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen]);
+
+  return [ref, canAnimate ? `c-reveal${seen ? ' c-in' : ''}` : ''];
+}
+
+/**
+ * A number that eases up to `target` (and between targets) instead of jumping.
+ * Returns the number to display. With reduced motion, a hidden tab or no target it
+ * simply returns the target.
+ */
+export function useCountUp(target, ms = 520) {
+  const [shown, setShown] = useState(target);
+  const from = useRef(0);
+  useEffect(() => {
+    if (target === null || target === undefined) { setShown(target); return undefined; }
+    const still = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+      || document.visibilityState === 'hidden';
+    if (still) { from.current = target; setShown(target); return undefined; }
+    const start = performance.now();
+    const origin = from.current;
+    let raf;
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / ms);
+      const eased = 1 - Math.pow(1 - t, 3);                 // ease-out
+      const v = Math.round(origin + (target - origin) * eased);
+      from.current = v;
+      setShown(v);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return shown;
+}
+
+/**
+ * True while the page is being scrolled DOWN past the top — so a sticky header can slip
+ * away and give a phone its screen back — and false the moment the person scrolls up
+ * or is near the top. Throttled to one check per animation frame.
+ */
+export function useHideOnScroll({ after = 140, delta = 10 } = {}) {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    let ticking = false;
+    const check = () => {
+      ticking = false;
+      const y = window.scrollY;
+      if (Math.abs(y - last) < delta) return;
+      setHidden(y > last && y > after);
+      last = y;
+    };
+    const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(check); } };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [after, delta]);
+  return hidden;
+}
