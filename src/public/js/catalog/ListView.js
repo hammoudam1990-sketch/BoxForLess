@@ -79,8 +79,6 @@ export function ListView({ state, update }) {
   // Before a category is chosen — and while not searching — the top-level categories
   // are big coloured tiles, as in the Box for Less app, instead of a row of chips.
   const showTiles = state.topLevel === '' && !state.search.trim() && tops.length > 0;
-  // The banner only introduces the whole range, so it goes as soon as anything narrows it.
-  const showBanner = showTiles && state.availability === 'all' && !state.withImage;
   const subs = state.topLevel ? cats.filter((c) => c.level === 2 && c.path.startsWith(`${state.topLevel} / `)) : [];
 
   const go = (delta) => {
@@ -107,11 +105,6 @@ export function ListView({ state, update }) {
         <span class="c-stat-n">${(shownTotal ?? total).toLocaleString()}</span>
         <span class="c-stat-l">products<br />${state.view === 'available' ? 'available now' : 'in the catalogue'}</span>
       </div>` : null}
-    ${showBanner ? html`
-      <section class="c-banner" aria-label="How requests work">
-        <h2>Request cartons in three steps</h2>
-        <ol class="c-steps"><li>Add cartons</li><li>Enter your code</li><li>Send</li></ol>
-      </section>` : null}
     <div class="c-views" role="tablist">
       <button type="button" class="c-view" role="tab" aria-selected=${state.view === 'available'}
         onClick=${() => state.view !== 'available' && update({ view: 'available', offset: 0 })}>Available Now</button>
