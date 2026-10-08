@@ -797,3 +797,12 @@ body {
 .c-chip, .c-sort { background: var(--c-tile); }
 .c-chip[aria-pressed="true"] { background: var(--c-ink); }
 .c-search input { background: var(--c-tile); }
+
+/* the search field: white, with an outline so it shows on the white page, and the site's own
+   font (form fields do not inherit it unless told to). 16px, the site's body size, which
+   also stops iOS zooming in when the field is tapped. */
+.c-search input {
+  background: #fff; border: 1.5px solid var(--c-line);
+  font-family: inherit; font-size: 1rem; line-height: 1.5;
+}
+.c-search input:focus { border-color: var(--c-ink); }
