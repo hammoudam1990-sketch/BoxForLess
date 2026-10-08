@@ -606,7 +606,7 @@ body {
 .c-stat-n { color: var(--c-on-bg); letter-spacing: -0.05em; text-shadow: 0 1px 0 rgba(255, 255, 255, .35); }
 .c-stat-l { color: var(--c-on-bg-muted); font-weight: 600; }
 .c-section { font-size: 28px; color: var(--c-on-bg); }
-.c-view { color: #6a645b; }                                  /* 5.6:1 on its white pill */
+.c-view { color: #d24a0e; }                                  /* burnt orange: 4.7:1 on white */
 .c-view[aria-selected="true"] { color: var(--c-on-bg); }
 .c-brand-title { font-weight: 700; }
 
