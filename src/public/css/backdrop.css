@@ -1,46 +1,5 @@
-/* The page background is two layers.
-   1. js/gradient-wave.js draws a slowly drifting orange-and-cream gradient (a canvas at z-index -2).
-   2. On top of it, the doodle wallpaper: black line art on white, drawn here and MULTIPLIED
-      over the gradient so only the lines show, faintly, on the colour.
-   - On a phone the wallpaper is one layer; from 900px up the screen is split into two halves
-     and the right half is the same picture mirrored, fading out towards the centre where the
-     content sits.
-   - It drifts very slowly (a scale and a nudge, transform only, 60s). Off under
-     prefers-reduced-motion, as is the gradient's movement.
-   Text never sits on the pattern itself: panels, the header, the tab bar and every small label
-   are white; only the big serif words stand on it, in near-black. */
-html { background: #fff1e6; }
-/* The picture layers sit at negative z-index, BELOW the body's own background, so the body
-   must not paint one: the html element above (and the gradient canvas) provide it. */
+/* The page background: plain white. (The animated gradient, js/gradient-wave.js, and the doodle
+   wallpaper, img/doodles-bg.webp, are still in the project but no page loads them. To bring a
+   background back, add its <script> / layers again.) */
+html { background: #ffffff; }
 html body { background: transparent; }
-
-body::before,
-body::after {
-  content: ""; position: fixed; top: 0; bottom: 0; z-index: -1; pointer-events: none;
-  background: url("/img/doodles-bg.webp") center / cover no-repeat;
-  opacity: .2; mix-blend-mode: multiply;
-  will-change: transform; transform-origin: 50% 50%;
-}
-body::before { left: 0; right: 0; animation: bg-drift 60s ease-in-out infinite alternate; }
-body::after { display: none; }
-
-@media (min-width: 900px) {
-  body::before, body::after {
-    opacity: .3;
-    -webkit-mask-image: linear-gradient(to right, #000 0%, rgba(0, 0, 0, .15) 100%);
-    mask-image: linear-gradient(to right, #000 0%, rgba(0, 0, 0, .15) 100%);
-  }
-  body::before { right: 50%; }
-  body::after {
-    display: block; left: 50%; right: 0; transform: scaleX(-1);
-    animation: bg-drift-flip 60s ease-in-out infinite alternate;
-  }
-}
-
-@keyframes bg-drift { from { transform: scale(1.03); } to { transform: scale(1.1) translate3d(-1.5%, -1.2%, 0); } }
-@keyframes bg-drift-flip { from { transform: scaleX(-1) scale(1.03); } to { transform: scaleX(-1) scale(1.1) translate3d(-1.5%, -1.2%, 0); } }
-
-@media (prefers-reduced-motion: reduce) {
-  body::before, body::after { animation: none; transform: none; }
-  body::after { transform: scaleX(-1); }
-}
