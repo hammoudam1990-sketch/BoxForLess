@@ -324,3 +324,18 @@ a.dash-tile:hover { border-color: var(--ink); }
   .hero-text h1 { font-size: 24px; }
   .feed-time { display: none; }
 }
+
+/* the dashboard fills the whole screen rather than a centred column */
+.adm-body .view:has(.hero) { max-width: none; padding: 26px 32px 48px; }
+.dash-view-grow .dstat-v { font-size: 40px; }
+.adm-body .view:has(.hero) .dstat-v { font-size: 40px; }
+.adm-body .view:has(.hero) .hero { padding: 22px 26px; }
+.adm-body .view:has(.hero) .hero-text h1 { font-size: 34px; }
+.adm-body .view:has(.hero) .bubbles { min-height: 340px; }
+.adm-body .view:has(.hero) .donut { width: 260px; height: 260px; }
+.adm-body .view:has(.hero) .donut-hole { width: 170px; height: 170px; }
+.adm-body .view:has(.hero) .donut-hole b { font-size: 34px; }
+.adm-body .view:has(.hero) .dlegend { font-size: 17px; min-width: 200px; }
+.adm-body .view:has(.hero) .task { min-height: 68px; font-size: 17px; }
+.adm-body .view:has(.hero) .grid-main, .adm-body .view:has(.hero) .grid-row { gap: 22px; margin-bottom: 22px; }
+.adm-body .view:has(.hero) .stockbar { height: 22px; }
