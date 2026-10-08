@@ -68,7 +68,9 @@ export function createApp(db) {
     if (!hasStaffSession(req)) return res.redirect(`/staff/login?next=${encodeURIComponent(req.path)}`);
     res.sendFile(path.join(publicDir, filename));
   };
-  app.get('/', privatePage('index.html'));
+  // The front door: one public page linking to the catalogue, the staff app and the
+  // scanner. The staff app itself lives at /index.html and is still private.
+  app.get('/', (_req, res) => res.sendFile(path.join(publicDir, 'home.html')));
   app.get('/index.html', privatePage('index.html'));
   app.get('/scan.html', privatePage('scan.html'));
   app.get('/staff/login', (_req, res) => {

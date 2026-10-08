@@ -4,6 +4,7 @@ import { useAsync } from '../lib/hooks.js';
 import { getJSON } from './http.js';
 import { Link } from './router.js';
 import { Pill, ProductImage, RequestControl } from './parts.js';
+import { Doodle, doodleFor } from './doodles.js';
 
 export function DetailView({ id }) {
   const state = useAsync(() => getJSON(`/api/catalog/products/${encodeURIComponent(id)}`), [id]);
@@ -32,8 +33,9 @@ export function DetailView({ id }) {
     <${Link} class="c-back" href="/catalog">← Back to Catalog<//>
     <div class="c-detail">
       <div class=${`c-detail-grid${p.image ? '' : ' c-detail-grid-noimg'}`}>
-        ${p.image ? html`<div class="c-hero"><${ProductImage} image=${p.image} name=${p.name} /></div>` : null}
+        ${p.image ? html`<div class="c-hero"><span class="c-mark" aria-hidden="true">↗</span><${ProductImage} image=${p.image} name=${p.name} /></div>` : null}
         <div>
+          ${p.image ? null : html`<div class="c-doodle-hero"><${Doodle} name=${doodleFor(p)} size="lg" /></div>`}
           <h1>${p.name}</h1>
           <div class="c-facts">
             <div><div class="c-fact-k">Barcode</div><div class="c-fact-v">${p.barcode}</div></div>

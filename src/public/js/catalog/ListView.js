@@ -4,11 +4,14 @@
 // The filter state is owned by the App, not by this component, so opening a product
 // and coming back finds the list exactly as it was left.
 import { html, useRef } from '../lib/react.js';
-import { useAsync, useDebounced } from '../lib/hooks.js';
+import { useAsync, useDebounced, useCountUp } from '../lib/hooks.js';
 import { getJSON } from './http.js';
 import { ProductCard } from './parts.js';
+import { Doodle, doodleForTop } from './doodles.js';
 
 const PAGE_SIZE = 24;
+// how many colours the category tiles cycle through (see .c-tile-N in catalog.css)
+const TILE_COLOURS = 4;
 
 /**
  * view: 'available' = active products with stock on hand (the default, because a
@@ -73,6 +76,11 @@ export function ListView({ state, update }) {
   // DRINKS & BEVERAGES and PETS are NOT merged.
   const tops = cats.filter((c) => c.level === 1);
   // second level of whichever top-level is selected
+  // Before a category is chosen — and while not searching — the top-level categories
+  // are big coloured tiles, as in the Box for Less app, instead of a row of chips.
+  const showTiles = state.topLevel === '' && !state.search.trim() && tops.length > 0;
+  // The banner only introduces the whole range, so it goes as soon as anything narrows it.
+  const showBanner = showTiles && state.availability === 'all' && !state.withImage;
   const subs = state.topLevel ? cats.filter((c) => c.level === 2 && c.path.startsWith(`${state.topLevel} / `)) : [];
 
   const go = (delta) => {
@@ -80,12 +88,30 @@ export function ListView({ state, update }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // The big number: what can be requested now (in stock + limited), or the whole range.
+  const total = f ? (state.view === 'available' ? (f.in_stock || 0) + (f.limited || 0) : f.all) : null;
+
+  const shownTotal = useCountUp(total);
+  const filtersActive = Boolean(state.search.trim() || state.topLevel || state.categoryPath
+    || state.availability !== 'all' || state.withImage);
+  const clearFilters = () => update({ search: '', topLevel: '', categoryPath: '', availability: 'all', withImage: false, offset: 0 });
+
   const data = results.data;
   const count = data && data.items.length
     ? `${data.offset + 1}–${Math.min(data.offset + data.items.length, data.total)} of ${data.total} products`
     : '';
 
   return html`
+    ${total != null ? html`
+      <div class="c-stat">
+        <span class="c-stat-n">${(shownTotal ?? total).toLocaleString()}</span>
+        <span class="c-stat-l">products<br />${state.view === 'available' ? 'available now' : 'in the catalogue'}</span>
+      </div>` : null}
+    ${showBanner ? html`
+      <section class="c-banner" aria-label="How requests work">
+        <h2>Request cartons in three steps</h2>
+        <ol class="c-steps"><li>Add cartons</li><li>Enter your code</li><li>Send</li></ol>
+      </section>` : null}
     <div class="c-views" role="tablist">
       <button type="button" class="c-view" role="tab" aria-selected=${state.view === 'available'}
         onClick=${() => state.view !== 'available' && update({ view: 'available', offset: 0 })}>Available Now</button>
@@ -93,19 +119,35 @@ export function ListView({ state, update }) {
         onClick=${() => state.view !== 'full' && update({ view: 'full', offset: 0 })}>Full Catalogue</button>
     </div>
     <div class="c-search">
+      <svg class="c-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+      </svg>
       <input ref=${searchRef} type="search" inputMode="search" autoComplete="off"
-        placeholder="Search products..." aria-label="Search products"
+        placeholder="Find a product" aria-label="Search products"
         value=${state.search} onChange=${(e) => update({ search: e.target.value, offset: 0 })} />
       <button class=${`c-search-clear${state.search ? '' : ' hidden'}`} type="button" aria-label="Clear search"
         onClick=${() => { update({ search: '', offset: 0 }); searchRef.current?.focus(); }}>×</button>
     </div>
     <div class="c-controls">
-      <div class="c-chips">
-        <${Chip} pressed=${state.topLevel === ''} onClick=${() => update({ topLevel: '', categoryPath: '', offset: 0 })}>All Categories<//>
-        ${tops.map((c) => html`
-          <${Chip} key=${c.path} pressed=${state.topLevel === c.path} count=${c.count}
-            onClick=${() => update({ topLevel: c.path, categoryPath: '', offset: 0 })}>${c.name}<//>`)}
-      </div>
+      ${showTiles ? html`
+        <section>
+          <h2 class="c-section" id="shop-by-category">Shop by Category</h2>
+          <div class="c-tiles">
+            ${tops.map((c, i) => html`
+              <button key=${c.path} type="button" class=${`c-tile c-tile-${i % TILE_COLOURS}`}
+                onClick=${() => update({ topLevel: c.path, categoryPath: '', offset: 0 })}>
+                <${Doodle} name=${doodleForTop(c.name)} size="md" class="c-tile-doodle" />
+                <span class="c-tile-name">${c.name}</span>
+                <span class="c-tile-count">${c.count} products</span>
+              </button>`)}
+          </div>
+        </section>` : html`
+        <div class="c-chips">
+          <${Chip} pressed=${state.topLevel === ''} onClick=${() => update({ topLevel: '', categoryPath: '', offset: 0 })}>All Categories<//>
+          ${tops.map((c) => html`
+            <${Chip} key=${c.path} pressed=${state.topLevel === c.path} count=${c.count}
+              onClick=${() => update({ topLevel: c.path, categoryPath: '', offset: 0 })}>${c.name}<//>`)}
+        </div>`}
       ${subs.length ? html`
         <div class="c-chips">
           <${Chip} pressed=${state.categoryPath === ''} onClick=${() => update({ categoryPath: '', offset: 0 })}>All<//>
@@ -122,7 +164,10 @@ export function ListView({ state, update }) {
             onClick=${() => update({ withImage: !state.withImage, offset: 0 })}>With Image<//>` : null}
       </div>
       <div class="c-sortrow">
-        <span class="c-count">${count}</span>
+        <span class="c-sort-left">
+          <span class="c-count" role="status">${count}</span>
+          ${filtersActive ? html`<button type="button" class="c-clear" onClick=${clearFilters}>Clear filters</button>` : null}
+        </span>
         <select class="c-sort" aria-label="Sort products" value=${state.sort}
           onChange=${(e) => update({ sort: e.target.value, offset: 0 })}>
           <option value="name_asc">Name A → Z</option>
@@ -130,12 +175,12 @@ export function ListView({ state, update }) {
         </select>
       </div>
     </div>
-    <div><${Results} results=${results} search=${state.search} go=${go} /></div>`;
+    <div><${Results} results=${results} search=${state.search} go=${go} onClear=${filtersActive ? clearFilters : null} /></div>`;
 }
 
-function Results({ results, search, go }) {
+function Results({ results, search, go, onClear }) {
   if (results.loading) {
-    return html`<div class="c-grid">${[0, 1, 2, 3, 4, 5].map((i) => html`<div key=${i} class="c-skeleton"></div>`)}</div>`;
+    return html`<div class="c-grid">${[0, 1, 2, 3, 4, 5].map((i) => html`<div key=${i} class="c-skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i></div>`)}</div>`;
   }
   if (results.error) return html`<div class="c-error">Could not load products: ${results.error.message}</div>`;
 
@@ -145,6 +190,7 @@ function Results({ results, search, go }) {
       <div class="c-empty">
         <h2>No products found</h2>
         <p>${search ? `Nothing matches “${search}”. Try a different name or barcode.` : 'No products match these filters.'}</p>
+        ${onClear ? html`<button type="button" class="c-btn primary c-empty-action" onClick=${onClear}>Clear filters</button>` : null}
       </div>`;
   }
 

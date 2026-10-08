@@ -112,6 +112,7 @@ console.log(`  pending reviews : ${n("SELECT COUNT(*) n FROM import_changes WHER
 // ------------------------------------------------------------------- 5. links
 console.log('\nLINKS  (everyone must be on the SAME Wi-Fi as this computer)');
 if (current) {
+  console.log(`  Front door     : http://${current}:${config.port}/   (links to everything)`);
   console.log(`  Catalogue      : http://${current}:${config.port}/catalog`);
   console.log(`  Staff / scanner: https://${current}:${config.httpsPort}/`);
   console.log(`  On this laptop : http://localhost:${config.port}/`);

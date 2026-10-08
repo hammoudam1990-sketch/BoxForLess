@@ -3,8 +3,8 @@ import { api } from '../api.js';
 
 /** Where to go after signing in — only ever a path on this site. */
 export function safeNext(search) {
-  const next = new URLSearchParams(search).get('next') || '/';
-  return next.startsWith('/') && !next.startsWith('//') ? next : '/';
+  const next = new URLSearchParams(search).get('next') || '/index.html';
+  return next.startsWith('/') && !next.startsWith('//') ? next : '/index.html';
 }
 
 export function Login() {
