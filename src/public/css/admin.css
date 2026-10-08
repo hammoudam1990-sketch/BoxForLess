@@ -339,3 +339,19 @@ a.dash-tile:hover { border-color: var(--ink); }
 .adm-body .view:has(.hero) .task { min-height: 68px; font-size: 17px; }
 .adm-body .view:has(.hero) .grid-main, .adm-body .view:has(.hero) .grid-row { gap: 22px; margin-bottom: 22px; }
 .adm-body .view:has(.hero) .stockbar { height: 22px; }
+
+/* Product Master fills the screen; larger text and rows, and status labels stay on one line */
+.adm-body .view:has(.prod-controls) { max-width: none; padding: 26px 32px 48px; }
+.adm-body .view:has(.prod-controls) h1 { font-size: 34px; }
+.adm-body .view:has(.prod-controls) .stat .n { font-size: 36px; }
+.adm-body .view:has(.prod-controls) .stat .l { font-size: 15px; }
+.adm-body .view:has(.prod-controls) .prod-controls input[type=search],
+.adm-body .view:has(.prod-controls) select,
+.adm-body .view:has(.prod-controls) .button-link { font-size: 17px; min-height: 48px; }
+.adm-body .view:has(.prod-controls) table { font-size: 16px; }
+.adm-body .view:has(.prod-controls) th { font-size: 14px; }
+.adm-body .view:has(.prod-controls) td { padding: 14px 12px; }
+.adm-body .view:has(.prod-controls) td .pill { white-space: nowrap; }
+.adm-body .view:has(.prod-controls) .prod-meta { font-size: 16px; }
+.adm-body .view:has(.prod-controls) .prod-pager button,
+.adm-body .view:has(.prod-controls) .prod-pager span { font-size: 17px; }
