@@ -40,7 +40,7 @@
   --c-radius: 10px;
   --c-tile-radius: 24px;
   --c-tap: 44px; /* minimum touch target */
-  --c-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --c-display: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -832,4 +832,4 @@ html[data-theme="dark"] .c-add, html[data-theme="dark"] .c-stepper { border-colo
 .c-chip[aria-pressed="true"] .n { font-size: 15px; }
 
 /* the whole site uses the device's own system font */
-html, body, button, input, select, textarea { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+html, body, button, input, select, textarea { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif; }

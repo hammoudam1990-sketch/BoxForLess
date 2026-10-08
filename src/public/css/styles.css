@@ -22,7 +22,7 @@
   --info-bg: #f6ebdd;
   --radius: 16px;
   --shadow: 0 2px 4px rgba(26,22,18,.07), 0 10px 26px rgba(26,22,18,.12);
-  --display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --display: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 * { box-sizing: border-box; }
 body {
@@ -271,4 +271,4 @@ tbody tr:hover { background: #f7f4ee; }
 }
 
 /* the whole site uses the device's own system font */
-html, body, button, input, select, textarea { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+html, body, button, input, select, textarea { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif; }
