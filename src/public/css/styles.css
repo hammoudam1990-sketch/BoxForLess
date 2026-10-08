@@ -22,7 +22,7 @@
   --info-bg: #f6ebdd;
   --radius: 16px;
   --shadow: 0 2px 4px rgba(26,22,18,.07), 0 10px 26px rgba(26,22,18,.12);
-  --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --display: Elephant, Georgia, serif;
 }
 * { box-sizing: border-box; }
 body {
@@ -269,3 +269,6 @@ tbody tr:hover { background: #f7f4ee; }
   background-position: calc(var(--logo-size) * -1.0875) calc(var(--logo-size) * -0.2958);
   border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(26, 22, 18, .12);
 }
+
+/* the whole site uses Elephant (falls back to Georgia where Elephant is not installed) */
+html, body, button, input, select, textarea { font-family: Elephant, Georgia, serif; }

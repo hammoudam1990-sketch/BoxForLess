@@ -40,7 +40,7 @@
   --c-radius: 10px;
   --c-tile-radius: 24px;
   --c-tap: 44px; /* minimum touch target */
-  --c-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --c-display: Elephant, Georgia, serif;
 }
 
 * { box-sizing: border-box; }
@@ -830,3 +830,6 @@ html[data-theme="dark"] .c-add, html[data-theme="dark"] .c-stepper { border-colo
 /* the filter row, the result count and the sort menu: 17px */
 .c-chip, .c-chip .n, .c-count, .c-sort, .c-chip[aria-pressed="true"] .n, .c-page-list .c-sort { font-size: 17px; }
 .c-chip[aria-pressed="true"] .n { font-size: 15px; }
+
+/* the whole site uses Elephant (falls back to Georgia where Elephant is not installed) */
+html, body, button, input, select, textarea { font-family: Elephant, Georgia, serif; }
