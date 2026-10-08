@@ -833,3 +833,28 @@ html[data-theme="dark"] .c-add, html[data-theme="dark"] .c-stepper { border-colo
 
 /* the whole site uses the device's own system font */
 html, body, button, input, select, textarea { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif; }
+
+/* Phones: the display type is scaled down so more of the catalogue fits on the screen.
+   Body text stays at 18px. Wider screens keep the full sizes. */
+@media (max-width: 759px) {
+  .c-stat { margin: 0 0 10px; gap: 10px; }
+  .c-stat-n { font-size: 60px; }
+  .c-stat-l { font-size: 16px; }
+  .c-views { gap: 14px; margin-bottom: 10px; }
+  .c-view { font-size: 22px; }
+  .c-section { font-size: 20px; margin: 4px 0 10px; }
+  .c-tile { min-height: 116px; padding: 12px; }
+  .c-tile-name { font-size: 19px; }
+  .c-tile-doodle { width: 36px; height: 36px; top: 12px; left: 12px; }
+  .c-tile::after { top: 12px; right: 12px; }
+  .c-tiles { gap: 8px; }
+  .c-card { padding: 8px 8px 10px; }
+  .c-card-top { gap: 8px; }
+  .c-doodle-chip { width: 40px; height: 40px; padding: 7px; }
+  .c-card-body { padding: 8px 2px 2px; gap: 5px; }
+  .c-card-body .c-name { font-size: 16px; min-height: 0; -webkit-line-clamp: 3; }
+  .c-pill { font-size: 14px; }
+  .c-search input { height: 44px; }
+  .c-controls { gap: 8px; margin-bottom: 12px; }
+  .c-grid { gap: 10px; }
+}
