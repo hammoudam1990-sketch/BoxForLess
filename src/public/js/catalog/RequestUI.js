@@ -52,6 +52,10 @@ export function RequestUI({ tab, onHome, onCategories }) {
         <span>My request</span>
       </button>
     </nav>
+    <button type="button" class="c-request-fab" aria-haspopup="dialog" onClick=${() => setOpen(true)}>
+      <${Icon} name="request" /><span>My request</span>
+      ${cartons ? html`<span class="c-tab-badge" aria-label=${`${cartons} cartons in your request`}>${cartons}</span>` : null}
+    </button>
     <${Drawer} open=${open} onClose=${() => setOpen(false)} />`;
 }
 
