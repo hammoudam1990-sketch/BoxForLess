@@ -18,7 +18,7 @@ function Header({ hidden }) {
     <header class=${`c-header${hidden ? ' c-header-hidden' : ''}`}>
       <div class="c-header-inner">
         <${Link} class="c-brand" href="/catalog">
-          <span class="c-logo">BFL</span>
+          <span class="c-logo" role="img" aria-label="Box for Less">BFL</span>
           <span class="c-brand-text">
             <span class="c-brand-title">Box for Less</span>
             <span class="c-brand-sub">Digital Product Catalog</span>

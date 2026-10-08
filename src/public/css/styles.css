@@ -257,3 +257,15 @@ tbody tr:hover { background: #f7f4ee; }
 }
 .view > h1 { text-shadow: 0 0 20px rgba(255, 255, 255, .8); }
 .scan-status { margin-left: auto; margin-right: auto; }
+
+/* The Box for Less logo mark: the open box with the orange arrow, cropped out of
+   img/logo.png (which also carries the wordmark). The text inside .logo is kept for
+   screen readers and hidden visually. */
+.logo {
+  --logo-size: 42px; width: var(--logo-size); height: var(--logo-size);
+  font-size: 0; color: transparent; overflow: hidden;
+  background: #fff url("/img/logo.png") no-repeat;
+  background-size: calc(var(--logo-size) * 3.134) auto;
+  background-position: calc(var(--logo-size) * -1.213) calc(var(--logo-size) * -0.352);
+  border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(26, 22, 18, .12);
+}

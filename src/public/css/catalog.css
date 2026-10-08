@@ -704,3 +704,14 @@ body {
 /* the tile drawing is smaller than the title is tall, so the two never meet */
 .c-tile { min-height: 168px; }
 .c-tile-doodle { width: 52px; height: 52px; }
+
+/* The Box for Less logo mark, cropped out of img/logo.png (see styles.css). */
+.c-logo {
+  --logo-size: 40px; width: var(--logo-size); height: var(--logo-size);
+  font-size: 0; color: transparent; overflow: visible;
+  background: #fff url("/img/logo.png") no-repeat;
+  background-size: calc(var(--logo-size) * 3.134) auto;
+  background-position: calc(var(--logo-size) * -1.213) calc(var(--logo-size) * -0.352);
+  border: 1px solid var(--c-line); box-shadow: 0 2px 8px rgba(26, 22, 18, .12);
+}
+.c-logo::after { display: none; }
