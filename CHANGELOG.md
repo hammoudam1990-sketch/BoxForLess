@@ -8,6 +8,8 @@ The whole front end — customer catalogue, staff screens, staff sign-in and the
 barcode scanner — is now React. Behaviour, URLs, API calls and CSS are unchanged.
 
 ### Added
+- **Admin dashboard in the new style:** a greeting band with a Show my tasks button, a task list counted from live data (changes to review, access requests, recent requests to accept, stock import needed), products by category as bubbles, stock by level, product health, a recent-activity feed of imports, requests and access requests, and a requests panel.
+
 - **Staff dashboard restyled after the Tailgrids reference:** summary cards with icons, a bar chart of products by stock level, a product-health donut, a recent-orders table, and sidebar sections. Every number is read from the server; no change percentages are shown, because the system keeps no history to compare them with.
 
 - **Staff admin redesigned.** A sidebar with icons, a top bar with a product search (with the "/" key), a notifications bell, and a **dashboard** as the home page. The dashboard shows real figures only: active products, changes to review, access requests waiting, active requests, stock freshness, product health, recent requests, and the access requests waiting. On phones and small laptops the sidebar becomes a drawer.

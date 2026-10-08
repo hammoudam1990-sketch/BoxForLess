@@ -1,21 +1,20 @@
-// The staff dashboard, laid out like the Tailgrids reference: summary cards with icons, a bar
-// chart, a donut, and a recent-orders table. Every number is read from the server. Nothing is
-// estimated, and no change percentages are shown because the system keeps no history to compare.
+// The staff dashboard, restyled after the light "Financial Dashboard" reference: a greeting band,
+// rounded white cards, an orange accent, a bubble chart and an activity feed. Every number is read
+// from the server. Nothing is estimated, and no percentage changes are shown, because the system
+// keeps no history to compare with.
 import { api, esc, num } from './api.js';
 
 const when = (ts) => (ts ? new Date(ts).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—');
+const dateLabel = () => new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'long' });
 const ICON = {
   box: 'M4 7l8-4 8 4-8 4-8-4zM4 7v10l8 4 8-4V7M12 11v10',
   request: 'M7 3h10a1 1 0 0 1 1 1v17l-3.5-2-2.5 2-2.5-2L6 21V4a1 1 0 0 1 1-1zM9.5 8h5M9.5 12h5',
   person: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0',
   check: 'M4 12l5 5L20 6',
+  upload: 'M12 4v11M7 10l5 5 5-5M5 20h14',
+  alert: 'M12 9v4M12 17h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
 };
 const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
-
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-}
 
 function customerName(r) {
   if (r.customer?.displayName) return r.customer.displayName;
@@ -29,141 +28,170 @@ function statusPill(status) {
   return `<span class="dpill ${tone}">${esc(label)}</span>`;
 }
 
-/** Bars for product counts by stock level, scaled to the largest. */
-function barChart(bands) {
-  const max = Math.max(1, ...bands.map((b) => b.n));
-  return `<div class="dbars" role="img" aria-label="${bands.map((b) => `${b.label} ${num(b.n)}`).join(', ')}">
-    ${bands.map((b) => `
-      <div class="dbar-col">
-        <span class="dbar-val">${num(b.n)}</span>
-        <div class="dbar-track"><i style="height:${((b.n / max) * 100).toFixed(1)}%" class="${b.tone}"></i></div>
-        <span class="dbar-lab">${esc(b.label)}</span>
+/** Bubbles sized by product count, one per top-level category. */
+function bubbles(tops) {
+  const max = Math.max(1, ...tops.map((t) => t.count));
+  const size = (n) => 46 + Math.sqrt(n / max) * 150;   // px diameter, 46..196
+  return `<div class="bubbles" role="img" aria-label="${tops.map((t) => `${t.name} ${num(t.count)}`).join(', ')}">
+    ${tops.map((t, i) => `
+      <div class="bubble ${i === 0 ? 'hot' : ''}" style="width:${size(t.count).toFixed(0)}px;height:${size(t.count).toFixed(0)}px">
+        <b>${num(t.count)}</b><span>${esc(t.name)}</span>
       </div>`).join('')}
   </div>`;
 }
 
 export async function renderDashboard(view) {
-  const [stats, requests, access, reviews, stock, inStock, limited, out] = await Promise.all([
+  const [stats, requests, access, reviews, stock, inStock, limited, out, imports, categories] = await Promise.all([
     api.stats(),
-    api.requests({ limit: 6 }),
+    api.requests({ limit: 8 }),
     api.accessRequests('PENDING'),
     api.reviews(),
     api.requestStockStatus(),
     api.products({ stock: 'in', limit: 1 }),
     api.products({ stock: 'limited', limit: 1 }),
     api.products({ stock: 'out', limit: 1 }),
+    api.imports(),
+    fetch('/api/catalog/categories?view=full').then((r) => (r.ok ? r.json() : { items: [] })).catch(() => ({ items: [] })),
   ]);
 
   const pendingReviews = reviews.counts?.total || 0;
   const waitingAccess = access.total || 0;
-  const activeRequests = requests.total || 0;
+  const toAccept = requests.items.filter((r) => r.status === 'SUBMITTED').length;
   const active = stats.active || 0;
   const total = stats.total || 0;
   const inactive = Math.max(0, total - active);
   const activePct = total ? (active / total) * 100 : 0;
-  const bands = [
-    { label: 'In stock', n: inStock.total, tone: 'ok' },
-    { label: 'Limited', n: limited.total, tone: 'warn' },
-    { label: 'Out', n: out.total, tone: 'off' },
+  const tops = (categories.items || []).filter((c) => c.level === 1).map((c) => ({ name: c.name, count: c.count }));
+
+  // Tasks are counted from the same data as the rest of the app. Each one links to where it is done.
+  const tasks = [
+    { n: pendingReviews, label: 'Changes to review', href: '#/changes', icon: ICON.check },
+    { n: waitingAccess, label: 'Access requests to approve', href: '#/access', icon: ICON.person },
+    { n: toAccept, label: 'Recent requests to accept', href: '#/requests', icon: ICON.request },
+    { n: stock.hasData && stock.fresh ? 0 : 1, label: 'Stock import needed', href: '#/imports', icon: ICON.upload },
   ];
+  const taskTotal = tasks.reduce((n, t) => n + t.n, 0);
+
+  // Recent activity: imports and customer requests, newest first.
+  const activity = [
+    ...imports.items.slice(0, 5).map((b) => ({ at: b.imported_at, text: `Product import “${b.filename}”`, sub: `${b.status} · ${num(b.total_rows || 0)} rows`, href: `#/imports/${b.id}`, icon: ICON.upload })),
+    ...requests.items.slice(0, 5).map((r) => ({ at: r.submitted_at, text: `Request ${r.reference || `#${r.id}`} from ${customerName(r)}`, sub: `${num(r.item_count)} line${r.item_count === 1 ? '' : 's'}`, href: `#/requests/${r.id}`, icon: ICON.request })),
+    ...access.items.slice(0, 3).map((a) => ({ at: a.created_at, text: `Access requested by ${a.company || a.contact || 'a company'}`, sub: 'Waiting for approval', href: '#/access', icon: ICON.person })),
+  ].filter((a) => a.at).sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 8);
 
   view.innerHTML = `
-    <div class="dash-head">
-      <div>
-        <h1>Dashboard</h1>
-        <p class="muted">${greeting()}. Here is what needs your attention.</p>
+    <section class="hero">
+      <div class="hero-date">
+        <span class="hero-day">${new Date().getDate()}</span>
+        <span class="hero-month">${esc(dateLabel())}</span>
       </div>
-    </div>
+      <div class="hero-text">
+        <h1>Hey, need a hand?</h1>
+        <p>You have <b>${num(taskTotal)}</b> ${taskTotal === 1 ? 'thing' : 'things'} to do today.</p>
+      </div>
+      <button class="hero-btn" type="button" data-scroll="tasks">Show my tasks <span aria-hidden="true">→</span></button>
+    </section>
 
     <section class="dstats" aria-label="Summary">
       <a class="dstat" href="#/products">
-        <span class="dstat-icon">${svg(ICON.box)}</span>
         <span class="dstat-k">Active products</span>
         <span class="dstat-v">${num(active)}</span>
         <span class="dstat-s">of ${num(total)} in the Product Master</span>
       </a>
       <a class="dstat" href="#/requests">
-        <span class="dstat-icon">${svg(ICON.request)}</span>
         <span class="dstat-k">Active requests</span>
-        <span class="dstat-v">${num(activeRequests)}</span>
+        <span class="dstat-v">${num(requests.total || 0)}</span>
         <span class="dstat-s">Submitted by customers</span>
       </a>
       <a class="dstat ${waitingAccess ? 'attn' : ''}" href="#/access">
-        <span class="dstat-icon">${svg(ICON.person)}</span>
         <span class="dstat-k">Access requests</span>
         <span class="dstat-v">${num(waitingAccess)}</span>
         <span class="dstat-s">${waitingAccess ? 'Companies waiting for a code' : 'Nobody waiting'}</span>
       </a>
       <a class="dstat ${pendingReviews ? 'attn' : ''}" href="#/changes">
-        <span class="dstat-icon">${svg(ICON.check)}</span>
         <span class="dstat-k">Changes to review</span>
         <span class="dstat-v">${num(pendingReviews)}</span>
         <span class="dstat-s">${pendingReviews ? 'Barcode or unit changes' : 'Nothing waiting'}</span>
       </a>
     </section>
 
-    <div class="dcharts">
-      <section class="dcard dcard-wide">
-        <div class="dcard-head">
-          <div><h2>Products by stock level</h2><p class="muted">Every product in the Product Master, by free stock</p></div>
-          <a href="#/products">Open →</a>
-        </div>
-        ${barChart(bands)}
+    <div class="grid-main">
+      <section class="dcard" id="tasks">
+        <div class="dcard-head"><div><h2>My tasks</h2><p class="muted">Each one opens the place it is done</p></div></div>
+        <ul class="tasks">
+          ${tasks.map((t) => `
+            <li>
+              <a href="${t.href}" class="task ${t.n ? 'open' : ''}">
+                <span class="task-icon">${svg(t.icon)}</span>
+                <span class="task-label">${esc(t.label)}</span>
+                <span class="task-n">${num(t.n)}</span>
+              </a>
+            </li>`).join('')}
+        </ul>
       </section>
 
       <section class="dcard">
-        <div class="dcard-head"><div><h2>Product health</h2><p class="muted">Active against inactive</p></div></div>
+        <div class="dcard-head"><div><h2>Products by category</h2><p class="muted">Top-level categories, every product counted</p></div><a href="#/products">Open →</a></div>
+        ${tops.length ? bubbles(tops) : '<p class="muted">No categories yet.</p>'}
+      </section>
+    </div>
+
+    <div class="grid-row">
+      <section class="dcard">
+        <div class="dcard-head"><div><h2>Stock by level</h2><p class="muted">Every product, by free stock</p></div></div>
+        <div class="levels">
+          <div><span class="dot ok"></span>In stock <b>${num(inStock.total)}</b></div>
+          <div><span class="dot warn"></span>Limited <b>${num(limited.total)}</b></div>
+          <div><span class="dot off"></span>Out <b>${num(out.total)}</b></div>
+        </div>
+        <div class="stockbar" role="img" aria-label="In stock ${num(inStock.total)}, limited ${num(limited.total)}, out ${num(out.total)}">
+          <i class="ok" style="flex:${inStock.total}"></i><i class="warn" style="flex:${limited.total}"></i><i class="off" style="flex:${out.total}"></i>
+        </div>
+        <div class="stock-note">
+          <span class="dpill ${stock.hasData && stock.fresh ? 'ok' : 'err'}">${stock.hasData && stock.fresh ? 'Stock is current' : stock.hasData ? 'Stock is out of date' : 'No stock import yet'}</span>
+          <p class="muted">${stock.hasData ? `Last import ${esc(when(stock.asOf))}.` : 'Run an Odoo import to enable requests.'}</p>
+        </div>
+      </section>
+
+      <section class="dcard">
+        <div class="dcard-head"><div><h2>Product health</h2></div></div>
         <div class="donut-wrap">
-          <div class="donut" style="background: conic-gradient(var(--ok, #2f7d4f) 0 ${activePct.toFixed(2)}%, #d8d2c7 ${activePct.toFixed(2)}% 100%)" role="img" aria-label="${num(active)} active, ${num(inactive)} inactive">
+          <div class="donut" style="background: conic-gradient(var(--orange) 0 ${activePct.toFixed(2)}%, #e6e3dd ${activePct.toFixed(2)}% 100%)" role="img" aria-label="${num(active)} active, ${num(inactive)} inactive">
             <div class="donut-hole"><b>${num(total)}</b><span>products</span></div>
           </div>
           <ul class="dlegend">
-            <li><i class="ok"></i>Active <b>${num(active)}</b></li>
-            <li><i class="off"></i>Inactive <b>${num(inactive)}</b></li>
+            <li><i class="orange"></i>Active <b>${num(active)}</b></li>
+            <li><i class="grey"></i>Inactive <b>${num(inactive)}</b></li>
             <li><i class="warn"></i>Data warnings <b>${num(stats.warnings || 0)}</b></li>
           </ul>
         </div>
       </section>
     </div>
 
-    <div class="dcharts dcharts-2">
+    <div class="grid-row">
       <section class="dcard dcard-wide">
-        <div class="dcard-head">
-          <div><h2>Recent requests</h2><p class="muted">The latest orders from customers</p></div>
-          <a href="#/requests">View all →</a>
-        </div>
-        ${requests.items.length ? `
-        <div class="dtable-wrap"><table class="dtable">
-          <thead><tr><th>Reference</th><th>Customer</th><th class="num">Lines</th><th>Submitted</th><th>Status</th></tr></thead>
-          <tbody>${requests.items.map((r) => `
-            <tr>
-              <td><a href="#/requests/${r.id}"><b>${esc(r.reference || `#${r.id}`)}</b></a></td>
-              <td>${esc(customerName(r))}</td>
-              <td class="num">${num(r.item_count)}</td>
-              <td class="muted">${esc(when(r.submitted_at))}</td>
-              <td>${statusPill(r.status)}</td>
-            </tr>`).join('')}</tbody>
-        </table></div>` : '<p class="muted">No requests yet.</p>'}
+        <div class="dcard-head"><div><h2>Recent activity</h2><p class="muted">Imports, requests and access requests, newest first</p></div></div>
+        ${activity.length ? `<ul class="feed">${activity.map((a) => `
+          <li><a href="${a.href}">
+            <span class="feed-icon">${svg(a.icon)}</span>
+            <span class="feed-text"><b>${esc(a.text)}</b><span class="muted">${esc(a.sub)}</span></span>
+            <span class="feed-time muted">${esc(when(a.at))}</span>
+          </a></li>`).join('')}</ul>` : '<p class="muted">Nothing has happened yet.</p>'}
       </section>
 
-      <div class="dcol">
-        <section class="dcard">
-          <div class="dcard-head"><div><h2>Stock</h2></div><a href="#/imports">Imports →</a></div>
-          ${stock.hasData && stock.fresh
-            ? `<span class="dpill ok">Stock is current</span><p class="muted">Last import ${esc(when(stock.asOf))}. Customers can submit requests.</p>`
-            : stock.hasData
-              ? `<span class="dpill err">Stock is out of date</span><p class="muted">Last import ${esc(when(stock.asOf))}. Customers cannot submit requests until a fresh import runs.</p>`
-              : `<span class="dpill err">No stock import yet</span><p class="muted">Customers cannot submit requests until an Odoo import runs.</p>`}
-        </section>
-
-        <section class="dcard">
-          <div class="dcard-head"><div><h2>Waiting for a code</h2></div><a href="#/access">Open →</a></div>
-          ${access.items.length ? access.items.slice(0, 4).map((a) => `
-            <a class="drow" href="#/access">
-              <span class="drow-t">${esc(a.company || '—')}</span>
-              <span class="muted">${esc(a.contact || '')} · ${esc(when(a.created_at))}</span>
-            </a>`).join('') : '<p class="muted">No access requests are waiting.</p>'}
-        </section>
-      </div>
+      <section class="dcard">
+        <div class="dcard-head"><div><h2>Requests</h2></div><a href="#/requests">View all →</a></div>
+        ${requests.items.length ? requests.items.slice(0, 5).map((r) => `
+          <a class="drow" href="#/requests/${r.id}">
+            <span class="drow-t">${esc(customerName(r))}</span>
+            <span class="muted">${esc(r.reference || `#${r.id}`)} · ${num(r.item_count)} line${r.item_count === 1 ? '' : 's'}</span>
+            <span>${statusPill(r.status)}</span>
+          </a>`).join('') : '<p class="muted">No requests yet.</p>'}
+      </section>
     </div>`;
+
+  // Scroll to the task list. (A #hash link would be read by the router as a page change.)
+  view.querySelector('[data-scroll="tasks"]')?.addEventListener('click', () => {
+    view.querySelector('#tasks')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 }

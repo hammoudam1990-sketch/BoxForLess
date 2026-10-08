@@ -230,3 +230,97 @@ a.dash-tile:hover { border-color: var(--ink); }
 @media (max-width: 900px) {
   .dcharts, .dcharts-2 { grid-template-columns: 1fr; }
 }
+
+/* ---------- dashboard, after the "Financial Dashboard" reference ---------- */
+.hero {
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  padding: 18px 22px; margin-bottom: 16px; border-radius: 22px; background: var(--panel); border: 1px solid var(--line);
+}
+.hero-date { display: flex; align-items: center; gap: 12px; padding-right: 20px; border-right: 1px solid var(--line); }
+.hero-day { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); font-size: 24px; font-weight: 800; }
+.hero-month { font-weight: 600; color: var(--muted); max-width: 90px; line-height: 1.3; }
+.hero-text { flex: 1; min-width: 200px; }
+.hero-text h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+.hero-text p { margin: 4px 0 0; color: var(--muted); }
+.hero-btn {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 22px; border: 0; border-radius: 999px;
+  background: var(--orange); color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+}
+.hero-btn:hover { filter: brightness(1.06); }
+
+.dstat { background: var(--panel); border-radius: 22px; border: 1px solid var(--line); box-shadow: none; }
+.dstat .dstat-icon { display: none; }
+.dstat-v { font-size: 34px; }
+.dstat.attn { border-color: var(--orange); }
+.dstat.attn .dstat-v { color: var(--orange); }
+
+.grid-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; margin-bottom: 16px; }
+.grid-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
+.dcard { border-radius: 22px; box-shadow: none; border: 1px solid var(--line); }
+.dcard-wide { grid-column: auto; }
+
+/* tasks */
+.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.task {
+  display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 0 16px; border-radius: 16px;
+  background: var(--bg); color: var(--ink); text-decoration: none; font-weight: 600;
+}
+.task:hover { border-color: var(--ink); }
+.task-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--panel); flex: none; }
+.task-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.task-label { flex: 1; }
+.task-n { min-width: 36px; height: 36px; padding: 0 12px; display: grid; place-items: center; border-radius: 999px; background: var(--panel); font-weight: 800; }
+.task.open { background: #fff1ea; }
+.task.open .task-icon { color: var(--orange); }
+.task.open .task-n { background: var(--orange); color: #fff; }
+
+/* bubbles: products by top-level category */
+.bubbles { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; min-height: 230px; padding: 8px 0; }
+.bubble {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  border-radius: 50%; background: #f3e4da; color: var(--ink); padding: 8px; overflow: hidden;
+}
+.bubble.hot { background: var(--orange); color: #fff; }
+.bubble b { font-size: clamp(16px, 2.6vw, 26px); font-weight: 800; line-height: 1; }
+.bubble span { font-size: 13px; font-weight: 600; opacity: .85; line-height: 1.2; }
+@media (prefers-reduced-motion: no-preference) { .bubble { transition: transform .2s ease; } .bubble:hover { transform: scale(1.04); } }
+
+/* stock by level */
+.levels { display: flex; flex-wrap: wrap; gap: 14px 22px; margin-bottom: 14px; font-weight: 600; color: var(--muted); }
+.levels b { color: var(--ink); margin-left: 4px; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+.dot.ok, .stockbar .ok { background: var(--ok, #2f7d4f); }
+.dot.warn, .stockbar .warn { background: var(--orange); }
+.dot.off, .stockbar .off { background: var(--ink); }
+.stockbar { display: flex; height: 16px; border-radius: 999px; overflow: hidden; background: var(--bg); gap: 3px; }
+.stockbar i { display: block; min-width: 0; border-radius: 999px; }
+.stock-note { margin-top: 16px; display: grid; gap: 6px; }
+.stock-note p { margin: 0; }
+
+/* product health donut in the new colours */
+.donut-hole { background: var(--panel); }
+.dlegend .orange { background: var(--orange); }
+.dlegend .grey { background: #e6e3dd; }
+
+/* activity feed */
+.feed { list-style: none; margin: 0; padding: 0; }
+.feed li { border-top: 1px solid var(--line); }
+.feed li:first-child { border-top: 0; }
+.feed a { display: flex; align-items: center; gap: 14px; padding: 12px 4px; color: var(--ink); text-decoration: none; }
+.feed a:hover .feed-text b { text-decoration: underline; }
+.feed-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--bg); flex: none; }
+.feed-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.feed-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.feed-text b { font-weight: 700; overflow-wrap: anywhere; }
+.feed-text span { font-size: 14px; }
+.feed-time { font-size: 13px; white-space: nowrap; }
+
+@media (max-width: 1024px) {
+  .grid-main, .grid-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 759px) {
+  .hero { padding: 16px; }
+  .hero-date { border-right: 0; padding-right: 0; }
+  .hero-text h1 { font-size: 24px; }
+  .feed-time { display: none; }
+}
