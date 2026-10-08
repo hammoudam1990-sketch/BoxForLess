@@ -4,37 +4,63 @@
   <meta charset="utf-8" />
   <script src="/js/theme-init.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Box for Less — Product Master</title>
+  <title>Box for Less — Staff</title>
   <link rel="stylesheet" href="/css/backdrop.css" />
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="/css/admin.css" />
   <link rel="stylesheet" href="/css/extras.css" />
   <link rel="stylesheet" href="/css/dark.css" />
   <link rel="stylesheet" href="/css/print.css" media="print" />
 </head>
-<body>
-  <header class="topbar">
-    <div class="brand">
+<body class="adm">
+  <aside class="adm-side" id="side" aria-label="Staff navigation">
+    <a class="adm-brand" href="#/dashboard">
       <span class="logo" role="img" aria-label="Box for Less">BFL</span>
-      <div>
-        <div class="brand-title">Box for Less</div>
-        <div class="brand-sub">Product Master · Phase 1</div>
-      </div>
-    </div>
-    <button id="menuToggle" class="menu-toggle ghost" type="button" aria-expanded="false" aria-controls="mainnav">Menu</button>
-    <nav class="mainnav" id="mainnav">
-      <a href="#/products" data-nav="products" class="active">Product Master</a>
-      <a href="#/imports" data-nav="imports">Imports</a>
-      <a href="#/changes" data-nav="changes">Change Review <span id="reviewBadge" class="badge hidden">0</span></a>
-      <a href="#/requests" data-nav="requests">Requests</a>
-      <a href="#/codes" data-nav="codes">Access Codes</a>
-      <a href="#/access" data-nav="access">Access Requests <span id="accessBadge" class="badge hidden">0</span></a>
-      <a href="scan.html" data-nav="scan">📷 Scan</a>
-      <button id="themeBtn" class="ghost" type="button">Dark mode</button>
-      <button id="staffLogout" class="ghost" type="button">Sign out</button>
+      <span><b>Box for Less</b><small>Staff</small></span>
+    </a>
+    <nav class="adm-nav" aria-label="Main">
+      <a href="#/dashboard" data-nav="dashboard">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg>Dashboard</a>
+      <a href="#/products" data-nav="products">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4-8-4zM4 7v10l8 4 8-4V7M12 11v10"/></svg>Product Master</a>
+      <a href="#/imports" data-nav="imports">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Imports</a>
+      <a href="#/changes" data-nav="changes">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h11l-3-3M20 17H9l3 3"/></svg>Change Review <span id="reviewBadge" class="badge hidden">0</span></a>
+      <a href="#/requests" data-nav="requests">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a1 1 0 0 1 1 1v17l-3.5-2-2.5 2-2.5-2L6 21V4a1 1 0 0 1 1-1zM9.5 8h5M9.5 12h5"/></svg>Requests</a>
+      <a href="#/access" data-nav="access">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0"/></svg>Access Requests <span id="accessBadge" class="badge hidden">0</span></a>
+      <a href="#/codes" data-nav="codes">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Access Codes</a>
+      <a href="scan.html" data-nav="scan">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M4 12h16"/></svg>Scan</a>
     </nav>
-  </header>
+    <button id="staffLogout" class="adm-logout" type="button">Sign out</button>
+  </aside>
+  <div class="adm-scrim" id="scrim" hidden></div>
 
-  <main id="view" class="view"></main>
+  <div class="adm-body">
+    <header class="adm-top">
+      <button id="menuToggle" class="adm-burger" type="button" aria-expanded="false" aria-controls="side" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <form class="adm-search" id="globalSearch" role="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="gsearch" type="search" placeholder="Search products by name, barcode or Odoo ID…" aria-label="Search products" autocomplete="off" />
+        <kbd aria-hidden="true">/</kbd>
+      </form>
+      <div class="adm-top-right">
+        <a class="adm-icon-btn" href="#/changes" aria-label="Items waiting for review">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9zM10 21h4"/></svg>
+          <span id="bellCount" class="badge hidden">0</span>
+        </a>
+        <div class="adm-user"><span class="adm-avatar" aria-hidden="true">BFL</span><span>Staff</span></div>
+      </div>
+    </header>
+
+    <main id="view" class="view"></main>
+  </div>
 
   <div id="toast" class="toast hidden"></div>
 

@@ -59,6 +59,13 @@ export const api = {
 
   // Customer access codes. These responses carry real codes, so they are staff
   // endpoints and must never be called from the catalog bundle.
+  // Customer requests (staff view)
+  requestStockStatus: () => fetch('/api/requests/stock-status').then(handle),
+  requests: ({ deleted = false, limit } = {}) => {
+    const q = new URLSearchParams({ ...(deleted ? { deleted: 'true' } : {}), ...(limit ? { limit: String(limit) } : {}) }).toString();
+    return fetch(`/api/requests${q ? `?${q}` : ''}`).then(handle);
+  },
+
   customerCodes: (params = {}) => {
     const q = new URLSearchParams(params).toString();
     return fetch(`/api/requests/customers/codes?${q}`).then(handle);

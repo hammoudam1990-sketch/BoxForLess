@@ -31,7 +31,10 @@ function primaryImageHtml(p, images = []) {
 export async function renderProducts(view) {
   const stats = await api.stats();
   const PAGE = 50;
-  const state = { search: '', filter: 'all', stock: 'all', sort: 'name_asc', page: 0 };
+  // A search typed in the top bar arrives here once, then is forgotten.
+  let fromTopBar = '';
+  try { fromTopBar = sessionStorage.getItem('bfl.productSearch') || ''; sessionStorage.removeItem('bfl.productSearch'); } catch { /* storage blocked */ }
+  const state = { search: fromTopBar, filter: 'all', stock: 'all', sort: 'name_asc', page: 0 };
 
   view.innerHTML = `
     <h1>Product Master</h1>
@@ -45,7 +48,7 @@ export async function renderProducts(view) {
     </div>
     <div class="card">
       <div class="controls prod-controls">
-        <input type="search" id="q" placeholder="Search barcode, name, or Odoo ID…" aria-label="Search products" />
+        <input type="search" id="q" value="${esc(fromTopBar)}" placeholder="Search barcode, name, or Odoo ID…" aria-label="Search products" />
         <select id="filter" aria-label="Status">
           <option value="all">All statuses</option>
           <option value="active">Active</option>
