@@ -64,7 +64,7 @@ body {
   margin: 0;
   background: var(--c-bg);
   color: var(--c-ink);
-  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Roboto, Helvetica, Arial, sans-serif;
+  font: 18px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Roboto, Helvetica, Arial, sans-serif;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -84,7 +84,7 @@ body {
   display: grid; place-items: center;
   width: 40px; height: 40px; flex: none;
   border-radius: 14px; background: var(--c-ink); color: #fff;
-  font-weight: 700; font-size: 12px; letter-spacing: .08em;
+  font-weight: 700; font-size: 18px; letter-spacing: .08em;
 }
 .c-logo::after {   /* the orange dot */
   content: ""; position: absolute; top: 6px; right: 6px;
@@ -92,7 +92,7 @@ body {
 }
 .c-brand-text { display: flex; flex-direction: column; }
 .c-brand-title { font-weight: 700; font-size: 18px; line-height: 1.15; letter-spacing: -0.02em; }
-.c-brand-sub { color: var(--c-muted); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.c-brand-sub { color: var(--c-muted); font-size: 18px; letter-spacing: .06em; text-transform: uppercase; }
 
 /* ---------- layout ---------- */
 .c-main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 18px; }
@@ -103,7 +103,7 @@ body {
   font-size: clamp(72px, 24vw, 112px); font-weight: 200; line-height: .9;
   letter-spacing: -0.06em; font-variant-numeric: tabular-nums;
 }
-.c-stat-l { font-size: 14px; line-height: 1.2; color: var(--c-muted); padding-bottom: 10px; }
+.c-stat-l { font-size: 18px; line-height: 1.2; color: var(--c-muted); padding-bottom: 10px; }
 
 /* ---------- search: a pill with a magnifier ---------- */
 .c-search { position: relative; margin-bottom: 16px; }
@@ -114,7 +114,7 @@ body {
 .c-search input {
   width: 100%; height: 52px;
   padding: 0 52px 0 46px;
-  font-size: 16px; /* 16px stops iOS Safari zooming on focus */
+  font-size: 18px; /* 16px stops iOS Safari zooming on focus */
   color: var(--c-ink); background: var(--c-tile);
   border: 1px solid transparent; border-radius: 999px;
   -webkit-appearance: none;
@@ -152,21 +152,21 @@ body {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 8px 18px; border-radius: 999px;
   border: 0; background: var(--c-tile);
-  color: var(--c-ink); font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer;
+  color: var(--c-ink); font-size: 18px; font-weight: 500; white-space: nowrap; cursor: pointer;
 }
 .c-chip .n { color: var(--c-muted); font-variant-numeric: tabular-nums; }
 .c-chip[aria-pressed="true"] { background: var(--c-ink); color: #fff; font-weight: 600; }
 .c-chip[aria-pressed="true"] .n {
-  background: var(--c-orange); color: var(--c-ink); font-weight: 700; font-size: 12px;
+  background: var(--c-orange); color: var(--c-ink); font-weight: 700; font-size: 18px;
   min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px;
   display: inline-grid; place-items: center;
 }
 
 .c-sortrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.c-count { color: var(--c-muted); font-size: 13px; letter-spacing: .02em; }
+.c-count { color: var(--c-muted); font-size: 18px; letter-spacing: .02em; }
 .c-sort {
   height: var(--c-tap); min-width: 150px;
-  padding: 0 14px; font-size: 14px;
+  padding: 0 14px; font-size: 18px;
   border: 0; border-radius: 999px;
   background: var(--c-tile); color: var(--c-ink);
 }
@@ -196,7 +196,7 @@ body {
 .c-tile:hover { box-shadow: 0 10px 24px rgba(17, 17, 16, .14); }
 .c-tile:active { transform: scale(.98); }
 .c-tile-name { font-size: 24px; font-weight: 500; line-height: 1.02; letter-spacing: -0.04em; overflow-wrap: anywhere; }
-.c-tile-count { font-size: 13px; font-weight: 500; opacity: .8; }
+.c-tile-count { font-size: 18px; font-weight: 500; opacity: .8; }
 @media (prefers-reduced-motion: no-preference) {
   .c-tile { animation: c-rise .4s cubic-bezier(.2, .8, .2, 1) both; }
   .c-tile:nth-child(2) { animation-delay: .06s; }
@@ -235,7 +235,7 @@ body {
 .c-card-top {
   display: flex; align-items: flex-start; justify-content: space-between;
   padding: 10px 10px 0; min-height: 56px;
-  font-size: 12px; font-weight: 600; letter-spacing: .08em; color: var(--c-muted);
+  font-size: 18px; font-weight: 600; letter-spacing: .08em; color: var(--c-muted);
 }
 .c-arrow { font-size: 18px; line-height: 1; color: var(--c-ink); }
 
@@ -246,7 +246,7 @@ body {
   display: grid; place-items: center; overflow: hidden;
 }
 .c-poster img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 12%; }
-.c-noimg { padding: 10px; text-align: center; color: var(--c-muted); font-size: 12px; line-height: 1.35; }
+.c-noimg { padding: 10px; text-align: center; color: var(--c-muted); font-size: 18px; line-height: 1.35; }
 .c-mark { position: absolute; top: 10px; right: 12px; font-size: 18px; line-height: 1; color: var(--c-ink); }
 
 .c-card-body { padding: 8px 10px 4px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
@@ -256,9 +256,9 @@ body {
   overflow: hidden; overflow-wrap: anywhere;
   margin-top: 6px;
 }
-.c-pack { color: var(--c-muted); font-size: 12px; font-weight: 600; letter-spacing: .08em; }
+.c-pack { color: var(--c-muted); font-size: 18px; font-weight: 600; letter-spacing: .08em; }
 .c-cat {
-  color: var(--c-muted); font-size: 12px; font-weight: 500;
+  color: var(--c-muted); font-size: 18px; font-weight: 500;
   text-transform: uppercase; letter-spacing: .06em;
   margin-top: auto;
 }
@@ -268,7 +268,7 @@ body {
   display: inline-flex; align-items: center; gap: 6px;
   align-self: flex-start;
   padding: 0; border-radius: 0; background: none;
-  font-size: 12px; font-weight: 600; letter-spacing: .03em; white-space: nowrap;
+  font-size: 18px; font-weight: 600; letter-spacing: .03em; white-space: nowrap;
   color: var(--c-muted);
 }
 .c-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
@@ -281,7 +281,7 @@ body {
   background: var(--c-tile); border-radius: var(--c-tile-radius); padding: 28px 20px; text-align: center;
 }
 .c-empty h2 { margin: 0 0 6px; font-size: 22px; font-weight: 500; letter-spacing: -0.03em; }
-.c-empty p { margin: 0; color: var(--c-muted); font-size: 14px; }
+.c-empty p { margin: 0; color: var(--c-muted); font-size: 18px; }
 .c-error { background: var(--c-out-bg); color: var(--c-out); }
 .c-skeleton {
   border-radius: var(--c-tile-radius); height: 210px;
@@ -296,7 +296,7 @@ body {
   min-height: var(--c-tap); padding: 10px 20px;
   border: 0; border-radius: 999px;
   background: var(--c-tile); color: var(--c-ink);
-  font-size: 15px; font-weight: 600; cursor: pointer;
+  font-size: 18px; font-weight: 600; cursor: pointer;
 }
 .c-btn.primary { background: var(--c-ink); color: #fff; }
 /* A disabled button is GREY, not a faded version of its enabled colour: there must
@@ -304,12 +304,12 @@ body {
    the customer can tell the request is now ready to send. */
 .c-btn[disabled],
 .c-btn.primary[disabled] { background: #ebeae7; color: var(--c-muted); opacity: 1; cursor: default; }
-.c-page-of { color: var(--c-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.c-page-of { color: var(--c-muted); font-size: 18px; font-variant-numeric: tabular-nums; }
 
 /* ---------- product detail ---------- */
 .c-back {
   display: inline-flex; align-items: center; gap: 6px; min-height: var(--c-tap);
-  color: var(--c-ink); text-decoration: none; font-weight: 600; font-size: 14px;
+  color: var(--c-ink); text-decoration: none; font-weight: 600; font-size: 18px;
 }
 .c-detail { margin-top: 4px; }
 .c-hero {
@@ -321,8 +321,8 @@ body {
 .c-hero img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 10%; }
 .c-detail h1 { font-size: clamp(34px, 10vw, 52px); font-weight: 500; line-height: 1; letter-spacing: -0.045em; margin: 16px 0 14px; }
 .c-facts { display: flex; flex-direction: column; gap: 14px; margin: 16px 0 24px; }
-.c-fact-k { color: var(--c-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px; }
-.c-fact-v { font-size: 17px; font-weight: 500; word-break: break-word; }
+.c-fact-k { color: var(--c-muted); font-size: 18px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 3px; }
+.c-fact-v { font-size: 18px; font-weight: 500; word-break: break-word; }
 
 @media (min-width: 760px) {
   .c-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
@@ -334,7 +334,7 @@ body {
 .c-toast {
   position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
   background: var(--c-ink); color: #fff; padding: 11px 18px;
-  border-radius: 999px; font-size: 14px; z-index: 50; max-width: 90vw;
+  border-radius: 999px; font-size: 18px; z-index: 50; max-width: 90vw;
 }
 
 /* ===========================================================================
@@ -351,11 +351,11 @@ body {
   padding: 10px 12px; border-radius: 10px;
   border: 1px solid var(--c-orange); background: var(--c-surface); color: var(--c-ink);
   box-shadow: inset 0 0 0 2px var(--c-surface), inset 0 0 0 3px var(--c-blue);
-  font-size: 14px; font-weight: 600; letter-spacing: .01em; cursor: pointer;
+  font-size: 18px; font-weight: 600; letter-spacing: .01em; cursor: pointer;
 }
 .c-add:hover { background: #fff5f0; }
 .c-add:active { opacity: .85; }
-.c-noreq { color: var(--c-muted); font-size: 12px; line-height: 1.35; padding: 6px 0; }
+.c-noreq { color: var(--c-muted); font-size: 18px; line-height: 1.35; padding: 6px 0; }
 
 .c-stepper {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -375,7 +375,7 @@ body {
   background: var(--c-ink); color: #fff; font-size: 20px; font-weight: 500; line-height: 1;
 }
 .c-step:active::before { opacity: .8; }
-.c-qty { font-size: 14px; font-variant-numeric: tabular-nums; }
+.c-qty { font-size: 18px; font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: no-preference) {
   .c-drawer-backdrop { animation: c-fade .22s ease-out both; }
@@ -407,7 +407,7 @@ body {
 .c-tab {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   min-height: 56px; padding: 6px 4px; border: 0; border-radius: 999px; background: transparent;
-  color: var(--c-muted); font-size: 12px; font-weight: 600; letter-spacing: .01em; cursor: pointer;
+  color: var(--c-muted); font-size: 18px; font-weight: 600; letter-spacing: .01em; cursor: pointer;
 }
 .c-tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .c-tab[aria-current="page"] { background: var(--c-ink); color: #fff; }
@@ -416,7 +416,7 @@ body {
 .c-tab-badge {
   position: absolute; top: -8px; right: -14px;
   min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
-  background: var(--c-orange); color: var(--c-ink); font-size: 12px; font-weight: 700; line-height: 20px; text-align: center;
+  background: var(--c-orange); color: var(--c-ink); font-size: 18px; font-weight: 700; line-height: 20px; text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
@@ -430,11 +430,11 @@ body {
 .c-steps li {
   counter-increment: step; display: flex; align-items: center; gap: 6px;
   padding: 5px 12px 5px 5px; border-radius: 999px; background: rgba(255, 255, 255, .7);
-  font-size: 13px; font-weight: 600;
+  font-size: 18px; font-weight: 600;
 }
 .c-steps li::before {
   content: counter(step); display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
-  background: var(--c-ink); color: #fff; font-size: 12px; font-weight: 700;
+  background: var(--c-ink); color: #fff; font-size: 18px; font-weight: 700;
 }
 
 /* drawer */
@@ -473,8 +473,8 @@ body {
   background: var(--c-tile); border-radius: 18px; padding: 10px 12px; margin-bottom: 8px;
 }
 .c-line-main { flex: 1; min-width: 0; }
-.c-line-name { font-size: 14px; font-weight: 600; }
-.c-line-err { color: var(--c-out); font-size: 13px; margin-top: 4px; }
+.c-line-name { font-size: 18px; font-weight: 600; }
+.c-line-err { color: var(--c-out); font-size: 18px; margin-top: 4px; }
 .c-line .c-stepper { min-height: 38px; flex: none; }
 .c-line .c-step { width: 34px; min-height: 36px; }
 .c-remove {
@@ -485,22 +485,22 @@ body {
 
 .c-customer, .c-field { margin: 14px 0; }
 .c-field label {
-  display: block; font-size: 12px; color: var(--c-muted);
+  display: block; font-size: 18px; color: var(--c-muted);
   text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px;
 }
 .c-field input, .c-field textarea {
-  width: 100%; font-size: 16px; font-family: inherit;   /* 16px stops iOS zooming on focus */
+  width: 100%; font-size: 18px; font-family: inherit;   /* 16px stops iOS zooming on focus */
   padding: 12px 14px; border: 1px solid transparent; border-radius: 16px;
   background: var(--c-tile); color: var(--c-ink); -webkit-appearance: none;
 }
 .c-field input:focus, .c-field textarea:focus { outline: 2px solid var(--c-ink); outline-offset: 0; background: #fff; }
-.c-hint { color: var(--c-muted); font-size: 12px; margin-top: 6px; }
+.c-hint { color: var(--c-muted); font-size: 18px; margin-top: 6px; }
 .c-results { margin-top: 8px; max-height: 220px; overflow-y: auto; }
 .c-result {
   display: block; width: 100%; text-align: left; min-height: var(--c-tap);
   padding: 10px 12px; margin-bottom: 6px; cursor: pointer;
   border: 0; border-radius: 16px;
-  background: var(--c-tile); color: var(--c-ink); font-size: 15px;
+  background: var(--c-tile); color: var(--c-ink); font-size: 18px;
 }
 /* Who the request will be filed under.
    Deliberately the most prominent thing in the drawer: it is the only
@@ -511,12 +511,12 @@ body {
   border: 1px solid currentColor; border-radius: 20px;
   padding: 14px 16px;
 }
-.c-selected-label { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.c-selected-label { font-size: 18px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .c-selected-name { font-size: 24px; font-weight: 600; line-height: 1.15; letter-spacing: -0.03em; margin: 4px 0 2px; overflow-wrap: anywhere; }
 .c-selected .c-link { color: inherit; text-decoration: underline; padding-top: 4px; }
 .c-link {
   border: 0; background: none; padding: 8px 0; cursor: pointer;
-  color: var(--c-ink); font-size: 14px; font-weight: 600; text-decoration: underline;
+  color: var(--c-ink); font-size: 18px; font-weight: 600; text-decoration: underline;
   text-underline-offset: 3px;
 }
 
@@ -527,15 +527,15 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 18px; letter-spacing: 0.14em; text-transform: uppercase;
 }
-.c-accesserr { color: var(--c-out); font-size: 13px; margin-top: 6px; }
+.c-accesserr { color: var(--c-out); font-size: 18px; margin-top: 6px; }
 .c-accesserr:empty { display: none; }
 .c-accessform { display: block; }
 
-.c-blocked { background: var(--c-limited-bg); color: var(--c-limited); border-radius: 16px; padding: 12px 14px; font-size: 14px; margin-bottom: 12px; }
-.c-notice { background: var(--c-out-bg); color: var(--c-out); border-radius: 16px; padding: 12px 14px; font-size: 14px; margin-bottom: 12px; }
+.c-blocked { background: var(--c-limited-bg); color: var(--c-limited); border-radius: 16px; padding: 12px 14px; font-size: 18px; margin-bottom: 12px; }
+.c-notice { background: var(--c-out-bg); color: var(--c-out); border-radius: 16px; padding: 12px 14px; font-size: 18px; margin-bottom: 12px; }
 .c-drawer-actions { display: flex; gap: 10px; margin-top: 16px; }
 .c-drawer-actions .c-btn { flex: 1; }
-.c-smallprint { color: var(--c-muted); font-size: 12px; line-height: 1.45; margin-top: 12px; }
+.c-smallprint { color: var(--c-muted); font-size: 18px; line-height: 1.45; margin-top: 12px; }
 .c-okbox { text-align: center; padding: 28px 12px; }
 .c-okbox h2 { margin: 0 0 10px; font-size: 26px; font-weight: 500; letter-spacing: -0.03em; color: var(--c-in); }
 
@@ -562,10 +562,10 @@ body {
 @keyframes c-bump { from { transform: scale(.5); } to { transform: none; } }
 
 /* the number you type into: big enough that iOS does not zoom, bold, no spinner */
-.c-qty { display: inline-flex; align-items: baseline; justify-content: center; gap: 4px; font-size: 13px; color: var(--c-muted); font-weight: 600; cursor: text; }
+.c-qty { display: inline-flex; align-items: baseline; justify-content: center; gap: 4px; font-size: 18px; color: var(--c-muted); font-weight: 600; cursor: text; }
 .c-qty-input {
   width: 3.4ch; min-width: 36px; padding: 0; border: 0; border-radius: 6px; background: transparent;
-  color: var(--c-ink); font: inherit; font-size: 16px; font-weight: 700; text-align: center;
+  color: var(--c-ink); font: inherit; font-size: 18px; font-weight: 700; text-align: center;
   font-variant-numeric: tabular-nums; -moz-appearance: textfield;
 }
 .c-qty-input:focus { background: var(--c-tile); }
@@ -587,7 +587,7 @@ body {
 .c-sort-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
 .c-clear {
   min-height: 44px; padding: 0 4px; border: 0; background: none; cursor: pointer;
-  color: var(--c-ink); font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;
+  color: var(--c-ink); font-size: 18px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;
 }
 .c-empty-action { margin-top: 16px; }
 
@@ -681,7 +681,7 @@ body {
 /* on a card: a round white chip with the drawing, then the pack size, then the arrow */
 .c-card-top { align-items: center; gap: 10px; padding: 8px 8px 0; min-height: 0; }
 .c-doodle-chip { padding: 7px; width: 52px; height: 52px; border-radius: 50%; background: var(--c-tile); }
-.c-card-pack { flex: 1; min-width: 0; color: var(--c-muted); font-size: 12px; font-weight: 600; letter-spacing: .08em; }
+.c-card-pack { flex: 1; min-width: 0; color: var(--c-muted); font-size: 18px; font-weight: 600; letter-spacing: .08em; }
 .c-card-top .c-arrow { align-self: flex-start; }
 
 /* on a category tile: large, top-left, opposite the arrow */
@@ -726,7 +726,7 @@ body {
     position: fixed; top: 12px; right: 16px; z-index: 30;
     display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px;
     border: 0; border-radius: 999px; background: var(--c-ink); color: #fff;
-    font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+    font: inherit; font-size: 18px; font-weight: 600; cursor: pointer;
     box-shadow: 0 8px 22px rgba(26, 22, 18, .22);
   }
   .c-request-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; }
@@ -744,11 +744,11 @@ body {
 .c-doodle-chip { width: 56px; height: 56px; padding: 9px; }
 .c-card-pack {
   flex: none; padding: 4px 10px; border-radius: 999px; background: var(--c-tile);
-  color: var(--c-ink); font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  color: var(--c-ink); font-size: 18px; font-weight: 700; letter-spacing: .06em;
 }
 .c-card-top .c-arrow { margin-left: auto; font-size: 20px; }
 .c-card-body { padding: 14px 4px 4px; gap: 8px; }
-.c-card-body .c-cat { order: -1; margin-top: 0; font-size: 12px; letter-spacing: .08em; color: var(--c-muted); }
+.c-card-body .c-cat { order: -1; margin-top: 0; font-size: 18px; letter-spacing: .08em; color: var(--c-muted); }
 .c-card-body .c-name {
   font-size: 19px; line-height: 1.12; -webkit-line-clamp: 3; margin-top: 0;
   min-height: calc(3 * 1.12em);               /* every tile's name takes the same space, so the buttons line up */
@@ -757,7 +757,7 @@ body {
 .c-card-actions { padding: 12px 4px 0; }
 .c-noreq {
   display: grid; place-items: center; min-height: 44px; padding: 8px 12px; border-radius: 10px;
-  background: var(--c-tile); color: var(--c-muted); font-size: 13px; font-weight: 600; text-align: center;
+  background: var(--c-tile); color: var(--c-muted); font-size: 18px; font-weight: 600; text-align: center;
 }
 
 /* wider than a phone: a fluid grid that fills the width in whole tiles */
@@ -803,6 +803,6 @@ body {
    also stops iOS zooming in when the field is tapped. */
 .c-search input {
   background: #fff; border: 1.5px solid var(--c-line);
-  font-family: inherit; font-size: 1rem; line-height: 1.5;
+  font-family: inherit; font-size: 1.125rem; line-height: 1.5;
 }
 .c-search input:focus { border-color: var(--c-ink); }
