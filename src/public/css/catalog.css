@@ -40,7 +40,7 @@
   --c-radius: 10px;
   --c-tile-radius: 24px;
   --c-tap: 44px; /* minimum touch target */
-  --c-display: Elephant, Georgia, serif;
+  --c-display: Arial, Helvetica, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -831,5 +831,5 @@ html[data-theme="dark"] .c-add, html[data-theme="dark"] .c-stepper { border-colo
 .c-chip, .c-chip .n, .c-count, .c-sort, .c-chip[aria-pressed="true"] .n, .c-page-list .c-sort { font-size: 17px; }
 .c-chip[aria-pressed="true"] .n { font-size: 15px; }
 
-/* the whole site uses Elephant (falls back to Georgia where Elephant is not installed) */
-html, body, button, input, select, textarea { font-family: Elephant, Georgia, serif; }
+/* the whole site uses Arial (Helvetica where Arial is missing) */
+html, body, button, input, select, textarea { font-family: Arial, Helvetica, sans-serif; }
