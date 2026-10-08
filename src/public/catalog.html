@@ -2,12 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <script src="/js/theme-init.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="robots" content="noindex" />
   <title>Box for Less — Digital Product Catalog</title>
   <!-- absolute paths: /catalog/product/<id> is a nested URL serving this same shell -->
   <link rel="stylesheet" href="/css/backdrop.css" />
   <link rel="stylesheet" href="/css/catalog.css" />
+  <link rel="stylesheet" href="/css/extras.css" />
+  <link rel="stylesheet" href="/css/dark.css" />
+  <link rel="stylesheet" href="/css/print.css" media="print" />
 </head>
 <body>
   <!-- The catalogue is React, mounted here. See js/catalog/. -->
@@ -20,5 +24,6 @@
   <script src="/vendor/react-dom.min.js"></script>
   <script src="/vendor/htm.min.js"></script>
   <script type="module" src="/js/catalog.js"></script>
+  <script type="module" src="/js/ui-extras.js"></script>
 </body>
 </html>

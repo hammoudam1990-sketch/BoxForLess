@@ -1,0 +1,76 @@
+/* Dark theme. Applies when <html data-theme="dark"> (js/theme-init.js sets it from the saved
+   choice, else the device's setting; the toggle is in js/ui-extras.js). Loaded after every other
+   stylesheet, so it overrides their tokens and the few colours they hard-code.
+   Contrast checked: ink on surface 14:1, muted on surface 7:1, white on the burnt orange 4.6:1. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bfl-surface: #1f1b17; --bfl-ink: #f5efe8; --bfl-line: #3a342d; --bfl-orange: #ff7a45;
+
+  /* catalogue tokens */
+  --c-bg: #14110e; --c-surface: #1f1b17; --c-tile: #2a2520; --c-canvas: #332d27;
+  --c-ink: #f5efe8; --c-muted: #b8aea2; --c-on-bg: #f5efe8; --c-on-bg-muted: #d6cdc1;
+  --c-line: #3a342d; --c-orange: #ff7a45; --c-blue: #6ea3ff; --c-focus: #f5efe8; --c-accent: #f5efe8;
+  --c-in: #5ec38a; --c-in-bg: #1d3326; --c-limited: #e0a23a; --c-limited-bg: #3a2c10;
+  --c-out: #ff8f85; --c-out-bg: #3d1f1c;
+
+  /* staff tokens */
+  --bg: #14110e; --panel: #1f1b17; --ink: #f5efe8; --muted: #b8aea2; --on-bg: #f5efe8; --on-bg-muted: #d6cdc1;
+  --line: #3a342d; --brand: #d9531a; --brand-dark: #ff9d75; --orange: #ff7a45;
+  --ok: #5ec38a; --ok-bg: #1d3326; --warn: #e0a23a; --warn-bg: #3a2c10; --err: #ff8f85; --err-bg: #3d1f1c; --info-bg: #33261c;
+  --shadow: 0 2px 4px rgba(0,0,0,.4), 0 10px 26px rgba(0,0,0,.45);
+}
+html[data-theme="dark"], html[data-theme="dark"] body { background: #14110e; color: var(--c-ink, #f5efe8); }
+
+/* things that hard-code white */
+html[data-theme="dark"] .c-header,
+html[data-theme="dark"] .topbar { background: rgba(20, 17, 14, .92); }
+html[data-theme="dark"] .c-tabbar { background: rgba(31, 27, 23, .96); border-color: var(--c-line); }
+html[data-theme="dark"] .c-stat-l, html[data-theme="dark"] .c-count, html[data-theme="dark"] .c-clear,
+html[data-theme="dark"] .c-page-of, html[data-theme="dark"] .c-views, html[data-theme="dark"] .c-section,
+html[data-theme="dark"] .c-back { background: transparent; }
+html[data-theme="dark"] .c-stat-n { text-shadow: none; }
+html[data-theme="dark"] .c-search input, html[data-theme="dark"] .c-field input, html[data-theme="dark"] .c-field textarea,
+html[data-theme="dark"] input[type=search], html[data-theme="dark"] input[type=text], html[data-theme="dark"] input[type=password],
+html[data-theme="dark"] select { background: var(--c-tile, #2a2520); color: var(--c-ink, #f5efe8); border-color: var(--c-line, #3a342d); }
+html[data-theme="dark"] .c-search input:focus, html[data-theme="dark"] .c-field input:focus,
+html[data-theme="dark"] .c-field textarea:focus { background: var(--c-surface); }
+html[data-theme="dark"] .c-drawer-panel { background: var(--c-surface); }
+html[data-theme="dark"] .c-drawer-backdrop { background: rgba(0, 0, 0, .65); }
+html[data-theme="dark"] .c-add, html[data-theme="dark"] .c-stepper { background: var(--c-surface); box-shadow: inset 0 0 0 2px var(--c-surface), inset 0 0 0 3px var(--c-blue); }
+html[data-theme="dark"] .c-add:hover { background: #2a2520; }
+html[data-theme="dark"] .c-card { box-shadow: 0 8px 22px rgba(0, 0, 0, .5), 0 2px 6px rgba(255, 122, 69, .2); }
+
+/* things that put light text on the ink colour (the ink is LIGHT in dark mode, so the text flips) */
+html[data-theme="dark"] .c-logo, html[data-theme="dark"] .logo { background-color: #fff; }
+html[data-theme="dark"] .c-chip[aria-pressed="true"],
+html[data-theme="dark"] .c-btn.primary,
+html[data-theme="dark"] .c-tab[aria-current="page"],
+html[data-theme="dark"] .c-request-fab,
+html[data-theme="dark"] .c-toast,
+html[data-theme="dark"] .toast { color: #14110e; }
+html[data-theme="dark"] .c-step::before { color: #14110e; }
+html[data-theme="dark"] .c-tile-0 { color: #14110e; }
+html[data-theme="dark"] .c-tile-1 { background: var(--c-surface); color: var(--c-ink); }
+html[data-theme="dark"] .c-tile-2 { color: #14110e; }
+html[data-theme="dark"] .c-tile-3 { background: #3a342d; color: var(--c-ink); }
+html[data-theme="dark"] .c-chip:hover:not([aria-pressed="true"]) { background: #38312a; }
+html[data-theme="dark"] .c-btn[disabled], html[data-theme="dark"] .c-btn.primary[disabled] { background: #2a2520; color: var(--c-muted); }
+html[data-theme="dark"] .c-skeleton { background-image: linear-gradient(90deg, #2a2520 25%, #342e28 50%, #2a2520 75%); }
+html[data-theme="dark"] .c-skeleton i { background: #3a342d; }
+html[data-theme="dark"] .c-doodle-chip { background: var(--c-tile); }
+html[data-theme="dark"] .c-view { color: #ff9d75; }
+html[data-theme="dark"] .c-steps li { background: rgba(255, 255, 255, .12); }
+
+/* staff screens */
+html[data-theme="dark"] button.secondary, html[data-theme="dark"] button.ghost, html[data-theme="dark"] .manual-panel,
+html[data-theme="dark"] .linkbtn { background: var(--panel); }
+html[data-theme="dark"] .drop { background: rgba(31, 27, 23, .6); }
+html[data-theme="dark"] tbody tr:hover { background: #2a2520; }
+html[data-theme="dark"] .view > .section-title, html[data-theme="dark"] .view > a.back, html[data-theme="dark"] .view > .back,
+html[data-theme="dark"] .scan-status, html[data-theme="dark"] .view > .muted { background: transparent; }
+html[data-theme="dark"] .view > h1 { text-shadow: none; }
+html[data-theme="dark"] .img-ph, html[data-theme="dark"] .pill.muted { background: #332d27; }
+html[data-theme="dark"] .hub-head p { background: transparent; color: var(--c-ink, #f5efe8); }
+html[data-theme="dark"] .hub-yellow { background: #1f1b17; color: #f5efe8; }
+html[data-theme="dark"] .hub-magenta { background: #f5efe8; color: #14110e; }
+html[data-theme="dark"] .bfl-loadbar i { background: #f5efe8; }

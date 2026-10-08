@@ -35,6 +35,12 @@ export function RequestUI({ tab, onHome, onCategories }) {
   const lines = useCartLines();
   const [open, setOpen] = useState(false);
   const cartons = lines.reduce((n, l) => n + l.quantityCtn, 0);
+  // the phone menu's "My request" asks for the drawer through this event
+  useEffect(() => {
+    const open = () => setOpen(true);
+    window.addEventListener('bfl:open-request', open);
+    return () => window.removeEventListener('bfl:open-request', open);
+  }, []);
 
   return html`
     <nav class="c-tabbar" aria-label="Catalogue">

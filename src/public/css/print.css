@@ -1,0 +1,48 @@
+/* Print stylesheet (linked with media="print" on every page): black on white, no navigation or
+   controls, products as a tidy three-column list, staff tables across the full page width. */
+@page { margin: 14mm; }
+@media print {
+  html, body { background: #fff !important; color: #000 !important; font-size: 12pt; }
+  body::before, body::after { display: none !important; }
+
+  /* everything that is for interacting, not reading */
+  .c-header, .c-tabbar, .c-request-fab, .c-drawer, .c-controls, .c-search, .c-views, .c-pager, .c-card-actions,
+  .c-menu, .c-icon-btn, .c-doodle-chip, .c-arrow, .c-mark, .c-clear, .c-skeleton,
+  .topbar, .toast, .scan-actions, .manual-entry, .drop, button, .menu-toggle,
+  .bfl-progress, .bfl-loadbar, .bfl-fabs, .bfl-cookie { display: none !important; }
+
+  /* the page */
+  .c-main, .view { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+  .c-page-list { display: block !important; }
+  .c-stat { margin: 0 0 8mm; }
+  .c-stat-n { font-size: 36pt !important; text-shadow: none !important; }
+  .c-stat-l { background: none !important; }
+
+  /* the products */
+  .c-grid { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 4mm !important; }
+  .c-card {
+    break-inside: avoid; page-break-inside: avoid; box-shadow: none !important; border: 1px solid #999 !important;
+    border-radius: 3mm !important; padding: 3mm !important; background: #fff !important; opacity: 1 !important; transform: none !important;
+  }
+  .c-card-top { padding: 0 !important; min-height: 0 !important; }
+  .c-card-pack { background: none !important; border: 1px solid #999; }
+  .c-name { font-size: 12pt !important; min-height: 0 !important; -webkit-line-clamp: unset !important; color: #000 !important; }
+  .c-cat, .c-pack, .c-pill { color: #000 !important; font-size: 9pt !important; }
+  a { color: #000 !important; text-decoration: none !important; }
+
+  /* the product page */
+  .c-detail { box-shadow: none !important; padding: 0 !important; background: #fff !important; }
+  .c-doodle-hero, .c-back { display: none !important; }
+  .c-detail h1 { font-size: 22pt !important; color: #000 !important; }
+
+  /* staff screens */
+  .card, .stat { box-shadow: none !important; border: 1px solid #999 !important; background: #fff !important; break-inside: avoid; }
+  table { display: table !important; width: 100% !important; font-size: 10pt !important; white-space: normal !important; overflow: visible !important; }
+  th, td { border-bottom: 1px solid #bbb !important; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+
+  /* anything that was animating in must be fully visible on paper */
+  * { animation: none !important; transition: none !important; }
+  .c-reveal { opacity: 1 !important; transform: none !important; }
+}

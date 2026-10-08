@@ -37,7 +37,7 @@ async function refreshBadge() {
 async function route() {
   const hash = location.hash || '#/products';
   const [, path, arg] = hash.split('/'); // "#", "products", "123"
-  view.innerHTML = '<div class="card muted">Loading…</div>';
+  view.innerHTML = '<div class="card muted"><span class="spinner" aria-hidden="true"></span>Loading…</div>';
   try {
     if (path === 'products' && arg) { setActiveNav('products'); await renderProductDetail(view, arg); }
     else if (path === 'products') { setActiveNav('products'); await renderProducts(view); }
@@ -54,6 +54,19 @@ async function route() {
   }
   refreshBadge();
 }
+
+// phone menu: the nav folds away behind a Menu button, and closes after a choice
+const topbar = document.querySelector('.topbar');
+const menuToggle = document.getElementById('menuToggle');
+menuToggle?.addEventListener('click', () => {
+  const open = topbar.classList.toggle('menu-open');
+  menuToggle.setAttribute('aria-expanded', String(open));
+});
+const syncTheme = () => { const b = document.getElementById('themeBtn'); if (b) b.textContent = window.bflTheme?.isDark() ? 'Light mode' : 'Dark mode'; };
+document.getElementById('themeBtn')?.addEventListener('click', () => { window.bflTheme?.toggle(); syncTheme(); });
+window.addEventListener('bfl:theme', syncTheme);
+window.addEventListener('hashchange', () => { topbar?.classList.remove('menu-open'); menuToggle?.setAttribute('aria-expanded', 'false'); });
+window.addEventListener('load', syncTheme);
 
 window.addEventListener('hashchange', route);
 window.addEventListener('DOMContentLoaded', () => {

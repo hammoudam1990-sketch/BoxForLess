@@ -13,6 +13,9 @@ barcode scanner — is now React. Behaviour, URLs, API calls and CSS are unchang
 ### Added
 - **`design-system/box-for-less/MASTER.md`** — the written design system for the customer catalogue (style, tokens with measured contrast, type, layout, components, states, motion, accessibility, anti-patterns), produced with the UI UX Pro Max skill.
 
+### Added
+- **Dark mode** (toggle bottom-right on wide screens, in the menu on phones; remembers the choice, follows the device setting at first), a **cookie notice**, **site search** (a header button and the "/" key jump to the product search), a **scroll-to-top button**, a **phone menu** (catalogue header and staff screens), a **loading bar** while anything loads plus a spinner on staff "Loading…", **hover states**, a **scroll-progress bar**, and a **print stylesheet**. Shared code: `js/theme-init.js`, `js/ui-extras.js`, `css/extras.css`, `css/dark.css`, `css/print.css`.
+
 ### Changed
 - **New background: a doodle wallpaper, and drawings for the products.** The amber photograph is replaced by a black line-art doodle pattern behind every page (veiled in white so text stays readable; mirrored into two halves on wide screens; a very slow drift). The palette goes back to white, near-black ink and burnt orange. Products that have no photograph — nearly all of them — now show a small line drawing of what kind of thing they are (a sack for rice and flour, a bottle for a drink, a jar for spices, a spray bottle for cleaners, and so on), chosen from the product's category; the four category tiles and the product page use them too. No product data is changed.
 
