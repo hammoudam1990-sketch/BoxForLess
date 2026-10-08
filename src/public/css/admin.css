@@ -355,3 +355,16 @@ a.dash-tile:hover { border-color: var(--ink); }
 .adm-body .view:has(.prod-controls) .prod-meta { font-size: 16px; }
 .adm-body .view:has(.prod-controls) .prod-pager button,
 .adm-body .view:has(.prod-controls) .prod-pager span { font-size: 17px; }
+
+/* Every staff page fills the screen, with larger text and touch-friendly controls */
+.adm-body .view { max-width: none; padding: 26px 32px 48px; }
+.adm-body .view h1 { font-size: 34px; }
+.adm-body .view h2 { font-size: 22px; }
+.adm-body .view p, .adm-body .view .muted, .adm-body .view li { font-size: 17px; }
+.adm-body .view table { font-size: 16px; }
+.adm-body .view th { font-size: 14px; }
+.adm-body .view td, .adm-body .view th { padding: 13px 12px; }
+.adm-body .view button, .adm-body .view .button-link { font-size: 17px; min-height: 46px; }
+.adm-body .view input, .adm-body .view select, .adm-body .view textarea { font-size: 17px; }
+.adm-body .view .drop { padding: 40px; font-size: 18px; }
+.adm-body .view .card { padding: 22px; }
