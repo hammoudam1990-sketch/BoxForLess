@@ -826,3 +826,7 @@ html[data-theme="dark"] .c-add, html[data-theme="dark"] .c-stepper {
 .c-add, .c-stepper,
 html[data-theme="dark"] .c-add, html[data-theme="dark"] .c-stepper { border-color: var(--c-ink); }
 .c-add:hover { border-color: var(--c-ink); }
+
+/* the filter row, the result count and the sort menu: 17px */
+.c-chip, .c-chip .n, .c-count, .c-sort, .c-chip[aria-pressed="true"] .n, .c-page-list .c-sort { font-size: 17px; }
+.c-chip[aria-pressed="true"] .n { font-size: 15px; }
