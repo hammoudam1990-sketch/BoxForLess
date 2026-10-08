@@ -1,5 +1,67 @@
-// Staff app entry point. The shell, router and every screen live in ./staff/.
-import { mount } from './lib/react.js';
-import { App } from './staff/App.js';
+// Router + navigation shell.
+window.__bflBooted = true; // tells js/boot-guard.js the page started
+import { api } from './api.js';
+import { renderProducts, renderProductDetail } from './products.js';
+import { renderImports, renderImportDetail } from './imports.js';
+import { renderChanges } from './changes.js';
+import { renderRequests, renderRequestDetail } from './requests.js';
+import { renderAccessCodes, renderAccessRequests } from './access.js';
 
-mount(App);
+const view = document.getElementById('view');
+
+function setActiveNav(name) {
+  document.querySelectorAll('[data-nav]').forEach((a) => {
+    a.classList.toggle('active', a.dataset.nav === name);
+  });
+}
+
+async function refreshBadge() {
+  try {
+    const { counts } = await api.reviews();
+    const badge = document.getElementById('reviewBadge');
+    const n = counts?.total || 0;
+    badge.textContent = n;
+    badge.classList.toggle('hidden', n === 0);
+  } catch { /* ignore */ }
+
+  // Companies waiting to be let in. Shown in the nav so a request for access is
+  // not missed — nobody thinks to open a screen that is usually empty.
+  try {
+    const { total } = await api.accessRequests('PENDING');
+    const badge = document.getElementById('accessBadge');
+    badge.textContent = total;
+    badge.classList.toggle('hidden', total === 0);
+  } catch { /* ignore */ }
+}
+
+async function route() {
+  const hash = location.hash || '#/products';
+  const [, path, arg] = hash.split('/'); // "#", "products", "123"
+  view.innerHTML = '<div class="card muted">Loading…</div>';
+  try {
+    if (path === 'products' && arg) { setActiveNav('products'); await renderProductDetail(view, arg); }
+    else if (path === 'products') { setActiveNav('products'); await renderProducts(view); }
+    else if (path === 'imports' && arg) { setActiveNav('imports'); await renderImportDetail(view, arg); }
+    else if (path === 'imports') { setActiveNav('imports'); await renderImports(view); }
+    else if (path === 'changes') { setActiveNav('changes'); await renderChanges(view); }
+    else if (path === 'requests' && arg) { setActiveNav('requests'); await renderRequestDetail(view, arg); }
+    else if (path === 'requests') { setActiveNav('requests'); await renderRequests(view); }
+    else if (path === 'codes') { setActiveNav('codes'); await renderAccessCodes(view); }
+    else if (path === 'access') { setActiveNav('access'); await renderAccessRequests(view); }
+    else { location.hash = '#/products'; }
+  } catch (e) {
+    view.innerHTML = `<div class="card errbox">Error: ${e.message}</div>`;
+  }
+  refreshBadge();
+}
+
+window.addEventListener('hashchange', route);
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('staffLogout')?.addEventListener('click', async () => {
+    await fetch('/api/staff/logout', { method: 'POST' });
+    location.assign('/staff/login');
+  });
+  route();
+  refreshBadge();
+});
+export { refreshBadge };
