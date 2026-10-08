@@ -1,5 +1,6 @@
 // Product Master read queries + stock-status enrichment.
 import { computeStockStatus } from './stock.js';
+import config from '../config.js';
 
 function enrich(p) {
   if (!p) return p;
@@ -13,8 +14,17 @@ function enrich(p) {
  *   filter: 'all'|'active'|'inactive'|'warning'|'barcode_review'|'uom_review'
  * @returns {{ total:number, items:object[] }}
  */
+// Whitelisted sort orders. Anything else falls back to the name, so no client text ever reaches SQL.
+const SORTS = {
+  name_asc: 'name COLLATE NOCASE ASC',
+  name_desc: 'name COLLATE NOCASE DESC',
+  stock_desc: 'free_to_use DESC, name COLLATE NOCASE ASC',
+  stock_asc: 'free_to_use ASC, name COLLATE NOCASE ASC',
+  barcode_asc: 'barcode ASC',
+};
+
 export function searchProducts(db, q = {}) {
-  const { search = '', filter = 'all', limit = 100, offset = 0 } = q;
+  const { search = '', filter = 'all', stock = 'all', sort = 'name_asc', limit = 100, offset = 0 } = q;
   const where = [];
   const params = [];
 
@@ -31,11 +41,20 @@ export function searchProducts(db, q = {}) {
     case 'uom_review': where.push('uom_change_pending = 1'); break;
     default: break;
   }
+  // stock band, using the same thresholds as the customer catalogue (config.stock)
+  const { outOfStockAtOrBelow, limitedAtOrBelow } = config.stock;
+  switch (stock) {
+    case 'out': where.push('free_to_use <= ?'); params.push(outOfStockAtOrBelow); break;
+    case 'limited': where.push('free_to_use > ? AND free_to_use <= ?'); params.push(outOfStockAtOrBelow, limitedAtOrBelow); break;
+    case 'in': where.push('free_to_use > ?'); params.push(limitedAtOrBelow); break;
+    default: break;
+  }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const orderSql = SORTS[sort] || SORTS.name_asc;
 
   const total = db.prepare(`SELECT COUNT(*) AS n FROM products ${whereSql}`).get(...params).n;
   const items = db.prepare(
-    `SELECT * FROM products ${whereSql} ORDER BY name LIMIT ? OFFSET ?`
+    `SELECT * FROM products ${whereSql} ORDER BY ${orderSql} LIMIT ? OFFSET ?`
   ).all(...params, Math.min(Number(limit) || 100, 1000), Number(offset) || 0);
 
   return { total, items: items.map(enrich) };
@@ -83,3 +102,19 @@ export function productStats(db) {
 }
 
 export default { searchProducts, getProductDetail, productStats };
+
+/**
+ * Every product matching the same filters, for a read-only CSV export. Nothing is changed.
+ * Capped at 20,000 rows as a sanity limit.
+ */
+export function exportProductsRows(db, q = {}) {
+  const EXPORT_CAP = 20000;
+  const PAGE = 1000;                       // searchProducts caps one page at 1,000
+  const rows = [];
+  for (let offset = 0; rows.length < EXPORT_CAP; offset += PAGE) {
+    const { items, total } = searchProducts(db, { ...q, limit: PAGE, offset });
+    rows.push(...items);
+    if (offset + PAGE >= total || items.length === 0) break;
+  }
+  return rows.slice(0, EXPORT_CAP);
+}

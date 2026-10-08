@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { searchProducts, getProductDetail, productStats } from '../../domain/products.js';
+import { searchProducts, getProductDetail, productStats, exportProductsRows } from '../../domain/products.js';
 import { saveProductImage, readPrimaryImage } from '../../domain/images.js';
 import config from '../../config.js';
 
@@ -14,8 +14,42 @@ const imageUpload = multer({
 
 router.get('/', (req, res, next) => {
   try {
-    const { search, filter, limit, offset } = req.query;
-    res.json(searchProducts(req.db, { search, filter, limit, offset }));
+    const { search, filter, stock, sort, limit, offset } = req.query;
+    res.json(searchProducts(req.db, { search, filter, stock, sort, limit, offset }));
+  } catch (e) { next(e); }
+});
+
+// ---- CSV export of the current filtered list. Read only; staff only (behind requireStaff).
+const CSV_COLUMNS = [
+  ['barcode', 'Barcode'], ['name', 'Product name'], ['box_uom', 'Pack'], ['is_active', 'Active'],
+  ['on_hand', 'On hand (CTN)'], ['free_to_use', 'Free to use (CTN)'], ['incoming', 'Incoming'],
+  ['outgoing', 'Outgoing'], ['forecasted', 'Forecasted'], ['stock_status', 'Stock status'],
+  ['source_odoo_id', 'Odoo ID'],
+];
+
+function csvCell(value) {
+  if (value === null || value === undefined) return '';
+  let text = String(value);
+  if (/^[=+\-@]/.test(text)) text = "'" + text;          // defuse spreadsheet formulas
+  return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+}
+
+router.get('/export.csv', (req, res, next) => {
+  try {
+    const { search, filter, stock, sort } = req.query;
+    const rows = exportProductsRows(req.db, { search, filter, stock, sort });
+    const lines = [CSV_COLUMNS.map(([, heading]) => heading).join(',')];
+    for (const p of rows) {
+      lines.push(CSV_COLUMNS.map(([key]) => {
+        const value = key === 'is_active' ? (p.is_active ? 'Yes' : 'No') : p[key];
+        return csvCell(value);
+      }).join(','));
+    }
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="products-${stamp}.csv"`);
+    res.setHeader('Cache-Control', 'no-store');
+    res.send('﻿' + lines.join('\r\n') + '\r\n');   // BOM so Excel reads the accents correctly
   } catch (e) { next(e); }
 });
 

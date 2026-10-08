@@ -272,3 +272,13 @@ tbody tr:hover { background: #f7f4ee; }
 
 /* the whole site uses the device's own system font */
 html, body, button, input, select, textarea { font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif; }
+
+/* Product Master list: filters on one row, paging, export */
+.prod-controls { align-items: stretch; }
+.prod-controls input[type=search] { flex: 1 1 260px; min-width: 0; }
+.prod-controls select { flex: 0 1 auto; }
+.prod-controls .button-link { display: inline-flex; align-items: center; min-height: 44px; }
+.prod-meta { margin: 0 0 8px; }
+.prod-pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.empty-state { text-align: center; padding: 36px 16px; border: 1px dashed var(--line); border-radius: 12px; }
+.empty-state b { display: block; margin-bottom: 4px; }

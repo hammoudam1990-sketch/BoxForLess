@@ -30,6 +30,9 @@ function primaryImageHtml(p, images = []) {
 
 export async function renderProducts(view) {
   const stats = await api.stats();
+  const PAGE = 50;
+  const state = { search: '', filter: 'all', stock: 'all', sort: 'name_asc', page: 0 };
+
   view.innerHTML = `
     <h1>Product Master</h1>
     <div class="stats" style="margin-bottom:16px">
@@ -41,32 +44,115 @@ export async function renderProducts(view) {
       <div class="stat"><div class="n">${num(stats.uom_pending)}</div><div class="l">UoM Review</div></div>
     </div>
     <div class="card">
-      <div class="controls">
-        <input type="search" id="q" placeholder="Search barcode, name, or Odoo ID…" />
-        <select id="filter">
-          <option value="all">All</option>
+      <div class="controls prod-controls">
+        <input type="search" id="q" placeholder="Search barcode, name, or Odoo ID…" aria-label="Search products" />
+        <select id="filter" aria-label="Status">
+          <option value="all">All statuses</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
           <option value="warning">Data quality warning</option>
           <option value="barcode_review">Barcode review</option>
           <option value="uom_review">UoM review</option>
         </select>
-        <span class="muted" id="count"></span>
+        <select id="stock" aria-label="Stock level">
+          <option value="all">Any stock level</option>
+          <option value="in">In stock</option>
+          <option value="limited">Limited stock</option>
+          <option value="out">Out of stock</option>
+        </select>
+        <select id="sort" aria-label="Sort by">
+          <option value="name_asc">Name A → Z</option>
+          <option value="name_desc">Name Z → A</option>
+          <option value="stock_desc">Most free stock first</option>
+          <option value="stock_asc">Least free stock first</option>
+          <option value="barcode_asc">Barcode</option>
+        </select>
+        <button type="button" class="ghost" id="clear">Clear</button>
+        <a class="button-link" id="export" href="#" download>Export CSV</a>
       </div>
-      <div id="tableWrap"><div class="sk-lines" role="status" aria-label="Loading"><i></i><i></i><i></i><i></i></div></div>
+      <div class="prod-meta">
+        <span class="muted" id="count" role="status"></span>
+      </div>
+      <div id="tableWrap">${skeleton()}</div>
+      <div class="prod-pager" id="pager"></div>
     </div>`;
 
-  const q = view.querySelector('#q');
-  const filter = view.querySelector('#filter');
+  const $ = (id) => view.querySelector(id);
+  const q = $('#q');
   let timer;
+  let seq = 0;                      // ignores replies to older requests
+
+  const query = () => new URLSearchParams({
+    search: state.search, filter: state.filter, stock: state.stock, sort: state.sort,
+    limit: String(PAGE), offset: String(state.page * PAGE),
+  }).toString();
+
+  const exportQuery = () => new URLSearchParams({
+    search: state.search, filter: state.filter, stock: state.stock, sort: state.sort,
+  }).toString();
+
   const load = async () => {
-    const data = await api.products({ search: q.value, filter: filter.value, limit: 200 });
-    view.querySelector('#count').textContent = `${num(data.total)} match${data.total === 1 ? '' : 'es'} (showing ${data.items.length})`;
-    view.querySelector('#tableWrap').innerHTML = tableHtml(data.items);
+    const mine = ++seq;
+    $('#tableWrap').innerHTML = skeleton();
+    try {
+      const data = await api.products(Object.fromEntries(new URLSearchParams(query())));
+      if (mine !== seq) return;
+      const pages = Math.max(1, Math.ceil(data.total / PAGE));
+      if (state.page >= pages) { state.page = pages - 1; return load(); }
+      const from = data.total ? state.page * PAGE + 1 : 0;
+      const to = state.page * PAGE + data.items.length;
+      $('#count').textContent = data.total
+        ? `${num(from)}–${num(to)} of ${num(data.total)} product${data.total === 1 ? '' : 's'}`
+        : 'No products match';
+      $('#tableWrap').innerHTML = data.items.length ? tableHtml(data.items) : emptyHtml();
+      $('#pager').innerHTML = pagerHtml(state.page, pages);
+      $('#export').setAttribute('href', `/api/products/export.csv?${exportQuery()}`);
+    } catch (e) {
+      if (mine !== seq) return;
+      $('#tableWrap').innerHTML = `<div class="errbox">Could not load products: ${esc(e.message)}</div>`;
+      $('#pager').innerHTML = '';
+    }
   };
-  q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 220); });
-  filter.addEventListener('change', load);
+
+  const reset = () => { state.page = 0; load(); };
+
+  q.addEventListener('input', () => {
+    state.search = q.value;
+    clearTimeout(timer);
+    timer = setTimeout(reset, 220);
+  });
+  $('#filter').addEventListener('change', (e) => { state.filter = e.target.value; reset(); });
+  $('#stock').addEventListener('change', (e) => { state.stock = e.target.value; reset(); });
+  $('#sort').addEventListener('change', (e) => { state.sort = e.target.value; reset(); });
+  $('#clear').addEventListener('click', () => {
+    q.value = ''; state.search = ''; state.filter = 'all'; state.stock = 'all'; state.sort = 'name_asc';
+    $('#filter').value = 'all'; $('#stock').value = 'all'; $('#sort').value = 'name_asc';
+    reset();
+  });
+  $('#pager').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-page]');
+    if (!btn || btn.disabled) return;
+    state.page = Number(btn.dataset.page);
+    load();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
   await load();
+}
+
+function skeleton() {
+  return '<div class="sk-lines" role="status" aria-label="Loading"><i></i><i></i><i></i><i></i></div>';
+}
+
+function emptyHtml() {
+  return '<div class="empty-state"><b>No products match these filters.</b><p class="muted">Try clearing the search or a filter.</p></div>';
+}
+
+function pagerHtml(page, pages) {
+  if (pages <= 1) return '';
+  return `<button type="button" class="ghost" data-page="${page - 1}" ${page === 0 ? 'disabled' : ''}>← Previous</button>
+    <span class="muted">Page ${page + 1} of ${num(pages)}</span>
+    <button type="button" data-page="${page + 1}" ${page >= pages - 1 ? 'disabled' : ''}>Next →</button>`;
 }
 
 function tableHtml(items) {

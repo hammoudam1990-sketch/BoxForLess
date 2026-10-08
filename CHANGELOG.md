@@ -8,6 +8,8 @@ The whole front end — customer catalogue, staff screens, staff sign-in and the
 barcode scanner — is now React. Behaviour, URLs, API calls and CSS are unchanged.
 
 ### Added
+- **Staff Product Master improved.** Products now page 50 at a time (it used to stop at 200 with no way to see more). New filters: stock level (in, limited, out) and sorting (name, most or least free stock, barcode). An **Export CSV** button downloads the current filtered list as a spreadsheet, read-only, with the spreadsheet-formula guard and Excel-friendly encoding. Nothing is changed in the database by any of this.
+
 - **A front door at `/`.** One public page (`home.html`) linking to the customer catalogue, the staff app and the scanner. The staff app moved from `/` to `/index.html` (still private); signing in now lands there.
 
 ### Added
