@@ -5,7 +5,7 @@
 // time from the category the API already sends.
 //
 // One stroke weight, round caps, drawn on a 48-unit grid, coloured by `currentColor`.
-import { svg } from '../lib/dom.js';
+import { html } from '../lib/react.js';
 import { doodleFor, doodleForTop } from './doodle-map.js';
 
 export { doodleFor, doodleForTop };
@@ -49,14 +49,11 @@ const DRAWINGS = {
 
 const SIZES = { sm: 28, md: 44, lg: 96 };
 
-/**
- * A drawing, as an <svg> element. Decorative: hidden from assistive technology (the
- * product's name sits beside it). `size` is 'sm' | 'md' | 'lg'.
- */
-export function doodle(name, { size = 'md', className = '' } = {}) {
+/** A drawing. Decorative: hidden from assistive technology (the name sits beside it). */
+export function Doodle({ name, size = 'md', class: cls = '' }) {
   const px = SIZES[size] || SIZES.md;
-  const el = svg(`<svg class="c-doodle ${className}" width="${px}" height="${px}" viewBox="0 0 48 48" fill="none"
-    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-    aria-hidden="true" focusable="false">${DRAWINGS[name] || DRAWINGS.box}</svg>`);
-  return el;
+  return html`
+    <svg class=${`c-doodle ${cls}`} width=${px} height=${px} viewBox="0 0 48 48" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"
+      dangerouslySetInnerHTML=${{ __html: DRAWINGS[name] || DRAWINGS.box }} />`;
 }
