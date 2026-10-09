@@ -441,6 +441,48 @@ test('the acknowledgement reveals nothing about who is already a customer', asyn
   db.close();
 });
 
+test('access-code page links to the standalone signup page', async () => {
+  const db = freshDb();
+  const { server, base } = await startApp(db);
+  try {
+    const accessResponse = await fetch(`${base}/customer-shop`);
+    const accessPage = await accessResponse.text();
+    assert.equal(accessResponse.status, 200);
+    assert.match(accessPage, /new URL\("\/signup",location\.href\)/);
+
+    const response = await fetch(`${base}/signup`);
+    const page = await response.text();
+    assert.equal(response.status, 200);
+    assert.match(page, /id="signup-form"/);
+    assert.match(page, /name="contact"/);
+    assert.match(page, /name="phone"/);
+    assert.match(page, /name="address"/);
+    assert.doesNotMatch(page, /name="company"|name="note"/);
+    assert.match(page, /href="\/customer-shop"/);
+  } finally { server.close(); }
+  db.close();
+});
+
+test('signup submission creates a pending request visible to access-request staff', async () => {
+  const db = freshDb();
+  const { server, base } = await startApp(db);
+  try {
+    const response = await post(base, '/api/catalog/access-requests', {
+      contact: 'Ama Mensah',
+      phone: '0244000111',
+      address: '12 Market Road, Accra',
+    });
+    assert.equal(response.status, 201);
+    assert.equal((await response.json()).received, true);
+    const requests = listAccessRequests(db, { status: 'PENDING' });
+    assert.equal(requests.total, 1);
+    assert.equal(requests.items[0].contact, 'Ama Mensah');
+    assert.equal(requests.items[0].phone, '0244000111');
+    assert.equal(requests.items[0].delivery_address, '12 Market Road, Accra');
+  } finally { server.close(); }
+  db.close();
+});
+
 // ---------------------------------------------------------------------------
 // staff side
 // ---------------------------------------------------------------------------

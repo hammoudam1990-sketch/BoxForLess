@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BoxForLess | Wholesale Shop</title>
+<style>
+:root{--bg:#fff;--cd:#fff;--tx:#171717;--mu:#626262;--bd:#e5e5e5;--pr:#171717;--on:#fff;--ok:#27804f;--wn:#a76b00;--er:#b33127;--r:16px;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#131313;--cd:#1e1e1e;--tx:#f1f1f1;--mu:#a7a7a7;--bd:#333;--pr:#fff;--on:#171717;--ok:#4ade80;--wn:#fbbf24;--er:#f87171}}
+:root[data-theme="dark"]{--bg:#131313;--cd:#1e1e1e;--tx:#f1f1f1;--mu:#a7a7a7;--bd:#333;--pr:#fff;--on:#171717;--ok:#4ade80;--wn:#fbbf24;--er:#f87171}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--cd);border-bottom:1px solid var(--bd);padding:8px 24px}
+.head-inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:20px;min-height:48px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;line-height:1.2;white-space:nowrap;color:var(--tx)}.logo span{color:inherit}.brand-name>span{color:var(--pr)}
+.brand-icon{width:36px;height:36px;flex:none}.brand-icon path{fill:none;stroke:var(--tx);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}.brand-icon .mark{stroke:var(--pr);stroke-width:2}
+.brand-sub{display:block;color:var(--mu);font-size:11px;font-weight:600;letter-spacing:.08em}
+nav{display:flex;gap:4px;flex:1;justify-content:center}nav button{background:none;border:0;color:var(--mu);font:inherit;font-weight:600;padding:8px 12px;border-radius:99px;cursor:pointer}
+nav button.on{background:var(--pr);color:var(--on)}
+main{max-width:1120px;margin:0 auto;padding:24px}
+.skip{position:absolute;top:8px;left:8px;z-index:10;transform:translateY(-160%);background:var(--cd);color:var(--tx);padding:10px 14px;border-radius:8px}.skip:focus{transform:none}
+.field-label{display:block;font-weight:600;margin:0 0 6px}.add label{font-size:13px;white-space:nowrap}
+.card{background:var(--cd);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px}
+.btn{background:var(--pr);color:var(--on);border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer}
+.btn.s{background:none;color:var(--tx);border:1px solid var(--bd)}.btn.z{padding:6px 10px;font-size:13px}.btn:disabled{opacity:.45;cursor:not-allowed}
+input,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;width:100%;min-height:44px}
+nav button,.btn,.chip{min-height:44px}
+input:focus-visible,button:focus-visible,select:focus-visible,a:focus-visible,main:focus-visible{outline:2px solid var(--pr);outline-offset:2px}
+.mu{color:var(--mu)}.bad{color:var(--er)}.good{color:var(--ok)}.right{text-align:right}
+.chips{display:flex;gap:8px;flex-wrap:wrap;padding:2px 0 10px}.chip{white-space:nowrap;border:1px solid var(--bd);background:#f4f4f4;color:var(--tx);border-radius:99px;padding:6px 13px;font:inherit;font-size:13px;cursor:pointer}
+.chip.on{background:var(--tx);color:#fff;border-color:var(--tx)}
+.shop-intro{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px}
+.shop-intro h1{font-size:27px;line-height:1.2;margin:3px 0 5px;letter-spacing:-.025em}
+.eyebrow{color:var(--mu);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.shop-intro p{color:var(--mu);margin:0}
+.shop-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:24px;align-items:start}
+.filters{position:sticky;top:76px}
+.filters h2{font-size:14px;margin:0 0 10px}
+.category-list{display:grid;gap:7px;margin-bottom:20px}
+.category{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;width:100%;border:1px solid transparent;border-radius:14px;background:#f3f3f3;color:var(--tx);padding:10px 12px;cursor:pointer;font:inherit;min-height:56px}
+.category small,.status-filter small{color:var(--mu)}.category>span small{display:block;font-size:12px}
+.category.on{background:var(--tx);color:#fff}
+.category.on small{color:#e3ded8}
+.status-filter{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;border:0;border-radius:99px;background:#f3f3f3;color:var(--tx);padding:8px 12px;margin:0 0 7px;cursor:pointer;font:inherit;text-align:left;min-height:42px}
+.status-filter.on{background:var(--tx);color:#fff}
+.status-filter.on small{color:#eee7df}
+.toolbar{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:12px;align-items:end;margin-bottom:14px}
+.toolbar input,.toolbar select{border-radius:99px;background:var(--cd)}
+.toolbar select{width:100%}
+.result-count{color:var(--mu);font-size:13px;margin:0 0 10px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.p{display:flex;flex-direction:column;gap:9px;position:relative;margin:0;border:1.5px solid #79746e;border-radius:19px;padding:14px;min-height:252px;box-shadow:0 5px 12px rgba(32,29,26,.08);transition:transform .16s ease,box-shadow .16s ease}
+.p:hover{transform:translateY(-2px);box-shadow:0 9px 18px rgba(32,29,26,.12)}
+.product-top{display:flex;align-items:center;gap:9px;padding-right:42px;margin-bottom:2px}
+.pic{width:44px;height:44px;flex:0 0 44px;border-radius:50%;background:#f2f2f2;display:grid;place-items:center;font-size:22px}
+.pack{background:#f2f2f2;border-radius:99px;padding:4px 10px;font-size:12px;font-weight:800}
+.fav{position:absolute;top:10px;right:9px;background:transparent;border:0;border-radius:99px;width:44px;height:44px;cursor:pointer;font-size:16px;color:var(--mu)}
+.product-cat{font-size:12px;color:var(--mu);font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+.product-name{font-size:13px;line-height:1.4;min-height:36px}
+.product-price{margin-top:-4px}
+.add{display:flex;gap:7px;margin-top:auto;align-items:center}.add input{width:65px;padding:8px}
+.add .btn{flex:1;padding:8px 10px}
+.tag{padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;background:color-mix(in srgb,currentColor 13%,transparent)}
+.stock-label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--mu)}
+.stock-label:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.stock-label.limited:before{background:#d99b16}
+.stock-label.out{color:var(--er)}.stock-label.out:before{background:var(--er)}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.Pending{color:var(--wn)}.Confirmed,.Packed{color:var(--pr)}.Delivered{color:var(--ok)}.Cancelled{color:var(--er)}
+.tl{display:flex;margin:12px 0 4px}.tl div{flex:1;text-align:center;font-size:12px;color:var(--mu);position:relative}
+.tl div:before{content:"";display:block;width:14px;height:14px;border-radius:50%;background:var(--bd);margin:0 auto 4px;position:relative;z-index:1}
+.tl div:after{content:"";position:absolute;top:6px;left:-50%;width:100%;height:2px;background:var(--bd)}.tl div:first-child:after{display:none}
+.tl .d{color:var(--tx)}.tl .d:before,.tl .d:after{background:var(--pr)}
+.bar{height:10px;border-radius:99px;background:var(--bd);overflow:hidden}.bar i{display:block;height:100%;background:var(--pr)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 4px;border-bottom:1px solid var(--bd)}th{color:var(--mu);font-size:12px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:9}
+.md{background:var(--cd);border-radius:18px 18px 0 0;padding:18px;width:100%;max-width:560px;max-height:90vh;overflow:auto}
+@media(min-width:640px){.ov{align-items:center;padding:16px}.md{border-radius:var(--r)}}
+.login{max-width:380px;margin:12vh auto;padding:0 16px}.login-signup{margin:12px 0 0;text-align:center;color:var(--mu)}.login-signup a{display:inline-block;min-height:44px;padding:10px 4px;color:var(--tx);font-weight:700;text-decoration:underline;text-underline-offset:3px}.code{font-family:ui-monospace,Consolas,monospace;letter-spacing:.14em;text-align:center;font-size:18px;font-weight:700}
+#t{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none;z-index:99;max-width:90%}
+#t.s{opacity:1}
+@media(prefers-reduced-motion:reduce){#t{transition:none}}
+@media(max-width:1100px){.shop-layout{grid-template-columns:1fr;gap:16px}.filters{position:static}.category-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.category{min-height:90px;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:12px;border-radius:16px;position:relative}.category:after{content:"↗";position:absolute;right:12px;top:10px;color:var(--mu)}.category>i{position:absolute;right:14px;bottom:10px;font-size:25px;font-style:normal}.category.on:after{color:#fff}.status-list{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}.status-filter{width:auto;white-space:nowrap;margin:0}.filters h2{margin-bottom:8px}}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){header{padding:8px 12px}.head-inner{gap:7px;flex-wrap:wrap}.logo{font-size:15px}.brand-sub{font-size:9px}nav{order:3;flex-basis:100%;justify-content:flex-start}nav button{padding:6px 9px}.head-inner>.btn{padding:6px 9px;margin-left:auto}.head-inner>.btn:last-child{margin-left:0}main{padding:18px 14px}.shop-intro{align-items:flex-start;flex-direction:column;margin-bottom:15px}.shop-intro h1{font-size:24px}.shop-layout{grid-template-columns:1fr;gap:14px}.filters{position:static}.category-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;padding:2px 0 8px;margin-bottom:12px}.category{min-width:0;min-height:82px}.filters h2{margin-bottom:8px}.status-list{display:flex;flex-wrap:wrap;overflow:visible;gap:6px;padding-bottom:5px}.status-filter{width:auto;white-space:nowrap;margin:0}.toolbar{grid-template-columns:1fr}.toolbar label:last-child{max-width:230px}.grid{gap:10px}.p{padding:12px;min-height:245px}.pic{width:40px;height:40px;flex-basis:40px}.product-name{font-size:12px}}
+@media(max-width:380px){.grid{grid-template-columns:1fr}.p{min-height:225px}.toolbar label:last-child{max-width:none}}
+body{background:var(--bg);color:var(--tx)}
+header{position:fixed;inset:0 auto 0 0;width:236px;z-index:5;background:#fff;border:0;border-right:1px solid var(--bd);padding:22px 14px}
+.head-inner{height:100%;min-height:0;max-width:none;align-items:stretch;flex-direction:column;gap:24px}
+.logo{padding:0 8px 18px;border-bottom:1px solid var(--bd)}
+.brand-icon{width:34px;height:34px}
+nav{display:flex;flex:1;flex-direction:column;justify-content:flex-start;gap:5px}
+nav button{text-align:left;width:100%;min-height:44px;border-radius:11px;padding:10px 12px}
+nav button.on{background:#171717;color:#fff}
+.profile{display:flex;align-items:center;gap:10px;border-top:1px solid var(--bd);padding:16px 6px 0;overflow-wrap:anywhere}
+.avatar{width:36px;height:36px;flex:none;border-radius:50%;display:grid;place-items:center;background:#f0f0f0;color:#171717;font-weight:800}
+.profile b,.profile small{display:block}.profile b{font-size:13px}.profile small{color:var(--mu);font-size:12px}
+.head-inner>.btn{width:100%;text-align:left;min-height:46px}
+.head-inner>.btn[data-a="cart"]{margin-top:auto;background:#171717;color:#fff;border-radius:13px;box-shadow:0 5px 12px rgba(0,0,0,.17)}
+.head-inner>.btn:last-child{margin-top:8px}
+main{max-width:none;margin:0 0 0 236px;padding:30px clamp(20px,4vw,56px);min-height:100vh}
+.shop-intro{align-items:center;background:linear-gradient(115deg,#171717,#303030 68%,#454545);border-radius:22px;color:#fff;min-height:168px;padding:26px 30px;box-shadow:0 12px 28px rgba(0,0,0,.12)}
+.shop-intro .eyebrow,.shop-intro p{color:#e0e0e0}
+.shop-intro h1{font-size:clamp(24px,3vw,34px);margin:8px 0}
+.shop-intro>p{border-left:1px solid rgba(255,255,255,.3);padding:8px 0 8px 22px;font-size:14px}
+.shop-intro>p b{display:block;color:#fff;font-size:30px;line-height:1.1}
+.category{background:#f3f3f3;border-radius:13px}
+.category.on{background:#171717}
+.status-filter{background:#f3f3f3}
+.status-filter.on{background:#171717}
+.p{border:1px solid var(--bd);border-radius:16px;box-shadow:0 3px 12px rgba(27,48,38,.055);transition:box-shadow .16s ease,border-color .16s ease}
+.p:hover{transform:none;border-color:#bdbdbd;box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.pack,.pic{background:#f2f2f2}
+.add .btn.s{background:#fff;border-color:#bdbdbd;color:#171717}
+.add .btn.s:hover{background:#f3f3f3}
+@media(max-width:760px){header{position:sticky;inset:auto;width:auto;height:auto;padding:8px 12px;border:0;border-bottom:1px solid var(--bd)}.head-inner{height:auto;min-height:0;max-width:1120px;align-items:center;flex-direction:row;gap:8px;flex-wrap:wrap}.logo{padding:0;border:0;font-size:15px}.brand-sub{font-size:9px}.profile{order:2;margin-left:auto;border:0;padding:0 2px;max-width:160px}.profile b{font-size:12px}.profile small{display:none}.avatar{width:30px;height:30px}nav{order:3;flex-basis:100%;flex:0 0 100%;flex-direction:row;justify-content:flex-start;gap:4px}nav button{width:auto;padding:6px 9px}.head-inner>.btn{width:auto;text-align:center;min-height:44px;padding:6px 9px;margin:0}.head-inner>.btn[data-a="cart"]{margin-left:auto;margin-top:0}.head-inner>.btn:last-child{margin:0}main{margin:0;min-height:0;padding:18px 14px}.shop-intro{align-items:flex-start;flex-direction:column;padding:20px;gap:12px}.shop-intro>p{border:0;border-top:1px solid rgba(255,255,255,.3);padding:12px 0 0;width:100%}}
+@media print{header,main,#t{display:none}.ov{position:static;background:none}.md{max-height:none}.no{display:none}}
+</style>
+</head>
+
+<body><a class="skip" href="#main">Skip to main content</a><div id="app"></div><div id="t" role="status" aria-live="polite" aria-atomic="true"></div>
+<script>
+"use strict";
+/* Shares data with boxforless-admin.html (same browser, same key). Replace with API calls in production. */
+const KEY="bfl_admin_v1",$=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const GH=n=>"GH₵ "+Number(n).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
+const day=n=>{const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10)};
+function seed(){const c=[{code:"KOF7A2X9",name:"Kofi Mensah Provisions",phone:"024 000 1111",credit:15000,status:"Active"},{code:"AMA3B8Q4",name:"Ama Serwaa Supermarket",phone:"055 000 2222",credit:40000,status:"Active"},{code:"YAW5C1M6",name:"Yaw Boateng Chop Bar",phone:"020 000 3333",credit:5000,status:"Suspended"}];
+const p=[{sku:"RIC-25",name:"Perfumed Rice 25kg",per:1,price:420,stock:120},{sku:"OIL-12",name:"Vegetable Oil 1L",per:12,price:360,stock:80},{sku:"TOM-24",name:"Tomato Paste 70g",per:24,price:290,stock:12},{sku:"SGR-10",name:"Sugar 1kg",per:10,price:240,stock:60}];
+const st=["Delivered","Delivered","Packed","Confirmed","Pending","Delivered","Cancelled"];
+const o=Array.from({length:14},(_,i)=>({id:1001+i,code:c[i%3].code,date:day(6-i%7),status:st[i%7],items:[{sku:p[i%4].sku,name:p[i%4].name,qty:1+i%4,price:p[i%4].price},{sku:p[(i+1)%4].sku,name:p[(i+1)%4].name,qty:1+i%3,price:p[(i+1)%4].price}]}));
+return{customers:c,products:p,orders:o,staff:[{name:"Brain Amponsah",role:"Admin"},{name:"Efua Owusu",role:"Sales"},{name:"Kwesi Adjei",role:"Warehouse"}],log:[],seq:1014,low:20}}
+const defaults=seed();
+let db;try{db=JSON.parse(localStorage.getItem(KEY))}catch(e){db=null}
+if(!db||!Array.isArray(db.customers)||!Array.isArray(db.products)||!Array.isArray(db.orders))db=defaults;
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}};
+const lsGet=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const CAT={RIC:["Grains & Rice","🍚"],OIL:["Oils","🫒"],TOM:["Canned & Sauces","🍅"],SGR:["Baking & Sugar","🍬"],WTR:["Drinks","💧"]};
+const cat=p=>CAT[p.sku.slice(0,3)]||["Other","📦"];
+const STEPS=["Pending","Confirmed","Packed","Delivered"];
+const S={u:null,v:"shop",q:"",c:"All",stock:"all",sort:"name",fav:false,cart:{},modal:""};
+const normalizeCode=value=>String(value??"").toUpperCase().replace(/[\s-]/g,"");
+const customerCode=customer=>customer?.code??customer?.access_code??customer?.accessCode??customer?.access_code_display??customer?.accessCodeDisplay??"";
+const catalogSignupUrl=()=>{const u=new URL("/signup",location.href);if(location.port==="5500")u.port="3000";return u.href};
+let modalOpener=null;
+let loginBusy=false;
+const restoreModalFocus=()=>{if(modalOpener?.isConnected)modalOpener.focus();else $("#main")?.focus();modalOpener=null};
+const toast=m=>{const t=$("#t");t.textContent=m;t.className="s";setTimeout(()=>t.className="",3000)};
+const pr=s=>db.products.find(x=>x.sku===s),tot=o=>o.items.reduce((s,i)=>s+i.qty*i.price,0);
+const mine=()=>db.orders.filter(o=>o.code===S.u.code);
+const used=()=>mine().filter(o=>["Pending","Confirmed","Packed"].includes(o.status)).reduce((s,o)=>s+tot(o),0);
+const avail=()=>Math.max(0,S.u.credit-used());
+const favs=()=>lsGet("bfl_fav_"+S.u.code,[]);
+const requestKey=()=> "bfl_request_"+S.u.code;
+const saveRequest=()=>lsSet(requestKey(),S.cart);
+const loadRequest=code=>{const saved=lsGet("bfl_request_"+code,{}),valid={};for(const [sku,qty] of Object.entries(saved)){const p=pr(sku),n=Math.floor(Number(qty));if(p&&p.stock>0&&n>0)valid[sku]=Math.min(n,p.stock)}return valid};
+const lines=()=>Object.entries(S.cart).filter(([k])=>pr(k)).map(([sku,qty])=>({sku,name:pr(sku).name,qty,price:pr(sku).price}));
+const ctot=()=>lines().reduce((s,i)=>s+i.qty*i.price,0);
+const cnt=()=>Object.keys(S.cart).length;
+
+function login(){return`<div class="login"><div class="logo" style="font-size:28px">Box<span>For</span>Less</div><p class="mu" id="login-help">Enter the access code provided by your BoxForLess representative.</p><div class="card"><label class="field-label" for="cc">Access code</label><input id="cc" class="code" maxlength="16" placeholder="XXXX-XXXX" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" aria-describedby="login-help"><p><button class="btn" data-a="login" style="width:100%">Enter shop</button></p><small class="mu">Enter the code exactly as provided. Spaces and hyphens are optional.</small></div><p class="login-signup">Don't have an access code? <a href="${esc(catalogSignupUrl())}">Sign up</a></p></div>`}
+const V={
+shop(){const f=favs(),cats=["All",...new Set(db.products.map(p=>cat(p)[0]))],q=S.q.toLowerCase();
+const stockOK=p=>S.stock==="all"||S.stock==="in"&&p.stock>=db.low||S.stock==="limited"&&p.stock>0&&p.stock<db.low||S.stock==="out"&&p.stock<1;
+const matches=p=>(S.c==="All"||cat(p)[0]===S.c)&&(!S.fav||f.includes(p.sku))&&stockOK(p)&&(!q||p.name.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q));
+const L=db.products.filter(matches).sort((a,b)=>S.sort==="price"?a.price-b.price:S.sort==="stock"?b.stock-a.stock:S.sort==="reverse-name"?b.name.localeCompare(a.name):a.name.localeCompare(b.name));
+const categoryButton=(c,n)=>{const icon=c==="All"?"📦":cat(db.products.find(p=>cat(p)[0]===c))[1];return`<button class="category ${S.c===c?"on":""}" data-a="cat" data-id="${esc(c)}" aria-pressed="${S.c===c}"><span>${esc(c)}<small>${n} product${n===1?"":"s"}</small></span><i aria-hidden="true">${icon}</i></button>`};
+const stockButton=(key,label,n)=>`<button class="status-filter ${S.stock===key?"on":""}" data-a="stock" data-id="${key}" aria-pressed="${S.stock===key}"><span>${label}</span><small>${n}</small></button>`;
+return`<div class="shop-intro"><div><div class="eyebrow">BoxForLess · Digital product catalog</div><h1>Welcome back, ${esc(S.u.name)}</h1><p>Browse products, check availability, and build your request.</p></div><p><b>${db.products.filter(p=>p.stock>0).length}</b> products available now</p></div>
+<div class="shop-layout"><aside class="filters" aria-label="Product filters"><h2>Shop by category</h2><div class="category-list">${categoryButton("All",db.products.length)}${cats.slice(1).map(c=>categoryButton(c,db.products.filter(p=>cat(p)[0]===c).length)).join("")}</div>
+<h2>Availability</h2><div class="status-list">${stockButton("all","All",db.products.length)}${stockButton("in","In stock",db.products.filter(p=>p.stock>=db.low).length)}${stockButton("limited","Limited stock",db.products.filter(p=>p.stock>0&&p.stock<db.low).length)}${stockButton("out","Out of stock",db.products.filter(p=>p.stock<1).length)}</div>
+<button class="status-filter ${S.fav?"on":""}" data-a="favf" aria-pressed="${S.fav}"><span>♥ Favourites</span><small>${f.length}</small></button></aside>
+<section aria-labelledby="catalog-heading"><div class="toolbar"><label><span class="sr">Search products</span><input id="q" type="search" placeholder="⌕  Find a product" value="${esc(S.q)}"></label><label><span class="field-label">Sort products</span><select id="sort"><option value="name" ${S.sort==="name"?"selected":""}>Name A → Z</option><option value="reverse-name" ${S.sort==="reverse-name"?"selected":""}>Name Z → A</option><option value="price" ${S.sort==="price"?"selected":""}>Price: low to high</option><option value="stock" ${S.sort==="stock"?"selected":""}>Stock: high to low</option></select></label></div>
+<h2 id="catalog-heading" class="sr">Product results</h2><p class="result-count" aria-live="polite" aria-atomic="true">${L.length?`Showing 1–${L.length} of ${L.length} products`:"No products match these filters"}</p>
+<div class="grid">${L.map(p=>`<article class="card p"><button class="fav" data-a="fav" data-id="${p.sku}" aria-label="${f.includes(p.sku)?"Remove "+esc(p.name)+" from favourites":"Add "+esc(p.name)+" to favourites"}" aria-pressed="${f.includes(p.sku)}">${f.includes(p.sku)?"♥":"♡"}</button><div class="product-top"><div class="pic" aria-hidden="true">${cat(p)[1]}</div><span class="pack">CTN ${p.per}</span></div><small class="product-cat">${esc(cat(p)[0])}</small><b class="product-name">${esc(p.name)}</b><small class="mu">SKU ${esc(p.sku)}</small><div class="product-price"><b>${GH(p.price)}</b> <small class="mu">/ carton</small></div><small class="stock-label ${p.stock<1?"out":p.stock<db.low?"limited":""}">${p.stock<1?"Out of stock":p.stock<db.low?"Limited stock · "+p.stock+" left":"In stock"}</small><div class="add"><label class="sr" for="q-${p.sku}">Cartons of ${esc(p.name)}</label><input id="q-${p.sku}" type="number" min="1" max="${p.stock}" value="1" aria-label="Cartons of ${esc(p.name)}"><button class="btn s" data-a="add" data-id="${p.sku}" ${p.stock<1?"disabled":""}>${S.cart[p.sku]?"Add more":"Add to request"}</button></div></article>`).join("")||'<p class="mu">No products found. Try changing your search or filters.</p>'}</div></section></div>`},
+orders(){const L=mine();return`<h1>Orders</h1>`+(L.length?L.map(o=>{const i=STEPS.indexOf(o.status);return`<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Order #${o.id}</b><span class="tag ${o.status}">${o.status}</span></div><div class="mu">${o.date} · ${o.items.reduce((s,x)=>s+x.qty,0)} cartons · <b style="color:var(--tx)">${GH(tot(o))}</b></div>
+${o.status==="Cancelled"?"":`<div class="tl">${STEPS.map((s,k)=>`<div class="${k<=i?"d":""}">${s}</div>`).join("")}</div>`}<p style="margin:10px 0 0"><button class="btn s z" data-a="inv" data-id="${o.id}">Invoice</button> <button class="btn s z" data-a="again" data-id="${o.id}">Reorder</button></p></div>`}).join(""):'<div class="card mu">No orders yet. Your first order will appear here.</div>')},
+account(){const u=S.u,pc=Math.min(100,used()/u.credit*100||0);return`<h1>Account</h1><div class="card"><h3 style="margin-top:0">${esc(u.name)}</h3><div class="mu">${esc(u.phone)} · Code <b>${u.code}</b> · ${u.status}</div></div>
+<div class="card"><b>Credit</b><div class="bar" style="margin:10px 0"><i style="width:${pc}%"></i></div><div style="display:flex;justify-content:space-between;flex-wrap:wrap"><span>Limit: <b>${GH(u.credit)}</b></span><span>In use: <b>${GH(used())}</b></span><span>Available: <b class="good">${GH(avail())}</b></span></div></div>
+<div class="card"><b>Need help?</b><p class="mu" style="margin-bottom:0">Contact your BoxForLess account manager to raise your credit limit or change your details.</p></div>`}};
+function cartM(){const L=lines(),t=ctot(),over=t>avail();return`<div class="ov"><div class="md" role="dialog" aria-modal="true" aria-labelledby="cart-title" tabindex="-1"><div style="display:flex;justify-content:space-between;align-items:center"><div><h3 id="cart-title" style="margin:0">My request</h3><small class="mu">${L.length} product${L.length===1?"":"s"} · ${L.reduce((s,i)=>s+i.qty,0)} carton${L.reduce((s,i)=>s+i.qty,0)===1?"":"s"}</small></div><button class="btn s z" data-a="close">Close</button></div>${L.length?`<table><thead><tr><th>Product</th><th>Cartons</th><th class="right">Total</th><th><span class="sr">Remove</span></th></tr></thead><tbody>${L.map(i=>`<tr><td>${esc(i.name)}<br><small class="mu">${GH(i.price)} / carton</small></td><td><input type="number" min="1" max="${pr(i.sku).stock}" value="${i.qty}" data-q="${i.sku}" style="width:76px" aria-label="Cartons of ${esc(i.name)}"></td><td class="right">${GH(i.qty*i.price)}</td><td><button class="btn s z" data-a="rm" data-id="${i.sku}" aria-label="Remove ${esc(i.name)} from request">✕</button></td></tr>`).join("")}</tbody></table>
+<p class="right" style="font-size:20px"><b>Estimated total: ${GH(t)}</b></p><p class="right ${over?"bad":"mu"}">Available credit: ${GH(avail())}${over?" (request is over your limit)":""}</p><button class="btn" data-a="place" style="width:100%" ${over||S.u.status!=="Active"?"disabled":""}>Submit request</button>${S.u.status!=="Active"?'<p class="bad">Your account is suspended. Please contact BoxForLess.</p>':""}`:'<p class="mu">Your request is empty. Add products from the catalogue to get started.</p>'}</div></div>`}
+function invM(o){return`<div class="ov"><div class="md" role="dialog" aria-modal="true" aria-labelledby="invoice-title" tabindex="-1"><h3 id="invoice-title" style="margin:0">Invoice #${o.id}</h3><p class="mu">BoxForLess Wholesale<br>Billed to: ${esc(S.u.name)} · ${o.date}</p><table><tr><th>Item</th><th>Ctn</th><th>Price</th><th class="right">Total</th></tr>${o.items.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.qty}</td><td>${GH(i.price)}</td><td class="right">${GH(i.qty*i.price)}</td></tr>`).join("")}<tr><td colspan="3"><b>Total due</b></td><td class="right"><b>${GH(tot(o))}</b></td></tr></table><p class="no" style="margin-bottom:0"><button class="btn" data-a="print">Print / Save PDF</button> <button class="btn s" data-a="close">Close</button></p></div></div>`}
+function render(){const a=$("#app");if(!S.u){a.innerHTML=`<main id="main" tabindex="-1">${login()}</main>`;return}
+a.innerHTML=`<header><div class="head-inner"><div class="logo"><svg class="brand-icon" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3 36 11v18L20 37 4 29V11L20 3Z"/><path d="m4 11 16 8 16-8M20 19v18"/><path class="mark" d="m16 10 4 2 4-2-4-2-4 2Z"/></svg><span class="brand-name">Box<span>For</span>Less<small class="brand-sub">DIGITAL PRODUCT CATALOG</small></span></div><nav aria-label="Main navigation">${[["shop","Shop"],["orders","Orders"],["account","Account"]].map(([k,l])=>`<button class="${S.v===k?"on":""}" data-a="nav" data-id="${k}" aria-current="${S.v===k?"page":"false"}">${l}</button>`).join("")}</nav><div class="profile"><span class="avatar" aria-hidden="true">${esc(S.u.name.trim().slice(0,1).toUpperCase())}</span><span><b>${esc(S.u.name)}</b><small>Customer account</small></span></div><button class="btn z" data-a="cart" aria-label="My request, ${cnt()} product${cnt()===1?"":"s"}"><span aria-hidden="true">▤</span> My request (${cnt()})</button><button class="btn s z" data-a="out">Log out</button></div></header><main id="main" tabindex="-1">${V[S.v]()}</main>${S.modal}`}
+document.addEventListener("input",e=>{if(e.target.id==="q"){S.q=e.target.value;const p=e.target.selectionStart;render();const n=$("#q");n.focus();n.setSelectionRange(p,p)}});
+document.addEventListener("change",e=>{if(e.target.id==="sort"){S.sort=e.target.value;render();$("#sort")?.focus();return}const k=e.target.dataset.q;if(k){const n=Math.floor(+e.target.value);if(!(n>0))delete S.cart[k];else S.cart[k]=Math.min(n,pr(k).stock);saveRequest();S.modal=cartM();render();$(`#app [data-q="${k}"]`)?.focus()}});
+document.addEventListener("keydown",e=>{if(e.target.id==="cc"&&e.key==="Enter"){e.preventDefault();$("[data-a='login']")?.click();return}if(!S.modal)return;if(e.key==="Escape"){S.modal="";render();restoreModalFocus();return}if(e.key==="Tab"){const d=$("#app .md"),f=[...d.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')];if(!f.length){e.preventDefault();d.focus();return}if(!d.contains(document.activeElement)){e.preventDefault();(e.shiftKey?f[f.length-1]:f[0]).focus()}else if(e.shiftKey&&document.activeElement===f[0]){e.preventDefault();f[f.length-1].focus()}else if(!e.shiftKey&&document.activeElement===f[f.length-1]){e.preventDefault();f[0].focus()}}});
+document.addEventListener("click",async e=>{const b=e.target.closest("[data-a]");if(!b)return;const wasModal=!!S.modal,opener=document.activeElement,a=b.dataset.a,id=b.dataset.id,loginCode=a==="login"?$("#cc").value:"";
+const A={
+async login(){if(loginBusy)return;const entered=normalizeCode($("#cc").value);if(!entered)return toast("Enter your access code to continue");
+const u=db.customers.find(c=>normalizeCode(customerCode(c))===entered);
+if(u){S.u={...u,code:entered};S.v="shop";S.cart=loadRequest(entered);return}
+loginBusy=true;const submit=$("[data-a='login']");if(submit){submit.disabled=true;submit.textContent="Checking code…"}
+try{const response=await fetch("/api/catalog/access",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:$("#cc").value})});const result=await response.json().catch(()=>({}));
+if(!response.ok){toast(result.error||"That access code was not recognised.");return}
+window.location.assign("/catalog");return"redirect"
+}catch(e){toast("Unable to connect to BoxForLess. Check your connection and try again.")}finally{loginBusy=false}},
+out(){S.u=null;S.modal="";S.cart={}},nav(){S.v=id},cat(){S.c=id},stock(){S.stock=id},favf(){S.fav=!S.fav},close(){S.modal=""},print(){window.print()},
+fav(){const f=favs(),i=f.indexOf(id);i<0?f.push(id):f.splice(i,1);lsSet("bfl_fav_"+S.u.code,f)},
+add(){const p=pr(id),n=Math.floor(+$("#q-"+id).value),t=(S.cart[id]||0)+n;if(!(n>0))return toast("Enter a valid quantity");if(t>p.stock)return toast("Only "+p.stock+" cartons in stock");S.cart[id]=t;saveRequest();toast(p.name+" added to your request")},
+cart(){S.modal=cartM()},rm(){delete S.cart[id];saveRequest();S.modal=cartM()},
+place(){const L=lines();if(!L.length||S.u.status!=="Active")return;if(ctot()>avail())return toast("Over your credit limit");
+for(const i of L)if(pr(i.sku).stock<i.qty)return toast("Not enough stock: "+i.name);
+L.forEach(i=>pr(i.sku).stock-=i.qty);const o={id:++db.seq,code:S.u.code,date:day(0),status:"Pending",items:L};db.orders.unshift(o);
+db.log.unshift({t:new Date().toLocaleString("en-GH"),u:S.u.name,m:"Order #"+o.id+" placed (customer portal)"});save();S.cart={};saveRequest();S.modal="";S.v="orders";toast("Request #"+o.id+" submitted. We'll confirm shortly.")},
+inv(){S.modal=invM(db.orders.find(o=>o.id==id))},
+again(){const o=db.orders.find(x=>x.id==id);let miss=0;o.items.forEach(i=>{const p=pr(i.sku);if(p&&p.stock>0)S.cart[i.sku]=Math.min(i.qty,p.stock);else miss++});saveRequest();S.modal=cartM();if(miss)toast(miss+" item(s) no longer available")}};
+const result=A[a]?await A[a]():undefined;if(result==="redirect")return;render();if(!wasModal&&S.modal){modalOpener=opener;$("#app .md [data-a='close']")?.focus()}else if(wasModal&&!S.modal)restoreModalFocus();else if(a==="login"&&!S.u){$("#cc").value=loginCode;$("#cc").focus()}else if(a==="nav"||a==="place"||a==="login")$("#main")?.focus();else if(a==="out")$("#cc")?.focus();else if(["fav","favf","cat","stock","add"].includes(a)){[...document.querySelectorAll("[data-a]")].find(x=>x.dataset.a===a&&(id===undefined||x.dataset.id===id))?.focus()}});
+render();
+</script>
+</body>
+</html>

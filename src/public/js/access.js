@@ -179,6 +179,7 @@ function wireCodeRows(view, data) {
 export async function renderAccessRequests(view, approved = null) {
   const data = await api.accessRequests();
   const pending = data.items.filter((r) => r.status === 'PENDING');
+  const snapshot = JSON.stringify(data.items.map((r) => [r.id, r.status, r.updated_at]));
 
   // Shown after an approval. Deliberately NOT window.alert(): a browser dialog's
   // text cannot be selected or copied, so the code ended up somewhere staff could
@@ -197,7 +198,7 @@ export async function renderAccessRequests(view, approved = null) {
 
   const rows = data.items.map((r) => `
     <tr data-id="${r.id}">
-      <td><b>${esc(r.company || '—')}</b><br><span class="muted">${esc(r.contact)}</span></td>
+      <td><b>${esc(r.company || r.contact)}</b>${r.company ? `<br><span class="muted">${esc(r.contact)}</span>` : ''}</td>
       <td>${esc(r.phone)}</td>
       <td class="muted">${esc(r.delivery_address || '—')}</td>
       <td class="muted">${when(r.created_at)}</td>
@@ -213,15 +214,16 @@ export async function renderAccessRequests(view, approved = null) {
     ${approvedPanel}
     <h1>Access requests</h1>
     <div class="notice" style="margin:12px 0">
-      Companies that opened the catalogue without a code and asked for one.
+      People who opened the catalogue without a code and asked for one.
       Approving creates the customer and issues their code.
       ${pending.length ? `<b>${pending.length} waiting for a decision.</b>` : ''}
     </div>
+    <p class="muted" data-access-refresh-error role="status" aria-live="polite"></p>
     <div class="card">
       ${data.items.length === 0
     ? '<p class="muted">No one has asked for access yet.</p>'
     : `<table>
-            <thead><tr><th>Company / contact</th><th>Phone</th><th>Address</th><th>Asked</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Customer / business</th><th>Phone</th><th>Address</th><th>Asked</th><th>Status</th><th></th></tr></thead>
             <tbody>${rows}</tbody>
           </table>`}
     </div>`;
@@ -260,6 +262,31 @@ export async function renderAccessRequests(view, approved = null) {
       window.alert(e.message);
     }
   }));
+
+  clearInterval(view.accessRequestPollTimer);
+  let polling = false;
+  view.accessRequestPollTimer = setInterval(async () => {
+    if (!view.isConnected || location.hash.split('/')[1] !== 'access') {
+      clearInterval(view.accessRequestPollTimer);
+      return;
+    }
+    if (polling) return;
+    polling = true;
+    try {
+      const latest = await api.accessRequests();
+      const nextSnapshot = JSON.stringify(latest.items.map((r) => [r.id, r.status, r.updated_at]));
+      if (nextSnapshot !== snapshot) await renderAccessRequests(view, approved);
+      else {
+        const error = view.querySelector('[data-access-refresh-error]');
+        if (error) error.textContent = '';
+      }
+    } catch (e) {
+      const error = view.querySelector('[data-access-refresh-error]');
+      if (error) error.textContent = `Could not refresh access requests: ${e.message}`;
+    } finally {
+      polling = false;
+    }
+  }, 10000);
 }
 
 export default { renderAccessCodes, renderAccessRequests };

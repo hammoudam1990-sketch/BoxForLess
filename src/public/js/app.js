@@ -105,5 +105,6 @@ window.addEventListener('DOMContentLoaded', () => {
     location.assign('/staff/login');
   });
   route();
+  window.setInterval(refreshBadge, 15000);
 });
 export { refreshBadge };

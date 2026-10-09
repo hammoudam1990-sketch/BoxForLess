@@ -61,6 +61,10 @@ export function createApp(db) {
   const catalogPage = (_req, res) => res.sendFile(path.join(publicDir, 'catalog.html'));
   app.get('/catalog', catalogPage);
   app.get('/catalog/product/:id', catalogPage);
+  app.get('/signup', (_req, res) => res.sendFile(path.join(publicDir, 'signup.html')));
+  // Legacy customer-shop entry point. Real access codes establish a signed
+  // catalog session before the customer continues to the authoritative catalog.
+  app.get('/customer-shop', (_req, res) => res.sendFile(path.join(publicDir, 'customer shop.html')));
 
   // The staff shell and scanner are private; the catalog remains public.
   const privatePage = (filename) => (req, res) => {

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>Sign up | Box for Less</title>
+  <style>
+    :root{color-scheme:light;--bg:#fff;--surface:#fff;--text:#171717;--muted:#626262;--border:#e5e5e5;--black:#171717;--error:#b42318;--success:#176b3a;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);display:grid;place-items:center;padding:24px}
+    main{width:min(100%,460px)}
+    .brand{font-size:28px;font-weight:800;letter-spacing:-.04em;margin:0 0 8px}
+    h1{font-size:23px;letter-spacing:-.025em;margin:0 0 8px}
+    .intro{color:var(--muted);margin:0 0 22px}
+    form{border:1px solid var(--border);border-radius:16px;padding:22px}
+    label{display:block;font-size:14px;font-weight:650;margin:0 0 14px}
+    input,textarea{display:block;width:100%;margin-top:6px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);font:inherit;padding:11px 12px;min-height:46px}
+    input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--black);outline-offset:2px}
+    button{width:100%;min-height:48px;border:0;border-radius:10px;background:var(--black);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.6;cursor:wait}
+    .message{min-height:24px;margin:0 0 10px;font-size:14px}
+    .message.error{color:var(--error)}
+    .message.success{color:var(--success)}
+    .back{display:inline-flex;align-items:center;min-height:44px;margin-top:12px;color:var(--text);font-weight:650}
+    [hidden]{display:none!important}
+    @media(max-width:480px){body{padding:20px 16px}form{padding:18px}}
+  </style>
+</head>
+<body>
+  <main>
+    <p class="brand">Box for Less</p>
+    <h1 id="signup-title">Sign up for customer access</h1>
+    <p class="intro">Share your contact and delivery details. Our team will review your request and send you an access code.</p>
+    <form id="signup-form">
+      <label for="contact">Your name
+        <input id="contact" name="contact" type="text" autocomplete="name" maxlength="200" required>
+      </label>
+      <label for="phone">Phone number
+        <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="60" required>
+      </label>
+      <label for="address">Delivery address
+        <textarea id="address" name="address" autocomplete="street-address" maxlength="500" required></textarea>
+      </label>
+      <p id="message" class="message" role="status" aria-live="polite"></p>
+      <button id="submit" type="submit">Request an access code</button>
+    </form>
+    <a class="back" href="/customer-shop">← Back to access code</a>
+
+  </main>
+  <script>
+    "use strict";
+    const form=document.querySelector("#signup-form");
+    const submitButton=document.querySelector("#submit");
+    const message=document.querySelector("#message");
+    form.addEventListener("submit",async event=>{
+      event.preventDefault();
+      if(!form.reportValidity())return;
+      submitButton.disabled=true;
+      message.className="message";
+      message.textContent="Sending your request…";
+      const fields=new FormData(form);
+      try{
+        const response=await fetch("/api/catalog/access-requests",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            contact:fields.get("contact"),
+            phone:fields.get("phone"),
+            address:fields.get("address"),
+          })
+        });
+        const result=await response.json();
+        if(!response.ok)throw new Error(result.error||"Could not send your request. Please try again.");
+        form.hidden=true;
+        document.querySelector("#signup-title").textContent="Request received";
+        message.className="message success";
+        message.textContent=result.message||"Thank you. Our team will review your details and contact you with an access code.";
+      }catch(error){
+        message.className="message error";
+        message.textContent=error.message||"Could not send your request. Please try again.";
+        submitButton.disabled=false;
+      }
+    });
+  </script>
+</body>
+</html>
