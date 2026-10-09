@@ -17,7 +17,7 @@ iPhone (2026-10-03)**. Released as `v0.3.0`. See [Verification](#verification).
 >
 > The reasoning here is kept because it still explains *why* things are as they
 > are. For how the system behaves today, read `IMPORT_RULES.md`, `CHANGELOG.md`
-> from `0.4.0` onward, and `CONTINUE_HERE.md`.
+> from `0.4.0` onward, `STAGE_4_ACCESS.md`, and `PHASE_STATUS.md`.
 
 Quantities are **CTN only**. No PCS, no unit selection, no CTN↔PCS conversion, no
 parsing of `CTN24` strings, no loose-piece logic.

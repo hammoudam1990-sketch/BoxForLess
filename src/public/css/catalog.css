@@ -1,20 +1,6 @@
-/* Customer-facing catalog. Deliberately a SEPARATE stylesheet from the admin
-   styles.css so the Product Master UI is not touched by catalog changes.
-   Mobile-first: the base rules are the phone layout; media queries add width.
-
-   LOOK (current): grains and honey — see the "Theme: grains and honey" block at the end of
-   this file; it overrides what follows where they differ.
-
-   EARLIER LOOK: editorial and bold (after the humbleteam "Content" reference). A white page,
-   very large light numerals and headings set tight, rounded light-grey tiles with a
-   small label top-left, a ↗ arrow top-right and the title large at the bottom, pill
-   controls, and one hot orange used sparingly. Black is the action colour.
-   Two earlier owner decisions are kept on purpose: the thin orange outline with a
-   soft shadow on every product box, and the "Add to request" button with an orange
-   edge, a thin blue inner line and 10px corners.
-   Almost no product has a photo, so a tile is typographic first; a photo, when there
-   is one, sits on a pale canvas above the caption. See
-   design-system/box-for-less/MASTER.md. */
+/* Customer-facing catalog, isolated from the admin stylesheet. Mobile-first; the shared
+   wallpaper is veiled more strongly here for legibility. The orange card outline and
+   two-tone Add to request control are intentional owner decisions. */
 
 :root {
   /* White doodle wallpaper, near-black ink, one burnt-orange accent. */
@@ -64,7 +50,7 @@ body {
   margin: 0;
   background: var(--c-bg);
   color: var(--c-ink);
-  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Roboto, Helvetica, Arial, sans-serif;
+  font: 17px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Roboto, Helvetica, Arial, sans-serif;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -83,15 +69,13 @@ body {
   position: relative;
   display: grid; place-items: center;
   width: 40px; height: 40px; flex: none;
-  border-radius: 14px; background: var(--c-ink); color: #fff;
-  font-weight: 700; font-size: 12px; letter-spacing: .08em;
+  border-radius: 14px; background: #193b32; color: #fff;
+  box-shadow: 0 4px 10px rgba(25, 59, 50, .2);
 }
-.c-logo::after {   /* the orange dot */
-  content: ""; position: absolute; top: 6px; right: 6px;
-  width: 6px; height: 6px; border-radius: 50%; background: var(--c-orange);
-}
+.c-logo svg { width: 30px; height: 30px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.c-logo .c-logo-accent { stroke: #f3a348; stroke-width: 3; }
 .c-brand-text { display: flex; flex-direction: column; }
-.c-brand-title { font-weight: 700; font-size: 18px; line-height: 1.15; letter-spacing: -0.02em; }
+.c-brand-title { font-weight: 700; font-size: 21px; line-height: 1.15; letter-spacing: -0.02em; }
 .c-brand-sub { color: var(--c-muted); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
 
 /* ---------- layout ---------- */
@@ -114,7 +98,7 @@ body {
 .c-search input {
   width: 100%; height: 52px;
   padding: 0 52px 0 46px;
-  font-size: 16px; /* 16px stops iOS Safari zooming on focus */
+  font-size: 17px;
   color: var(--c-ink); background: var(--c-tile);
   border: 1px solid transparent; border-radius: 999px;
   -webkit-appearance: none;
@@ -152,7 +136,7 @@ body {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 8px 18px; border-radius: 999px;
   border: 0; background: var(--c-tile);
-  color: var(--c-ink); font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer;
+  color: var(--c-ink); font-size: 17px; font-weight: 500; white-space: nowrap; cursor: pointer;
 }
 .c-chip .n { color: var(--c-muted); font-variant-numeric: tabular-nums; }
 .c-chip[aria-pressed="true"] { background: var(--c-ink); color: #fff; font-weight: 600; }
@@ -166,7 +150,7 @@ body {
 .c-count { color: var(--c-muted); font-size: 13px; letter-spacing: .02em; }
 .c-sort {
   height: var(--c-tap); min-width: 150px;
-  padding: 0 14px; font-size: 14px;
+  padding: 0 14px; font-size: 17px;
   border: 0; border-radius: 999px;
   background: var(--c-tile); color: var(--c-ink);
 }
@@ -289,6 +273,26 @@ body {
   background-size: 200% 100%; animation: c-shimmer 1.4s ease-in-out infinite;
 }
 @keyframes c-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.c-loading-card { min-height: 286px; padding: 16px 14px; gap: 12px; }
+.c-skeleton i { display: block; height: 12px; border-radius: 6px; background: #e4dfd5; }
+.c-loading-card i:first-child { width: 54px; height: 54px; border-radius: 50%; }
+.c-loading-card i:nth-child(2) { width: 34%; height: 10px; }
+.c-loading-card i:nth-child(3) { width: 84%; height: 17px; margin-top: 8px; }
+.c-loading-card i:nth-child(4) { width: 60%; height: 12px; }
+.c-loading-card i:nth-child(5) { width: 100%; height: 44px; margin-top: auto; border-radius: 10px; }
+.c-detail-skeleton { display: grid; gap: 22px; padding: 18px; background: #fff; border-radius: 28px; }
+.c-detail-skeleton-image { min-height: 240px; }
+.c-detail-skeleton-copy { display: flex; flex-direction: column; gap: 14px; }
+.c-detail-skeleton-copy i {
+  height: 18px; border-radius: 6px; background: linear-gradient(90deg, #f1eee8 25%, #faf8f4 50%, #f1eee8 75%);
+  background-size: 200% 100%; animation: c-shimmer 1.4s ease-in-out infinite;
+}
+.c-detail-skeleton-copy i:first-child { width: 78%; height: 34px; }
+.c-detail-skeleton-copy i:last-child { width: 55%; }
+@media (min-width: 760px) {
+  .c-detail-skeleton { grid-template-columns: 1fr 1fr; align-items: start; padding: 24px; }
+  .c-detail-skeleton-image { min-height: 420px; }
+}
 
 /* ---------- pagination and buttons ---------- */
 .c-pager { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 24px 0 8px; }
@@ -296,7 +300,7 @@ body {
   min-height: var(--c-tap); padding: 10px 20px;
   border: 0; border-radius: 999px;
   background: var(--c-tile); color: var(--c-ink);
-  font-size: 15px; font-weight: 600; cursor: pointer;
+  font-size: 17px; font-weight: 600; cursor: pointer;
 }
 .c-btn.primary { background: var(--c-ink); color: #fff; }
 /* A disabled button is GREY, not a faded version of its enabled colour: there must
@@ -304,7 +308,7 @@ body {
    the customer can tell the request is now ready to send. */
 .c-btn[disabled],
 .c-btn.primary[disabled] { background: #ebeae7; color: var(--c-muted); opacity: 1; cursor: default; }
-.c-page-of { color: var(--c-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.c-page-of { color: var(--c-muted); font-size: 17px; font-variant-numeric: tabular-nums; }
 
 /* ---------- product detail ---------- */
 .c-back {
@@ -395,19 +399,17 @@ body {
    a wide screen cannot be overridden by an animation. The live tab is a black pill; the
    request count is an orange badge, as on the old cart pill. */
 .c-tabbar {
-  position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 30;
-  max-width: 480px; margin: 0 auto;
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;
-  padding: 6px;
+  position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 30;
+  display: block; padding: 5px;
   background: rgba(255, 255, 255, .96);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   border: 1px solid var(--c-line); border-radius: 999px;
   box-shadow: 0 10px 30px rgba(17, 17, 16, .16);
 }
 .c-tab {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  min-height: 56px; padding: 6px 4px; border: 0; border-radius: 999px; background: transparent;
-  color: var(--c-muted); font-size: 12px; font-weight: 600; letter-spacing: .01em; cursor: pointer;
+  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px;
+  min-height: 48px; padding: 6px 18px; border: 0; border-radius: 999px; background: var(--c-ink);
+  color: #fff; font-size: 17px; font-weight: 600; letter-spacing: .01em; cursor: pointer;
 }
 .c-tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .c-tab[aria-current="page"] { background: var(--c-ink); color: #fff; }
@@ -592,10 +594,8 @@ body {
 .c-empty-action { margin-top: 16px; }
 
 /* ===========================================================================
-   Theme: wallpaper (originally written for an amber photograph; its colours now come from the tokens at the top)
-   The whole site sits on one photograph (css/backdrop.css). Warm amber behind, cream
-   panels in front, deep brown ink, burnt orange as the single hot colour, and a serif for
-   the big words. Where this block disagrees with an earlier rule, this block wins.
+   Theme: white catalogue canvas, warm neutral panels, dark ink and burnt orange.
+   Where this block disagrees with an earlier rule, this block wins.
    =========================================================================== */
 
 /* the big words */
@@ -638,7 +638,6 @@ body {
 .c-drawer-panel { background: var(--c-surface); }
 .c-drawer-backdrop { background: rgba(26, 22, 18, .55); }
 .c-tabbar { background: rgba(255, 255, 255, .95); border-color: rgba(26, 22, 18, .12); box-shadow: 0 12px 32px rgba(26, 22, 18, .28); }
-.c-tab[aria-current="page"] { background: var(--c-ink); color: var(--c-surface); }
 .c-toast { background: var(--c-ink); color: var(--c-surface); }
 .c-skeleton { background-image: linear-gradient(90deg, #f1eee8 25%, #faf8f4 50%, #f1eee8 75%); }
 .c-skeleton i { background: #e4dfd5; }
@@ -654,8 +653,7 @@ body {
   .c-grid > :nth-child(3n).c-in { transition-delay: .1s; }
 }
 
-/* Nothing small is set directly on the photograph: it goes on a cream pill. The big serif
-   words (the number, the section titles) are large enough to stand on the veiled picture. */
+/* Floating labels retain a light surface against the white page. */
 .c-stat-l, .c-count, .c-clear, .c-page-of {
   background: rgba(255, 255, 255, .88); border-radius: 999px; padding: 4px 12px; color: var(--c-ink);
 }
@@ -704,3 +702,86 @@ body {
 /* the tile drawing is smaller than the title is tall, so the two never meet */
 .c-tile { min-height: 168px; }
 .c-tile-doodle { width: 52px; height: 52px; }
+
+/* The shared doodle wallpaper remains available on other pages, not the catalogue. */
+html, html body { background: #fff; }
+body::before, body::after { display: none; background-image: none; }
+
+.c-header-inner { max-width: 1240px; padding: 12px 20px; }
+.c-brand { gap: 14px; }
+.c-logo { width: 46px; height: 46px; border-radius: 15px; }
+
+.c-main { max-width: 1240px; padding: 22px 20px 132px; }
+.c-main, .c-drawer-panel { font-size: 17px; }
+.c-search input, .c-chip, .c-sort, .c-btn, .c-add, .c-tab, .c-page-of, .c-toast { font-size: 17px; }
+.c-stat {
+  width: fit-content; align-items: center; gap: 14px;
+  margin: 0 0 18px; padding: 10px 18px;
+  background: rgba(255, 255, 255, .92);
+  border: 1px solid rgba(26, 22, 18, .1);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(26, 22, 18, .08);
+}
+.c-stat-n { font-size: clamp(64px, 14vw, 92px); line-height: .9; }
+.c-stat-l { margin: 0; padding: 0; background: none; font-size: 13px; }
+
+.c-views { gap: 8px; padding: 5px; border: 1px solid var(--c-line); }
+.c-view { min-height: 44px; padding: 6px 16px; border-radius: 999px; font-size: clamp(18px, 4vw, 23px); }
+.c-view[aria-selected="true"] { background: var(--c-ink); color: #fff; }
+.c-search { margin: 14px 0; }
+.c-search input { height: 56px; border-radius: 16px; box-shadow: 0 5px 16px rgba(26, 22, 18, .05); }
+
+.c-controls {
+  gap: 14px; margin-bottom: 22px; padding: 16px;
+  background: rgba(255, 255, 255, .9);
+  border: 1px solid rgba(26, 22, 18, .1);
+  border-radius: 22px;
+  box-shadow: 0 8px 24px rgba(26, 22, 18, .06);
+}
+.c-chips { gap: 8px; }
+.c-chip, .c-sort { border: 1px solid var(--c-line); }
+.c-chip[aria-pressed="true"] { border-color: var(--c-ink); }
+.c-sortrow { padding-top: 12px; border-top: 1px solid var(--c-line); }
+
+.c-tile { min-height: 164px; border-radius: 20px; }
+.c-grid { gap: 14px; }
+.c-card {
+  padding: 8px; border-color: rgba(228, 87, 26, .42); border-radius: 20px;
+  box-shadow: 0 5px 16px rgba(26, 22, 18, .08);
+}
+.c-card:hover { box-shadow: 0 12px 28px rgba(26, 22, 18, .14); }
+.c-name { font-size: 17px; }
+
+.c-empty, .c-error {
+  max-width: 680px; margin: 28px auto; padding: 36px 24px;
+  border: 1px solid rgba(26, 22, 18, .08);
+  box-shadow: 0 10px 28px rgba(26, 22, 18, .08);
+}
+.c-detail { box-shadow: 0 12px 34px rgba(26, 22, 18, .12); }
+
+@media (min-width: 760px) {
+  .c-main { padding-top: 30px; }
+  .c-controls { padding: 20px; }
+}
+
+@media (max-width: 760px) {
+  .c-main { padding-bottom: 96px; }
+}
+
+@media (max-width: 420px) {
+  .c-main { padding-left: 14px; padding-right: 14px; }
+  .c-controls { padding: 12px; border-radius: 18px; }
+  .c-view { padding-right: 12px; padding-left: 12px; }
+  .c-stat { padding: 10px 14px; }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .c-card { transition: transform .24s cubic-bezier(.2, .8, .2, 1), box-shadow .24s ease, border-color .24s ease; }
+  .c-card:hover { transform: translateY(-5px); border-color: var(--c-orange); }
+  .c-card:hover .c-doodle-chip { transform: rotate(-5deg) scale(1.06); }
+  .c-doodle-chip { transition: transform .24s ease; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .c-reveal.c-in { transition-duration: .42s; }
+}

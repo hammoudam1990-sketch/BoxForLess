@@ -10,10 +10,12 @@ skill's `search.py` could not run; the same CSV files were queried directly inst
 Where the data and this project disagree, the project wins (see "Departures").
 
 > **Newest direction — doodle wallpaper and product drawings (supersedes the amber palette
-> below).** Every page sits on a black line-art doodle wallpaper (`img/doodles-bg.webp`,
-> 572×1024, 235 KB, shared via `css/backdrop.css`), veiled in white (70% on a phone; on wide
+> below).** Non-catalogue pages use a black line-art doodle wallpaper (`img/doodles-bg.webp`,
+> 572×1024, about 204 KB, shared via `css/backdrop.css`), veiled in white (70% on a phone; on wide
 > screens stronger at the outer edges and veiled to 92% towards the centre, the right half a
 > mirror of the left) and drifting very slowly (60s, transform only, off under reduced motion).
+> The catalogue instead uses a clean white background; the rounded bottom navigation is
+> reserved for mobile and becomes a compact top-right toolbar on wider screens.
 > The legibility rule is unchanged: **text never sits on the pattern** — panels, header, tab
 > bar and small labels are white; only the big serif words stand on it, in near-black.
 > Palette: white, `#f1eee8` pills, ink `#1a1612` (17:1), muted `#57524b` (7.6:1), burnt orange

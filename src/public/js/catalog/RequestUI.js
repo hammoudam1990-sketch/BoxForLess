@@ -18,8 +18,6 @@ const normalizeCodeInput = (v) => String(v ?? '').toUpperCase().split('')
 
 // Plain line icons, one stroke weight, hidden from assistive tech (each tab has a text label).
 const ICONS = {
-  home: 'M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z',
-  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   request: 'M7 3h10a1 1 0 0 1 1 1v17l-3.5-2-2.5 2-2.5-2L6 21V4a1 1 0 0 1 1-1zM9.5 8h5M9.5 12h5',
 };
 const Icon = ({ name }) => html`
@@ -28,22 +26,15 @@ const Icon = ({ name }) => html`
   </svg>`;
 
 /**
- * The bottom tab bar — Home, Categories, My request — and the request drawer it opens.
- * `tab` says which of Home / Categories the list is showing ('' on a product page).
+ * The "My request" button (with its carton badge) and the request drawer it opens.
  */
-export function RequestUI({ tab, onHome, onCategories }) {
+export function RequestUI() {
   const lines = useCartLines();
   const [open, setOpen] = useState(false);
   const cartons = lines.reduce((n, l) => n + l.quantityCtn, 0);
 
   return html`
     <nav class="c-tabbar" aria-label="Catalogue">
-      <button type="button" class="c-tab" aria-current=${tab === 'home' ? 'page' : null} onClick=${onHome}>
-        <${Icon} name="home" /><span>Home</span>
-      </button>
-      <button type="button" class="c-tab" aria-current=${tab === 'categories' ? 'page' : null} onClick=${onCategories}>
-        <${Icon} name="grid" /><span>Categories</span>
-      </button>
       <button type="button" class="c-tab" aria-haspopup="dialog" aria-expanded=${open} onClick=${() => setOpen(true)}>
         <span class="c-tab-icon">
           <${Icon} name="request" />

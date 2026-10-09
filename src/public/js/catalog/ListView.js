@@ -180,7 +180,13 @@ export function ListView({ state, update }) {
 
 function Results({ results, search, go, onClear }) {
   if (results.loading) {
-    return html`<div class="c-grid">${[0, 1, 2, 3, 4, 5].map((i) => html`<div key=${i} class="c-skeleton" aria-hidden="true"><i></i><i></i><i></i><i></i></div>`)}</div>`;
+    return html`
+      <div class="c-grid" role="status" aria-label="Loading products" aria-busy="true">
+        ${[0, 1, 2, 3, 4, 5].map((i) => html`
+          <div key=${i} class="c-skeleton c-loading-card" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i>
+          </div>`)}
+      </div>`;
   }
   if (results.error) return html`<div class="c-error">Could not load products: ${results.error.message}</div>`;
 

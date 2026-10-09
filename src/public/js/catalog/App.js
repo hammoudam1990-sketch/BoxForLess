@@ -6,7 +6,7 @@
 // from ../staff/ here.
 import { html, useState, useEffect, useCallback, useRef } from '../lib/react.js';
 import { useHideOnScroll } from '../lib/hooks.js';
-import { usePathname, parsePath, navigate, Link } from './router.js';
+import { usePathname, parsePath, Link } from './router.js';
 import { ListView, INITIAL_LIST } from './ListView.js';
 import { DetailView } from './DetailView.js';
 import { RequestUI } from './RequestUI.js';
@@ -18,7 +18,13 @@ function Header({ hidden }) {
     <header class=${`c-header${hidden ? ' c-header-hidden' : ''}`}>
       <div class="c-header-inner">
         <${Link} class="c-brand" href="/catalog">
-          <span class="c-logo">BFL</span>
+          <span class="c-logo" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none">
+              <path d="M8 17.5 24 9l16 8.5v18L24 44l-16-8.5v-18Z" />
+              <path d="m8.5 18 15.5 8 15.5-8M24 26v17M18 12.2l16 8.4v7.2" />
+              <path class="c-logo-accent" d="M18 12.2v7.2" />
+            </svg>
+          </span>
           <span class="c-brand-text">
             <span class="c-brand-title">Box for Less</span>
             <span class="c-brand-sub">Digital Product Catalog</span>
@@ -50,24 +56,6 @@ export function App() {
     mainRef.current?.focus({ preventScroll: true });
   }, [route.name, route.id]);
 
-  // Home and Categories both clear the filters; Home goes to the top, Categories to the tiles.
-  const reset = { search: '', topLevel: '', categoryPath: '', offset: 0 };
-  const goHome = () => {
-    update(reset);
-    if (route.name === 'list') window.scrollTo({ top: 0, behavior: 'smooth' });
-    else navigate('/catalog');
-  };
-  const goCategories = () => {
-    update(reset);
-    if (route.name !== 'list') navigate('/catalog');
-    // wait for the list (and its tiles) to be on screen before scrolling to them
-    setTimeout(() => {
-      const el = document.getElementById('shop-by-category');
-      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 76, behavior: 'smooth' });
-    }, 120);
-  };
-  const tab = route.name !== 'list' ? '' : (list.topLevel ? 'categories' : 'home');
-
   return html`
     <${Header} hidden=${headerHidden} />
     <main class="c-main" ref=${mainRef} tabIndex="-1">
@@ -77,5 +65,5 @@ export function App() {
     : html`<${ListView} state=${list} update=${update} />`}
       </div>
     </main>
-    <${RequestUI} tab=${tab} onHome=${goHome} onCategories=${goCategories} />`;
+    <${RequestUI} />`;
 }

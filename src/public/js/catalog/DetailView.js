@@ -14,7 +14,13 @@ export function DetailView({ id }) {
     if (p) document.title = `${p.name} — Box for Less`;
   }, [p]);
 
-  if (state.loading) return html`<div class="c-skeleton" style=${{ height: 320 }}></div>`;
+  if (state.loading) return html`
+    <div class="c-detail-skeleton" role="status" aria-label="Loading product" aria-busy="true">
+      <div class="c-skeleton c-detail-skeleton-image" aria-hidden="true"></div>
+      <div class="c-detail-skeleton-copy" aria-hidden="true">
+        <i></i><i></i><i></i><i></i>
+      </div>
+    </div>`;
 
   if (state.error) {
     return html`

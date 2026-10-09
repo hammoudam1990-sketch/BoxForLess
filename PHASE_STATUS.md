@@ -147,7 +147,7 @@ Released as `v0.4.1`. Detail: `STAGE_4_ACCESS.md`.
 
 | Not built yet | Prepared by | Note |
 |---|---|---|
-| **Deployment** | — | **The only thing between this and real customers.** Runs on a private LAN address today. See `CONTINUE_HERE.md`. |
+| **Deployment** | — | Runs on a private LAN address today. Production needs a host with persistent disk, a domain and trusted TLS, deployment secrets, and a daily stock-import plan. |
 | Image Library | `product_images`, `primary_image_id` | Partly there: photo capture and save work from the scan page. |
 | Sales Dashboard | audit tables, `sales_users` | |
 | Odoo Quotation Export | `quotations` skeleton | Blocked by the pricing decision (D2). |
