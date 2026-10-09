@@ -1,9 +1,8 @@
 // Routing for the catalogue: /catalog (list) and /catalog/product/:id (detail).
 //
-// The server hands both URLs the same shell, so the path is what the client reads.
-// In-app links go through history.pushState, which keeps navigation a single page
-// load on a phone and lets the list keep its filters while a product is open.
-import { html, useState, useEffect } from '../lib/react.js';
+// The server hands both URLs the same page, so the path is what the browser reads. Links
+// inside the catalogue move with history.pushState, which keeps navigation to one page load
+// on a phone and lets the list keep its filters while a product is open.
 
 const listeners = new Set();
 
@@ -14,30 +13,31 @@ export function navigate(href) {
   listeners.forEach((fn) => fn());
 }
 
-/** The current pathname; re-renders on navigate() and on the browser's back/forward. */
-export function usePathname() {
-  const [path, setPath] = useState(() => window.location.pathname);
-  useEffect(() => {
-    const sync = () => setPath(window.location.pathname);
-    listeners.add(sync);
-    window.addEventListener('popstate', sync);
-    return () => { listeners.delete(sync); window.removeEventListener('popstate', sync); };
-  }, []);
-  return path;
+/** Run `fn` whenever the route changes, by a link or by the browser's back / forward. */
+export function onRouteChange(fn) {
+  listeners.add(fn);
+  window.addEventListener('popstate', fn);
+  return () => { listeners.delete(fn); window.removeEventListener('popstate', fn); };
 }
 
 /** "/catalog/product/123" -> { name: 'detail', id: '123' }; anything else is the list. */
-export function parsePath(pathname) {
+export function parsePath(pathname = window.location.pathname) {
   const m = pathname.match(/^\/catalog\/product\/(.+)$/);
   return m ? { name: 'detail', id: decodeURIComponent(m[1]) } : { name: 'list' };
 }
 
-/** An ordinary <a href> that navigates in place unless the user asked for a new tab. */
-export function Link({ href, children, ...rest }) {
-  const onClick = (e) => {
-    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || rest.target) return;
+/**
+ * Make every ordinary click on a catalogue link (<a href="/catalog…">) navigate in place.
+ * A click with a modifier key, a middle click or a link with a target still opens normally.
+ */
+export function interceptLinks(root = document) {
+  root.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.target || a.hasAttribute('download')) return;
+    const url = new URL(a.href, window.location.href);
+    if (url.origin !== window.location.origin || !/^\/catalog(\/|$)/.test(url.pathname)) return;
     e.preventDefault();
-    navigate(href);
-  };
-  return html`<a href=${href} onClick=${onClick} ...${rest}>${children}</a>`;
+    navigate(url.pathname + url.search);
+  });
 }

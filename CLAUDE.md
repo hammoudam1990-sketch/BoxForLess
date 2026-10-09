@@ -63,7 +63,7 @@ Instead:
 - **Backend:** Express REST API.
 - **Database:** SQLite file (`data/*.db`) via the built-in `node:sqlite` module.
 - **Excel import:** SheetJS (`xlsx`).
-- **Frontend:** React 18 + htm (no JSX, no build step) as ES modules under `src/public/js`; React is vendored in `src/public/vendor`, never a CDN.
+- **Frontend:** plain HTML, CSS and JavaScript (ES modules under `src/public/js`, no framework, no build step, nothing from a CDN). Pages are built with small DOM helpers (`js/lib/dom.js`); a field someone types into is built once and never rebuilt.
 - **Tests:** Node built-in test runner (`node --test`).
 
 ---

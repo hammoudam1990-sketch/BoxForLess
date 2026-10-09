@@ -24,7 +24,7 @@ const SEARCH_DELAY = 220;
  * including out-of-stock.
  */
 const INITIAL = {
-  view: 'available', search: '', availability: 'all', withImage: false,
+  view: 'available', search: '', availability: 'all',
   topLevel: '', categoryPath: '', sort: 'name_asc', offset: 0,
 };
 export const state = { ...INITIAL };
@@ -53,13 +53,12 @@ export const showEverything = () => patchList({ search: '', topLevel: '', catego
 export const listTab = () => (state.topLevel ? 'categories' : 'home');
 
 const filtersActive = () => Boolean(state.search.trim() || state.topLevel || state.categoryPath
-  || state.availability !== 'all' || state.withImage);
+  || state.availability !== 'all');
 
 function listQuery() {
   const p = new URLSearchParams();
   if (state.search.trim()) p.set('search', state.search.trim());
   if (state.availability !== 'all') p.set('availability', state.availability);
-  if (state.withImage) p.set('with_image', 'true');
   p.set('view', state.view);
   if (state.topLevel) p.set('top_level', state.topLevel);
   if (state.categoryPath) p.set('category_path', state.categoryPath);
@@ -74,8 +73,8 @@ function chip(label, pressed, count, onClick) {
     label, count === null || count === undefined ? null : h('span', { class: 'n' }, count));
 }
 
-/** Build the list into `container`. Returns { destroy }. */
-export function mountList(container) {
+/** Build the list into `container`. `onChange` runs after every change. Returns { destroy }. */
+export function mountList(container, { onChange = () => {} } = {}) {
   const scope = createScope();         // listeners that live as long as the list
   let cardsScope = createScope();      // the product tiles' cart subscriptions
   const latestProducts = createLatest();
@@ -92,11 +91,8 @@ export function mountList(container) {
   // ---- the parts that are built once ----
   const numberEl = h('span', { class: 'c-stat-n' });
   const labelEl = h('span', { class: 'c-stat-l' });
-  const statEl = h('div', { class: 'c-stat hidden' }, numberEl, labelEl);
-
-  const bannerEl = h('section', { class: 'c-banner hidden', 'aria-label': 'How requests work' },
-    h('h2', {}, 'Request cartons in three steps'),
-    h('ol', { class: 'c-steps' }, h('li', {}, 'Add cartons'), h('li', {}, 'Enter your code'), h('li', {}, 'Send')));
+  const statSkeleton = h('span', { class: 'sk-block', style: { width: '190px', height: '96px', borderRadius: '18px' } });
+  const statEl = h('div', { class: 'c-stat', role: 'status', 'aria-label': 'Loading' }, statSkeleton);
 
   const viewButton = (key, label) => h('button', {
     type: 'button', class: 'c-view', role: 'tab', onClick: () => { if (state.view !== key) change({ view: key, offset: 0 }); },
@@ -129,13 +125,13 @@ export function mountList(container) {
   const controlsEl = h('div', { class: 'c-controls' }, topRegion, subRegion, filterRegion, sortRow);
   const resultsEl = h('div');
 
-  setChildren(container, statEl, bannerEl, viewsEl, searchEl, controlsEl, resultsEl);
+  setChildren(container, statEl, viewsEl, searchEl, controlsEl, resultsEl);
 
   // ---- state changes ----
   const loadLater = debounce(() => loadProducts(), SEARCH_DELAY);
 
   function clearFilters() {
-    change({ search: '', topLevel: '', categoryPath: '', availability: 'all', withImage: false, offset: 0 });
+    change({ search: '', topLevel: '', categoryPath: '', availability: 'all', offset: 0 });
   }
 
   /** Apply a change: update the screen now, and fetch products (after a pause if it was typing). */
@@ -163,8 +159,12 @@ export function mountList(container) {
   function renderStat() {
     const f = facets;
     const total = f ? (state.view === 'available' ? (f.in_stock || 0) + (f.limited || 0) : f.all) : null;
-    toggleHidden(statEl, total === null);
-    if (total === null) return;
+    if (total === null) return;           // the skeleton stays until the counts arrive
+    if (statSkeleton.isConnected) {
+      statEl.removeAttribute('role');
+      statEl.removeAttribute('aria-label');
+      setChildren(statEl, numberEl, labelEl);
+    }
     setChildren(labelEl, 'products', h('br'), state.view === 'available' ? 'available now' : 'in the catalogue');
     stopTween();
     stopTween = tween(shown ?? 0, total, (v) => { shown = v; numberEl.textContent = v.toLocaleString(); });
@@ -173,7 +173,16 @@ export function mountList(container) {
   // The tiles and chips are only rebuilt when something they show has changed, so the tiles'
   // rise-in animation does not replay every time an unrelated filter is touched.
   let topKey = '';
+  let categoriesLoaded = false;
   function renderTop() {
+    if (!categoriesLoaded && !state.topLevel && !state.search.trim()) {
+      if (topKey !== 'loading') {
+        topKey = 'loading';
+        setChildren(topRegion, h('div', { class: 'c-tiles', role: 'status', 'aria-label': 'Loading' },
+          [0, 1, 2].map(() => h('div', { class: 'sk-block', style: { height: '150px', borderRadius: '24px' } }))));
+      }
+      return;
+    }
     const key = [showTiles(), state.topLevel, state.categoryPath, categoryVersion].join('|');
     if (key === topKey) return;
     topKey = key;
@@ -219,7 +228,7 @@ export function mountList(container) {
     fullTab.setAttribute('aria-selected', String(state.view === 'full'));
     if (searchInput.value !== state.search) searchInput.value = state.search;
     toggleHidden(clearSearch, !state.search);
-    toggleHidden(bannerEl, !(showTiles() && state.availability === 'all' && !state.withImage));
+    onChange();
     renderTop();
     renderFilters();
     renderSortRow();
@@ -276,7 +285,7 @@ export function mountList(container) {
 
   async function loadCategories() {
     const view = state.view;
-    if (categoryCache.has(view)) { cats = categoryCache.get(view); categoryVersion += 1; renderAll(); return; }
+    if (categoryCache.has(view)) { cats = categoryCache.get(view); categoriesLoaded = true; categoryVersion += 1; renderAll(); return; }
     const mine = latestCategories.next();
     try {
       // the view travels with the request so the counts match the list below them
@@ -284,6 +293,7 @@ export function mountList(container) {
       if (!latestCategories.is(mine)) return;
       cats = r.items; categoryCache.set(view, cats);
     } catch { if (!latestCategories.is(mine)) return; cats = []; }
+    categoriesLoaded = true;
     categoryVersion += 1;
     renderAll();
   }

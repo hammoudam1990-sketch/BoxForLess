@@ -448,7 +448,7 @@ body {
    scroll layer fights Safari's scroll-into-view. iOS 13+ has momentum scrolling
    natively, so removing it costs nothing.
    `--c-kb` is the height the keyboard covers, measured from visualViewport in
-   catalog/RequestUI.js. Without it, `bottom: 0` sits BEHIND the keyboard, so the
+   catalog/request.js. Without it, `bottom: 0` sits BEHIND the keyboard, so the
    field being typed into is off-screen.
    dvh follows the viewport as browser chrome and the keyboard come and go; the vh
    line above it is the fallback for browsers without dvh. */

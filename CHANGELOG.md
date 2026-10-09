@@ -2,7 +2,20 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased] — Front end rewritten in React
+## [Unreleased] — Customer catalogue rewritten in plain HTML, CSS and JavaScript
+
+- **The customer catalogue no longer uses React.** `/catalog` is now plain JavaScript
+  modules (`js/catalog/app.js`, `list.js`, `detail.js`, `request.js`, `cards.js`,
+  `qty.js`, `router.js`, `doodles.js`) built with the small helpers in `js/lib/dom.js`.
+  Behaviour, URLs, API calls and CSS classes are unchanged: the same list, tiles, chips,
+  search, product page, request drawer, access-code entry, tab bar and phone menu.
+- Every field a customer types into (search, access code, the "no code" form, address,
+  notes, carton counts) is built once and only shown or hidden, so the keyboard is never
+  dropped mid-typing.
+- React, ReactDOM and htm are removed: the vendored files, the npm packages and the
+  `vendor-react` script. The staff screens and the scanner were already plain JavaScript.
+
+## Earlier — Front end rewritten in React
 
 The whole front end — customer catalogue, staff screens, staff sign-in and the
 barcode scanner — is now React. Behaviour, URLs, API calls and CSS are unchanged.
