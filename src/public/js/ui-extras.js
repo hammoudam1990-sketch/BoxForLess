@@ -68,7 +68,8 @@ function cookieNotice() {
 function start() {
   syncThemeButton();
   const fabs = $('div', { class: 'bfl-fabs' });
-  fabs.append(topBtn, themeBtn);
+  fabs.append(topBtn);
+  if (root.getAttribute('data-theme-toggle') !== 'false') fabs.append(themeBtn);
   document.body.append(fabs);
   const notice = cookieNotice();
   if (notice) document.body.appendChild(notice);
