@@ -21,10 +21,17 @@ npm start            # http://localhost:3000
 
 Node **>= 22** is required (for the built-in `node:sqlite` module).
 
-### Staff sign-in before public use
+### Customer catalog
+
+After `npm start`, open http://localhost:3000/catalog. The page uses the existing
+customer-safe `/api/catalog` responses; there is no mock-data mode. Prices and
+account financial details are not part of the Phase 1 catalog.
+
+### Staff authentication configuration
 
 The customer catalog stays public. Product management, imports, customer
-details, and request actions require the staff sign-in. Configure these server
+details, and request actions remain protected by the existing staff authentication
+middleware. Configure these server
 environment variables before starting the app:
 
 - `BFL_STAFF_USERNAME` — staff sign-in name.
@@ -42,6 +49,11 @@ If the staff credentials or session secret are missing or too short, staff
 endpoints fail closed. Keep these values in the hosting provider's secret
 settings; never commit them to this repository. Customer browsing and request
 submission continue to work without a staff account.
+
+The public `/login.html` page is currently a frontend-only visual preview: it
+does not submit credentials or establish a session. `/staff/login` forwards to
+that page. The existing staff API and protection remain in place, but staff
+credential entry is not available through this preview UI.
 
 ### Import the Odoo export
 

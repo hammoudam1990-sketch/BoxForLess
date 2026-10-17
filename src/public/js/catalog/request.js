@@ -1,4 +1,4 @@
-// Request cart UI: the bottom tab bar, the desktop "My request" button, the review drawer,
+// Request cart UI: the bottom tab bar, the desktop request button, the review drawer,
 // and submission.
 //
 // Everything here is presentation. No availability arithmetic happens in the browser: the
@@ -11,6 +11,7 @@ import { h, setChildren, svg, toggleHidden } from '../lib/dom.js';
 import { readCart, onCartChange, removeFromCart, clearCart, toRequestLines, pruneUnavailable } from '../cart.js';
 import { getJSON, postJSON } from './http.js';
 import { createQtyStepper } from './qty.js';
+import { REQUEST_LABELS } from './labels.js';
 
 // Mirrors domain/access-codes.js. Only used to decide when a typed code is COMPLETE enough to
 // check; the server alone decides whether it is correct.
@@ -35,24 +36,28 @@ function field(id, label, control, ...hint) {
 }
 
 /**
- * Build the tab bar (Home, Categories, My request), the desktop request button and the drawer.
+ * Build the tab bar (Shop, Categories, Request), the desktop request button and the drawer.
  * Returns { setTab(tab), open() }. `tab` is 'home', 'categories' or '' (on a product page).
  */
 export function mountRequestUI({ onHome, onCategories }) {
   const drawer = createDrawer();
+  const headerRequestButton = document.querySelector('.c-header-request');
+  const headerRequestBadge = headerRequestButton?.querySelector('.c-header-request-badge');
+  const sideRequestButton = document.querySelector('.c-side-request');
+  const sideRequestBadge = sideRequestButton?.querySelector('.c-side-request-badge');
 
   // ---- the tab bar (phones) ----
-  const homeTab = h('button', { type: 'button', class: 'c-tab', onClick: onHome }, icon('home'), h('span', {}, 'Home'));
+  const homeTab = h('button', { type: 'button', class: 'c-tab', onClick: onHome }, icon('home'), h('span', {}, 'Shop'));
   const catTab = h('button', { type: 'button', class: 'c-tab', onClick: onCategories }, icon('grid'), h('span', {}, 'Categories'));
   const tabIcon = h('span', { class: 'c-tab-icon' }, icon('request'));
   const requestTab = h('button', {
     type: 'button', class: 'c-tab', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', onClick: () => drawer.open(),
-  }, tabIcon, h('span', {}, 'My request'));
-  const tabbar = h('nav', { class: 'c-tabbar', 'aria-label': 'Catalogue' }, homeTab, catTab, requestTab);
+  }, tabIcon, h('span', {}, REQUEST_LABELS.tab));
+  const tabbar = h('nav', { class: 'c-tabbar', 'aria-label': 'Shop navigation' }, homeTab, catTab, requestTab);
 
   // ---- the floating button (wider screens) ----
   const fab = h('button', { type: 'button', class: 'c-request-fab', 'aria-haspopup': 'dialog', onClick: () => drawer.open() },
-    icon('request'), h('span', {}, 'My request'));
+    icon('request'), h('span', {}, REQUEST_LABELS.name));
 
   document.body.append(tabbar, fab, drawer.el);
 
@@ -63,6 +68,16 @@ export function mountRequestUI({ onHome, onCategories }) {
   const showCount = (lines) => {
     const n = cartons(lines);
     const label = `${n} cartons in your request`;
+    if (headerRequestButton) headerRequestButton.setAttribute('aria-label', n ? label : REQUEST_LABELS.name);
+    if (sideRequestButton) sideRequestButton.setAttribute('aria-label', n ? label : REQUEST_LABELS.name);
+    if (headerRequestBadge) {
+      headerRequestBadge.textContent = n ? String(n) : '';
+      headerRequestBadge.hidden = !n;
+    }
+    if (sideRequestBadge) {
+      sideRequestBadge.textContent = n ? String(n) : '';
+      sideRequestBadge.hidden = !n;
+    }
     tabBadge?.remove(); tabBadge = null;
     fabBadge?.remove(); fabBadge = null;
     if (!n) return;

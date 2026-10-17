@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#092d50" />
+  <title>Sign in — Box for Less</title>
+  <link rel="stylesheet" href="/css/login.css" />
+</head>
+<body class="general-login-page">
+  <main class="login-layout">
+    <section class="brand-panel" aria-labelledby="brand-heading">
+      <div class="brand-panel-content">
+        <a class="hero-brand" href="/" aria-label="Box for Less home">
+          <svg class="hero-brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="m24 3 19 10.5v21L24 45 5 34.5v-21L24 3Z" fill="currentColor"/>
+            <path d="m5.5 13.5 18.5 10 18.5-10M24 24v20.5M15 8l19 11M33 8 14 19" fill="none" stroke="var(--mark-seam, #092d50)" stroke-width="2.5" stroke-linejoin="round"/>
+          </svg>
+          <span class="hero-brand-copy">
+            <strong>Box for Less</strong>
+            <span>Bigger boxes. Better value.</span>
+          </span>
+        </a>
+
+        <div class="brand-message">
+          <p class="eyebrow">YOUR WHOLESALE PARTNER</p>
+          <h1 id="brand-heading">Welcome back <span>to Box for Less</span></h1>
+          <p class="brand-description">Your trusted wholesale partner. Quality products, great prices, reliable delivery.</p>
+        </div>
+
+        <ul class="benefit-list" aria-label="Box for Less benefits">
+          <li class="benefit">
+            <span class="benefit-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.3 7.6 7.7 4.3 7.7-4.3M12 12v9"/></svg>
+            </span>
+            <span><strong>Wide Range</strong><small>Top brands and trusted products in large quantities.</small></span>
+          </li>
+          <li class="benefit">
+            <span class="benefit-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m20 4-9.5 1L4 11.5l8.5 8.5 6.5-6.5L20 4Z"/><circle cx="15.5" cy="8.5" r="1"/></svg>
+            </span>
+            <span><strong>Competitive Prices</strong><small>Better value for your business.</small></span>
+          </li>
+          <li class="benefit">
+            <span class="benefit-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M3 6h11v11H3zM14 10h4l3 3v4h-7z"/><circle cx="7.5" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+            </span>
+            <span><strong>Reliable Delivery</strong><small>On time, every time.</small></span>
+          </li>
+          <li class="benefit">
+            <span class="benefit-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+            </span>
+            <span><strong>Secure &amp; Trusted</strong><small>Your business data is safe with us.</small></span>
+          </li>
+        </ul>
+      </div>
+
+      <p class="brand-footer"><span>Box for Less</span><span aria-hidden="true">|</span><span>B2B Sales Platform</span></p>
+    </section>
+
+    <section class="login-panel" aria-labelledby="login-heading">
+      <div class="login-topbar">
+        <span>Don't have an account?</span>
+        <button id="contactSales" class="contact-sales" type="button">
+          Contact Sales
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+
+      <div class="login-content">
+        <div class="login-brand">
+          <svg class="login-brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="m24 3 19 10.5v21L24 45 5 34.5v-21L24 3Z" fill="currentColor"/>
+            <path d="m5.5 13.5 18.5 10 18.5-10M24 24v20.5M15 8l19 11M33 8 14 19" fill="none" stroke="var(--mark-seam, #f4f7fb)" stroke-width="2.8" stroke-linejoin="round"/>
+          </svg>
+          <span class="login-brand-copy">
+            <strong>Box for Less</strong>
+            <span>Bigger boxes. Better value.</span>
+          </span>
+        </div>
+
+        <div class="form-intro">
+          <h2 id="login-heading">Login to your account</h2>
+          <p>Access your dashboard, place orders and manage your business with ease.</p>
+        </div>
+
+        <form id="generalLoginForm" class="login-form" novalidate onsubmit="return false">
+          <div class="form-field">
+            <label for="identifier">Email or Phone Number</label>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+              <input id="identifier" name="identifier" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Enter your email or phone number" aria-required="true" />
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>
+              <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-required="true" />
+              <button id="togglePassword" class="password-toggle" type="button" aria-label="Show password" aria-pressed="false">
+                <svg class="eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-options">
+            <label class="remember-option"><input id="rememberMe" name="rememberMe" type="checkbox" checked /> <span>Remember me</span></label>
+            <button id="forgotPassword" class="forgot-link" type="button">Forgot password?</button>
+          </div>
+
+          <p id="loginMessage" class="login-message" role="status" aria-live="polite" hidden></p>
+
+          <button id="loginButton" class="sign-in-button" type="submit">
+            <span class="submit-label">Sign In</span>
+            <svg class="submit-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+
+          <div class="auth-divider" aria-hidden="true">Or continue with</div>
+          <button id="googleSignIn" class="google-button" type="button">
+            <svg class="google-mark" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11c-.5 2.5-1.9 4.6-4.1 6v5h6.6c3.9-3.6 6.1-8.9 6.1-14.7z"/>
+              <path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.6-5c-1.8 1.2-4.1 2-6.9 2-5.3 0-9.8-3.6-11.4-8.4H5.8v5.2C9.1 39.6 16 44 24 44z"/>
+              <path fill="#FBBC05" d="M12.6 27.8c-.4-1.2-.7-2.5-.7-3.8s.2-2.6.7-3.8V15H5.8C4.4 17.8 3.6 20.8 3.6 24s.8 6.2 2.2 9l6.8-5.2z"/>
+              <path fill="#EA4335" d="M24 9.5c3 0 5.7 1 7.8 3l5.8-5.8C34.1 3.5 29.5 2 24 2 16 2 9.1 6.4 5.8 13l6.8 5.2C14.2 13.2 18.7 9.5 24 9.5z"/>
+            </svg>
+            Sign in with Google
+          </button>
+        </form>
+
+        <p class="security-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 3v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+          Your information is secure and protected.
+        </p>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/js/login.js"></script>
+</body>
+</html>

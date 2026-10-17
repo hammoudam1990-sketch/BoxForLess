@@ -5,6 +5,7 @@
 // request, and anything that is not a number puts the old value back.
 import { h, setChildren } from '../lib/dom.js';
 import { setQuantity, quantityOf, onCartChange } from '../cart.js';
+import { REQUEST_LABELS } from './labels.js';
 
 const MAX_CARTONS = 9999;
 
@@ -57,26 +58,42 @@ export function bindRequestControl(host, product, scope) {
     return;
   }
   const item = { barcode: product.id, name: product.name, pack: product.pack };
+  const control = h('div', { class: 'c-request-control' });
+  const feedback = h('span', { class: 'c-added-feedback', 'aria-live': 'polite' });
+  setChildren(host, control, feedback);
   let stepper = null;
   let addButton = null;
+  let feedbackTimer = null;
 
   const sync = () => {
     const qty = quantityOf(item.barcode);
     if (qty < 1) {
       if (addButton) return;
       stepper = null;
-      addButton = h('button', { class: 'c-add', type: 'button', onClick: () => setQuantity(item, 1) }, 'Add to request');
-      setChildren(host, addButton);
+      addButton = h('button', {
+        class: 'c-add', type: 'button',
+        onClick: () => {
+          feedback.textContent = REQUEST_LABELS.added;
+          if (feedbackTimer !== null) window.clearTimeout(feedbackTimer);
+          feedbackTimer = window.setTimeout(() => {
+            feedback.textContent = '';
+            feedbackTimer = null;
+          }, 1200);
+          setQuantity(item, 1);
+        },
+      }, REQUEST_LABELS.action);
+      setChildren(control, addButton);
       return;
     }
     if (!stepper) {
       addButton = null;
       stepper = createQtyStepper(item);
-      setChildren(host, stepper.el);
+      setChildren(control, stepper.el);
     }
     stepper.update(qty);
   };
 
   sync();
   scope.add(onCartChange(sync));
+  scope.add(() => { if (feedbackTimer !== null) window.clearTimeout(feedbackTimer); });
 }

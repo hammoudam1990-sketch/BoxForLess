@@ -54,8 +54,9 @@ The server runs on `http://localhost:3000`.
   - `DEMO005` – Bulk Retail
 
 ### 🔐 **Staff View** (Requires Login)
-- Visit `http://localhost:3000`
-- Sign in with username `admin` / password `DemoPass123456`
+- Staff credentials and server-side authorization remain configured as above.
+- The public `/login.html` page is a frontend-only preview and does not submit
+  credentials. The current UI does not provide staff credential entry.
 - **Products** – search, filter, review stock status
 - **Imports** – preview / confirm product updates (try uploading `fixtures/sample-products.xlsx`)
 - **Requests** – view customer orders, approve, or export to Excel
@@ -72,7 +73,7 @@ The server runs on `http://localhost:3000`.
 6. Submit
 
 ### Scenario 2: Approve Requests (Staff)
-1. Sign in at `/`
+1. Open the staff area at `/index.html` with an existing staff session
 2. Go to **Requests**
 3. See the customer request you just made
 4. Click **Approve** or **Export to Excel**

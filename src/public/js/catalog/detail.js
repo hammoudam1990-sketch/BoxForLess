@@ -17,19 +17,29 @@ export function mountDetail(container, id) {
   let alive = true;
   scope.add(() => { alive = false; });
 
-  setChildren(container, h('div', { class: 'c-detail', role: 'status', 'aria-label': 'Loading' },
+  const loading = () => h('div', { class: 'c-detail', role: 'status', 'aria-label': 'Loading' },
     h('div', { class: 'sk-block', style: { height: '180px', marginBottom: '18px' } }),
-    h('div', { class: 'sk-lines' }, h('i'), h('i'), h('i'), h('i'))));
+    h('div', { class: 'sk-lines' }, h('i'), h('i'), h('i'), h('i')));
 
-  getJSON(`/api/catalog/products/${encodeURIComponent(id)}`).then((p) => {
-    if (!alive) return;
-    document.title = `${p.name} — Box for Less`;
-    setChildren(container, backLink(), render(p, scope));
-  }, (e) => {
-    if (!alive) return;
-    setChildren(container, backLink(), h('div', { class: 'c-error', style: { marginTop: '12px' } },
-      e.status === 404 ? 'This product is not available in the catalog.' : `Could not load this product: ${e.message}`));
-  });
+  function load() {
+    setChildren(container, loading());
+    getJSON(`/api/catalog/products/${encodeURIComponent(id)}`).then((p) => {
+      if (!alive) return;
+      document.title = `${p.name} — Box for Less`;
+      setChildren(container, backLink(), render(p, scope));
+    }, (error) => {
+      if (!alive) return;
+      const notFound = error.status === 404;
+      setChildren(container, backLink(), h('div', {
+        class: 'c-error', role: 'alert', style: { marginTop: '12px' },
+      },
+      h('p', {}, notFound
+        ? 'This product is not available in the catalog.'
+        : 'We could not load this product. Check your connection and try again.'),
+      notFound ? null : h('button', { type: 'button', class: 'c-btn primary c-empty-action', onClick: load }, 'Try again')));
+    });
+  }
+  load();
 
   return { destroy: () => scope.dispose() };
 }

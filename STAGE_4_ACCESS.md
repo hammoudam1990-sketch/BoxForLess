@@ -168,6 +168,12 @@ on every write. It **fails closed** — if `BFL_STAFF_USERNAME`,
 `BFL_STAFF_PASSWORD` (≥12 bytes) or `BFL_SESSION_SECRET` (≥32 bytes) is missing or
 too short, staff endpoints return 503 rather than opening up.
 
+`/staff/login` now forwards to the shared public `/login.html` frontend preview.
+That UI does not submit credentials or create a session; password sign-in and
+recovery are not connected. The staff API, signed cookie, and authorization
+middleware remain unchanged. Customer access remains a separate access-code flow
+in the catalogue; there is no customer password login or recovery flow.
+
 Two staff screens were added: **Access Codes** (search, copy a code, copy a
 ready-to-send message, issue/reissue) and **Access Requests** (approve or reject,
 with a badge counting those waiting).
@@ -244,7 +250,7 @@ payload.
 **New:** `src/domain/access-codes.js` · `src/domain/access-requests.js` ·
 `src/server/customer-access.js` · `src/server/staff-auth.js` ·
 `src/server/routes/customer-imports.js` · `src/import/customer-service.js` ·
-`src/public/js/access.js` · `src/public/js/staff-login.js` ·
+`src/public/js/access.js` · `src/public/js/login.js` ·
 `src/public/staff-login.html` · `scripts/issue-access-codes.js` ·
 `scripts/import-customers-cli.js` · `scripts/daily-update.js` ·
 `test/access-codes.test.js` · `test/customer-import.test.js` · `test/cart.test.js`
