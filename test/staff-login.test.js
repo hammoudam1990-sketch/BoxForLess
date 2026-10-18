@@ -42,7 +42,7 @@ after(async () => {
   }
 });
 
-test('public login page is shared by the old login entry and has no authentication wiring', async () => {
+test('customer login page uses browser-only accounts and never calls the server', async () => {
   const response = await fetch(`${baseUrl}/login.html`);
   const html = await response.text();
 
@@ -54,7 +54,7 @@ test('public login page is shared by the old login entry and has no authenticati
   assert.match(html, /Forgot password\?/);
   assert.match(html, /name="password"/);
   assert.match(html, /id="togglePassword"/);
-  assert.match(html, /id="contactSales"/);
+  assert.match(html, /id="registerLink"[^>]*href="\/register\.html"/);
   assert.match(html, /id="googleSignIn"/);
   assert.match(html, /\/css\/login\.css/);
   assert.match(html, /class="login-brand-mark"/);
@@ -62,8 +62,14 @@ test('public login page is shared by the old login entry and has no authenticati
 
   const script = await fetch(`${baseUrl}/js/login.js`).then((response) => response.text());
   assert.doesNotMatch(script, /fetch\s*\(|\/api\//);
-  assert.match(script, /Your information has not been sent/);
+  assert.match(script, /lib\/local-accounts\.js/);
   assert.match(script, /Google sign-in is not connected yet/);
+
+  const register = await fetch(`${baseUrl}/register.html`);
+  assert.equal(register.status, 200);
+  assert.match(await register.text(), /id="registerForm"/);
+  const registerScript = await fetch(`${baseUrl}/js/register.js`).then((r) => r.text());
+  assert.doesNotMatch(registerScript, /fetch\s*\(|\/api\//);
 
   const css = await fetch(`${baseUrl}/css/login.css`).then((response) => response.text());
   assert.match(css, /login-warehouse-reference\.jpg/);
@@ -72,8 +78,23 @@ test('public login page is shared by the old login entry and has no authenticati
   assert.equal(image.status, 200);
   assert.match(image.headers.get('content-type'), /image\/jpeg/);
 
-  const staffAlias = await fetch(`${baseUrl}/staff/login`).then((response) => response.text());
-  assert.match(staffAlias, /url=\/login\.html/);
+});
+
+test('staff sign-in page is separate from the customer page and posts to the staff API', async () => {
+  const response = await fetch(`${baseUrl}/staff/login`);
+  const html = await response.text();
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.match(html, /id="staffLoginForm"/);
+  assert.match(html, /name="username"/);
+  assert.match(html, /name="password"/);
+  assert.match(html, /\/js\/staff-login\.js/);
+  assert.doesNotMatch(html, /http-equiv="refresh"/);
+
+  const script = await fetch(`${baseUrl}/js/staff-login.js`).then((r) => r.text());
+  assert.match(script, /\/api\/staff\/login/);
+  // ?next= may only send the browser to a path on this site
+  assert.match(script, /startsWith\('\/'\) && !next\.startsWith\('\/\/'\)/);
 });
 
 test('staff sign-in validates credentials, issues a protected session and honors private-page gating', async () => {

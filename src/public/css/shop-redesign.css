@@ -707,3 +707,34 @@ html[data-theme="dark"] .c-card { box-shadow: 0 8px 22px rgba(0, 0, 0, .5), 0 2p
 @media (prefers-reduced-motion: reduce) {
   .c-slide-dot[aria-pressed="true"] { transform: none; }
 }
+
+/* Signed-in customer (localStorage accounts until Phase 2): a bar above the shop, and the
+   company name in the menu. Shown on every screen size, since the header name hides on phones. */
+.c-signed-in {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--shop-pale-blue);
+  border-radius: 10px;
+  background: var(--shop-pale-blue);
+  color: var(--shop-navy);
+  font-size: 15px !important;
+}
+.c-signed-in svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.c-signed-in span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-signed-in-out {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+button.c-header-account { border: 0; background: transparent; font: inherit; cursor: pointer; }
+.c-menu-account { margin: 4px 14px 6px; color: var(--c-muted, #57524b); font-size: 15px; overflow-wrap: anywhere; }
+.c-menu-account strong { display: block; color: var(--c-ink, #1a1612); font-size: 17px; }

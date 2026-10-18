@@ -55,8 +55,10 @@ The server runs on `http://localhost:3000`.
 
 ### 🔐 **Staff View** (Requires Login)
 - Staff credentials and server-side authorization remain configured as above.
-- The public `/login.html` page is a frontend-only preview and does not submit
-  credentials. The current UI does not provide staff credential entry.
+- Staff sign in at `/staff/login` with the username and password above; opening
+  any staff page while signed out goes there first.
+- The customer `/login.html` page is a frontend-only preview and does not submit
+  credentials (customer accounts arrive in Phase 2).
 - **Products** – search, filter, review stock status
 - **Imports** – preview / confirm product updates (try uploading `fixtures/sample-products.xlsx`)
 - **Requests** – view customer orders, approve, or export to Excel

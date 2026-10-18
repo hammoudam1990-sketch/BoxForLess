@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#092d50" />
+  <title>Create account — Box for Less</title>
+  <link rel="stylesheet" href="/css/login.css" />
+</head>
+<body class="general-login-page register-page">
+  <!-- C02 Register. For now the account is saved in this browser's localStorage only
+       (js/lib/local-accounts.js) and waits for approval like a real registration. -->
+  <main class="login-layout">
+    <section class="brand-panel" aria-labelledby="brand-heading">
+      <div class="brand-panel-content">
+        <a class="hero-brand" href="/" aria-label="Box for Less home">
+          <svg class="hero-brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="m24 3 19 10.5v21L24 45 5 34.5v-21L24 3Z" fill="currentColor"/>
+            <path d="m5.5 13.5 18.5 10 18.5-10M24 24v20.5M15 8l19 11M33 8 14 19" fill="none" stroke="var(--mark-seam, #092d50)" stroke-width="2.5" stroke-linejoin="round"/>
+          </svg>
+          <span class="hero-brand-copy">
+            <strong>Box for Less</strong>
+            <span>Bigger boxes. Better value.</span>
+          </span>
+        </a>
+
+        <div class="brand-message">
+          <p class="eyebrow">OPEN A CUSTOMER ACCOUNT</p>
+          <h1 id="brand-heading">Order from your phone <span>with Box for Less</span></h1>
+          <p class="brand-description">Register your business once. Our Sales Manager checks your details and sets up your account, then you can sign in and send orders.</p>
+        </div>
+
+        <ol class="steps-list" aria-label="How registration works">
+          <li><strong>Register</strong><small>Your company, contact and delivery details.</small></li>
+          <li><strong>We approve</strong><small>The Sales Manager checks and approves your account.</small></li>
+          <li><strong>Sign in and order</strong><small>Browse the range and send your cartons request.</small></li>
+        </ol>
+      </div>
+
+      <p class="brand-footer"><span>Box for Less</span><span aria-hidden="true">|</span><span>B2B Sales Platform</span></p>
+    </section>
+
+    <section class="login-panel" aria-labelledby="register-heading">
+      <div class="login-topbar">
+        <span>Already have an account?</span>
+        <a class="contact-sales" href="/login.html">
+          Sign in
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <div class="login-content register-content">
+        <div class="login-brand">
+          <svg class="login-brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="m24 3 19 10.5v21L24 45 5 34.5v-21L24 3Z" fill="currentColor"/>
+            <path d="m5.5 13.5 18.5 10 18.5-10M24 24v20.5M15 8l19 11M33 8 14 19" fill="none" stroke="var(--mark-seam, #f4f7fb)" stroke-width="2.8" stroke-linejoin="round"/>
+          </svg>
+          <span class="login-brand-copy">
+            <strong>Box for Less</strong>
+            <span>Bigger boxes. Better value.</span>
+          </span>
+        </div>
+
+        <div id="registerStep">
+          <div class="form-intro">
+            <h2 id="register-heading">Create your account</h2>
+            <p>All fields are required. We use them to set up your account and deliver your orders.</p>
+          </div>
+
+          <form id="registerForm" class="login-form" novalidate>
+            <div class="form-field">
+              <label for="company">Company or shop name</label>
+              <div class="input-wrap">
+                <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11M9 20v-6h6v6"/></svg>
+                <input id="company" name="company" type="text" autocomplete="organization" maxlength="200" placeholder="e.g. Sunrise Provisions Ltd" aria-required="true" />
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label for="contact">Contact person</label>
+              <div class="input-wrap">
+                <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+                <input id="contact" name="contact" type="text" autocomplete="name" maxlength="200" placeholder="Your full name" aria-required="true" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="phone">Phone number</label>
+                <div class="input-wrap">
+                  <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v18H7zM11 18h2"/></svg>
+                  <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="30" placeholder="024 000 0000" aria-required="true" />
+                </div>
+              </div>
+
+              <div class="form-field">
+                <label for="email">Email</label>
+                <div class="input-wrap">
+                  <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v12H3zM3 7l9 6 9-6"/></svg>
+                  <input id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="200" placeholder="name@company.com" aria-required="true" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label for="address">Delivery address</label>
+              <div class="input-wrap">
+                <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+                <textarea id="address" name="address" autocomplete="street-address" maxlength="500" rows="2" placeholder="Shop, street, area and town" aria-required="true"></textarea>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="password">Password</label>
+                <div class="input-wrap">
+                  <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>
+                  <input id="password" name="password" type="password" autocomplete="new-password" placeholder="8+ characters" aria-required="true" aria-describedby="passwordHint" />
+                  <button id="togglePassword" class="password-toggle" type="button" aria-label="Show passwords" aria-pressed="false">
+                    <svg class="eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-field">
+                <label for="confirm">Confirm password</label>
+                <div class="input-wrap">
+                  <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="m9 15.5 2 2 4-4"/></svg>
+                  <input id="confirm" name="confirm" type="password" autocomplete="new-password" placeholder="Type it again" aria-required="true" />
+                </div>
+              </div>
+            </div>
+            <p id="passwordHint" class="field-hint">Use at least 8 characters.</p>
+
+            <p id="registerMessage" class="login-message" role="alert" hidden></p>
+
+            <button id="registerButton" class="sign-in-button" type="submit">
+              <span class="submit-label">Create account</span>
+              <svg class="submit-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </button>
+          </form>
+
+          <p class="register-prompt">Already registered? <a href="/login.html">Sign in</a> · <a href="/catalog">Browse without signing in</a></p>
+        </div>
+
+        <div id="doneStep" class="done-step" hidden tabindex="-1" aria-labelledby="done-heading">
+          <span class="done-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          </span>
+          <h2 id="done-heading">Waiting for approval</h2>
+          <p>Thank you, <strong id="doneCompany"></strong>. Your registration has been received.</p>
+          <p>The Sales Manager will check your details and set up your account. We will contact you on <strong id="donePhone"></strong> when you can sign in.</p>
+          <a id="doneSignIn" class="sign-in-button" href="/login.html">
+            <span class="submit-label">Back to sign in</span>
+            <svg class="submit-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <p class="register-prompt"><a href="/catalog">Browse the catalogue while you wait</a></p>
+        </div>
+
+        <p class="security-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 3v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+          Preview: your account is saved in this browser only.
+        </p>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/js/register.js"></script>
+</body>
+</html>

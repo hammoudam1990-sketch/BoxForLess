@@ -11,6 +11,7 @@ import { mountDetail } from './detail.js';
 import { mountRequestUI } from './request.js';
 import { mountSlideshow } from './slideshow.js';
 import { REQUEST_LABELS } from './labels.js';
+import { accounts } from '../lib/local-accounts.js';
 
 const LIST_TITLE = 'Box for Less — Digital Product Catalog';
 
@@ -26,6 +27,7 @@ const PATHS = {
   moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
   print: 'M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2M7 14h10v6H7z',
   staff: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0',
+  signOut: 'M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3M10 8l-4 4 4 4M6 12h10',
 };
 const icon = (name) => svg(`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${PATHS[name]}"/></svg>`);
 const brandMark = () => svg(`<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
@@ -38,6 +40,10 @@ const brandMark = () => svg(`<svg viewBox="0 0 32 32" aria-hidden="true" focusab
 export function startCatalog(root) {
   let current = null;        // the page on screen: { destroy }
   let route = parsePath();
+  // Signed-in customer, from this browser's localStorage until Phase 2 accounts exist.
+  const store = accounts();
+  const account = store.currentAccount();
+  const signOut = () => { store.signOut(); location.assign('/login.html'); };
 
   // ---------------------------------------------------------------- header and menu
   const menuBtn = h('button', {
@@ -58,7 +64,10 @@ export function startCatalog(root) {
     h('hr'),
     item('moon', themeLabel, () => window.bflTheme && window.bflTheme.toggle()),
     item('print', 'Print this page', () => window.print()),
-    h('a', { href: '/login.html', role: 'menuitem' }, icon('staff'), 'Sign in'));
+    account
+      ? [h('p', { class: 'c-menu-account' }, 'Signed in as ', h('strong', {}, account.company)),
+        item('signOut', 'Sign out', signOut)]
+      : h('a', { href: '/login.html', role: 'menuitem' }, icon('staff'), 'Sign in'));
 
   function setMenu(open) {
     toggleHidden(menu, !open);
@@ -70,7 +79,7 @@ export function startCatalog(root) {
   // the menu closes on Escape and on a click anywhere outside it
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
   document.addEventListener('pointerdown', (e) => {
-    if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !e.target.closest('.c-menu-btn')) setMenu(false);
+    if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !e.target.closest('.c-menu-btn, .c-header-account')) setMenu(false);
   });
 
   const headerSearch = h('div', { class: 'c-header-search' });
@@ -79,8 +88,13 @@ export function startCatalog(root) {
     type: 'button', class: 'c-header-request', 'aria-label': REQUEST_LABELS.name,
     onClick: () => window.dispatchEvent(new Event('bfl:open-request')),
   }, icon('request'), requestHeaderBadge, h('span', { class: 'c-header-request-label' }, REQUEST_LABELS.name));
-  const accountLink = h('a', { class: 'c-header-account', href: '/login.html', 'aria-label': 'Sign in' },
-    icon('staff'), h('span', {}, 'Sign in'));
+  const accountLink = account
+    ? h('button', {
+      type: 'button', class: 'c-header-account', 'aria-label': `Signed in as ${account.company}. Open menu`,
+      onClick: () => setMenu(menu.classList.contains('hidden')),
+    }, icon('staff'), h('span', {}, account.company))
+    : h('a', { class: 'c-header-account', href: '/login.html', 'aria-label': 'Sign in' },
+      icon('staff'), h('span', {}, 'Sign in'));
   const header = h('header', { class: 'c-header' },
     h('div', { class: 'c-header-inner' },
       h('a', { class: 'c-brand', href: '/catalog' },
@@ -108,8 +122,10 @@ export function startCatalog(root) {
     type: 'button', class: 'c-side-link c-side-request', 'aria-label': REQUEST_LABELS.name,
     onClick: () => window.dispatchEvent(new Event('bfl:open-request')),
   }, icon('request'), h('span', {}, REQUEST_LABELS.name), requestSideBadge);
-  const accountSideLink = h('a', { class: 'c-side-link', href: '/login.html', 'aria-label': 'Sign in' },
-    icon('staff'), h('span', {}, 'Sign in'));
+  const accountSideLink = account
+    ? h('button', { type: 'button', class: 'c-side-link', onClick: signOut }, icon('signOut'), h('span', {}, 'Sign out'))
+    : h('a', { class: 'c-side-link', href: '/login.html', 'aria-label': 'Sign in' },
+      icon('staff'), h('span', {}, 'Sign in'));
   const sidebar = h('aside', { class: 'c-sidebar', 'aria-label': 'Shop navigation' },
     h('nav', { class: 'c-side-nav' }, homeNav, productsNav, requestNav, categoriesNav, accountSideLink));
 
@@ -143,7 +159,11 @@ export function startCatalog(root) {
   window.addEventListener('offline', updateNetworkNotice);
   window.addEventListener('online', updateNetworkNotice);
   updateNetworkNotice();
-  const content = h('div', { class: 'c-content' }, networkNotice, workspace);
+  const signedInBar = account && h('div', { class: 'c-signed-in', role: 'status' },
+    icon('staff'),
+    h('span', {}, 'Signed in as ', h('strong', {}, account.company)),
+    h('button', { type: 'button', class: 'c-signed-in-out', onClick: signOut }, 'Sign out'));
+  const content = h('div', { class: 'c-content' }, networkNotice, signedInBar, workspace);
   const footer = h('footer', { class: 'c-shop-footer' },
     h('div', { class: 'c-footer-brand' },
       h('span', { class: 'c-footer-logo' }, brandMark()),
