@@ -19,14 +19,15 @@ This creates `data/product_master.db` with the schema.
 ## 2. Seed Demo Data
 
 ```bash
-node scripts/demo-seed.js
+node scripts/import-cli.js fixtures/sample-products.xlsx --confirm   # 50 sample products
+node scripts/demo-seed.js             # preview: what would be added
+node scripts/demo-seed.js --confirm   # add it
 ```
 
-This creates:
-- **20 demo products** (various carton quantities)
-- **5 demo customers** with access codes
-- **2 sample requests** (one approved, one pending)
-- Staff credentials (see output)
+This adds **6 fictional demo customers** (names end in "(Demo)"), each with an access code,
+and **12 requests** spread over the last ten days (pending, accepted and one withdrawn), so the
+staff dashboard has something to show. The script prints the access codes. It refuses to run
+against a database with more than 50 real customers, and running it twice adds nothing.
 
 ## 3. Start the Server
 
@@ -46,19 +47,16 @@ The server runs on `http://localhost:3000`.
 - Visit `http://localhost:3000/catalog`
 - Browse demo products by category
 - Add items to cart (CTN-only)
-- Enter a demo access code to submit a request:
-  - `DEMO001` – ABC Wholesale
-  - `DEMO002` – XYZ Foods
-  - `DEMO003` – Corner Market
-  - `DEMO004` – Supply Co
-  - `DEMO005` – Bulk Retail
+- Enter one of the access codes printed by `demo-seed.js` to submit a request
+  (codes are random, eight characters, shown as `XXXX-XXXX`).
 
 ### 🔐 **Staff View** (Requires Login)
 - Staff credentials and server-side authorization remain configured as above.
 - Staff sign in at `/staff/login` with the username and password above; opening
   any staff page while signed out goes there first.
-- The customer `/login.html` page is a frontend-only preview and does not submit
-  credentials (customer accounts arrive in Phase 2).
+- The customer `/login.html` page keeps accounts in the browser's localStorage only
+  (demo accounts are listed under the form) until Phase 2 server accounts exist.
+- **Dashboard** – orders, customers, pending approvals, order lines, system status
 - **Products** – search, filter, review stock status
 - **Imports** – preview / confirm product updates (try uploading `fixtures/sample-products.xlsx`)
 - **Requests** – view customer orders, approve, or export to Excel
@@ -71,7 +69,7 @@ The server runs on `http://localhost:3000`.
 2. Search for "cases" or scroll categories
 3. Add a few products to cart
 4. Click **Request**
-5. Enter code `DEMO001` (or any from the list above)
+5. Enter one of the codes printed by `demo-seed.js`
 6. Submit
 
 ### Scenario 2: Approve Requests (Staff)
