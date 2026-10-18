@@ -133,7 +133,7 @@ export function mountHome(container) {
   scope.add(() => { alive = false; });
   const account = currentCustomer();
   const grid = h('div', { class: 'p-grid' },
-    Array.from({ length: 8 }, () => h('div', { class: 'p-card p-card-skeleton', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'))));
+    Array.from({ length: 12 }, () => h('div', { class: 'p-card p-card-skeleton', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'))));
 
   setChildren(container, h('div', { class: 'p-home' },
     h('div', { class: 'p-home-main' },
@@ -148,7 +148,7 @@ export function mountHome(container) {
       recentOrders(account),
       quickActions(account))));
 
-  getJSON('/api/catalog/products?view=available&sort=name_asc&limit=8&offset=0').then((data) => {
+  getJSON('/api/catalog/products?view=available&sort=name_asc&limit=12&offset=0').then((data) => {
     if (!alive) return;
     setChildren(grid, data.items.length ? data.items.map((p) => createProductCard(p, scope))
       : h('p', { class: 'p-empty' }, 'No products are available right now.'));

@@ -34,7 +34,7 @@ body { color: var(--p-ink); }
 
 /* ---------------------------------------------------------------- header */
 .p-header { position: sticky; top: 0; z-index: 30; background: var(--p-navy); color: #fff; box-shadow: 0 2px 10px rgba(11, 42, 85, .25); }
-.p-header-inner { display: flex; align-items: center; gap: 20px; max-width: 1440px; min-height: 64px; margin: 0 auto; padding: 8px 24px; }
+.p-header-inner { display: flex; align-items: center; gap: 20px; min-height: 64px; padding: 8px 24px; }
 .p-brand { display: flex; align-items: center; gap: 11px; color: #fff !important; text-decoration: none; flex: none; }
 .p-logo { display: grid; width: 44px; height: 44px; color: #fff; }
 .p-logo svg { width: 100%; height: 100%; }
@@ -89,7 +89,7 @@ body { color: var(--p-ink); }
 .p-menu-btn svg { width: 24px; height: 24px; }
 
 /* ---------------------------------------------------------------- body: left menu + page */
-.p-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); flex: 1; width: 100%; max-width: 1440px; margin: 0 auto; }
+.p-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); flex: 1; width: 100%; }
 .p-side { position: sticky; top: 64px; align-self: start; height: calc(100vh - 64px); overflow-y: auto; padding: 20px 14px; border-right: 1px solid var(--p-line); background: #fff; }
 .p-nav { display: flex; flex-direction: column; gap: 4px; }
 .p-nav-link {
@@ -258,7 +258,7 @@ body { color: var(--p-ink); }
 .p-quick small { display: block; color: var(--p-muted); font-size: 12.5px !important; }
 
 /* account pages */
-.p-page { display: grid; gap: 18px; max-width: 1100px; }
+.p-page { display: grid; gap: 18px; }
 .p-page > h1, .p-page-head h1 { margin: 0; color: var(--p-ink); font-size: 28px !important; font-weight: 800; letter-spacing: -.02em; }
 .p-page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .p-page-head p { margin: 4px 0 0; color: var(--p-muted); font-size: 15px !important; }
@@ -300,12 +300,12 @@ body { color: var(--p-ink); }
 .p-page-products .c-tile-name { font-size: 18px !important; }
 .p-page-products .c-products-heading { margin-top: 0; }
 .p-page-products .c-products-title { color: var(--p-ink); font-size: 24px !important; font-weight: 800; }
-.p-page-detail .c-detail { max-width: 1000px; }
+.p-page-detail .c-detail { max-width: none; }
 .p-page-detail .p-price { margin: 4px 0 14px; font-size: 20px !important; }
 
 /* ---------------------------------------------------------------- footer */
 .p-footer { margin-top: 24px; background: var(--p-navy); color: #fff; }
-.p-footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; max-width: 1440px; margin: 0 auto; padding: 20px 24px; }
+.p-footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 20px 24px; }
 .p-brand-foot .p-logo { width: 38px; height: 38px; }
 .p-brand-foot b { font-size: 19px !important; }
 .p-footer-links { display: flex; flex-wrap: wrap; align-items: center; }
@@ -321,6 +321,11 @@ body { color: var(--p-ink); }
 /* ---------------------------------------------------------------- responsive */
 @media (max-width: 1279px) {
   .p-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* wide screens: as many cards per row as fit, so the page fills the width */
+@media (min-width: 1600px) {
+  .p-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .p-home { grid-template-columns: minmax(0, 1fr) 320px; }
 }
 @media (max-width: 1120px) {
   .p-home { grid-template-columns: minmax(0, 1fr); }

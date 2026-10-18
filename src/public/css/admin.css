@@ -136,7 +136,7 @@ body.adm {
 .adm-user-menu hr { margin: 6px 4px; border: 0; border-top: 1px solid var(--line); }
 
 /* ---------------------------------------------------------------- page */
-.adm-body .view { width: 100%; max-width: 1480px; margin: 0 auto; padding: 22px 24px 28px; flex: 1; }
+.adm-body .view { width: 100%; max-width: none; margin: 0; padding: 22px 24px 28px; flex: 1; }
 .adm-body h1 { margin: 4px 0 16px; font-size: 28px; letter-spacing: -.02em; }
 .adm-body .card { border-radius: 12px; }
 .adm-foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 24px 18px; color: var(--muted); font-size: 12.5px; }
