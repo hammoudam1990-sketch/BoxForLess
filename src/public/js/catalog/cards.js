@@ -5,7 +5,8 @@
 import { h } from '../lib/dom.js';
 import { reveal } from '../lib/util.js';
 import { doodle, doodleFor } from './doodles.js';
-import { bindRequestControl } from './qty.js';
+import { bindCartControl } from './qty.js';
+import { samplePrice, formatGhs } from './sample-data.js';
 
 const NO_IMAGE_TEXT = 'No product image available';
 
@@ -27,39 +28,34 @@ export function productImage(image, name, { eager = false } = {}) {
   return img;
 }
 
-/**
- * The top of a tile.
- *
- * Almost nothing in this catalogue has a photo — 8,932 of 8,933 at the time of writing —
- * so the common case is NOT a picture. A tile without one shows a small drawing of what
- * KIND of thing it is (a sack, a bottle, a jar…), the pack size and an arrow. A product
- * that has a photo gets a pale canvas with the picture matted inside it.
- */
-function tileTop(product) {
-  if (!product.image) {
-    return h('div', { class: 'c-card-top' },
-      doodle(doodleFor(product), { className: 'c-doodle-chip' }),
-      h('span', { class: 'c-card-pack' }, product.pack || ''),
-      h('span', { class: 'c-arrow', 'aria-hidden': 'true' }, '↗'));
-  }
-  return h('div', { class: 'c-poster' },
-    h('span', { class: 'c-mark', 'aria-hidden': 'true' }, '↗'),
-    productImage(product.image, product.name));
+/** The price line: "GH₵ 120.00 / carton" for a signed-in customer (sample until Phase 3), else nothing. */
+export function priceLine(product) {
+  const price = samplePrice(product);
+  return price === null ? null
+    : h('div', { class: 'p-price' }, h('b', {}, formatGhs(price)), h('span', {}, ' / carton'));
 }
 
-/** One product tile. `scope` collects its cart subscription. */
+/**
+ * One product tile, after the Oct 2026 customer mockup: a picture (or the drawing of what kind
+ * of thing it is), the stock pill, name, category, price per carton, and the cart control.
+ * `scope` collects its cart subscription.
+ */
 export function createProductCard(product, scope) {
-  const actions = h('div', { class: 'c-card-actions' });
-  bindRequestControl(actions, product, scope);
+  const actions = h('div', { class: 'p-card-actions' });
+  bindCartControl(actions, product, scope);
+  const href = `/catalog/product/${encodeURIComponent(product.id)}`;
 
-  const card = h('div', { class: 'c-card' },
-    h('a', { class: 'c-card-link', href: `/catalog/product/${encodeURIComponent(product.id)}` },
-      tileTop(product),
-      h('div', { class: 'c-card-body' },
-        h('div', { class: 'c-name' }, product.name),
-        product.pack && product.image ? h('div', { class: 'c-pack' }, product.pack) : null,
-        product.category ? h('div', { class: 'c-cat' }, product.category.name) : null,
-        availabilityPill(product.availability))),
+  const card = h('div', { class: 'p-card' },
+    h('a', { class: 'p-card-link', href },
+      h('div', { class: 'p-card-pic' },
+        product.image ? productImage(product.image, product.name)
+          : doodle(doodleFor(product), { size: 'lg', className: 'p-card-doodle' }),
+        product.pack ? h('span', { class: 'p-card-pack' }, product.pack) : null),
+      h('div', { class: 'p-card-body' },
+        availabilityPill(product.availability),
+        h('div', { class: 'p-card-name' }, product.name),
+        product.category ? h('div', { class: 'p-card-cat' }, product.category.name) : null,
+        priceLine(product))),
     actions);
   reveal(card);
   return card;

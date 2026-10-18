@@ -4,7 +4,7 @@
 // commits when the field loses focus or Enter is pressed; 0 removes the product from the
 // request, and anything that is not a number puts the old value back.
 import { h, setChildren } from '../lib/dom.js';
-import { setQuantity, quantityOf, onCartChange } from '../cart.js';
+import { setQuantity, quantityOf, onCartChange, addToCart } from '../cart.js';
 import { REQUEST_LABELS } from './labels.js';
 
 const MAX_CARTONS = 9999;
@@ -96,4 +96,64 @@ export function bindRequestControl(host, product, scope) {
   sync();
   scope.add(onCartChange(sync));
   scope.add(() => { if (feedbackTimer !== null) window.clearTimeout(feedbackTimer); });
+}
+
+/**
+ * The product-card control from the Oct 2026 mockup: choose a number of cartons with
+ * − [ 1 ] +, then "Add to Cart" adds that many. Below it, how many are already in the cart.
+ * The picker is local to the card; the cart itself is edited in the cart drawer.
+ */
+export function bindCartControl(host, product, scope) {
+  if (!product.requestable) {
+    setChildren(host, h('div', { class: 'c-noreq' }, 'Not available to order right now'));
+    return;
+  }
+  const item = { barcode: product.id, name: product.name, pack: product.pack };
+  let pick = 1;
+  const input = h('input', {
+    class: 'p-pick-input', type: 'text', inputmode: 'numeric', pattern: '[0-9]*', autocomplete: 'off', value: '1',
+    'aria-label': `Cartons of ${product.name} to add`,
+    onFocus: (e) => e.target.select(),
+    onInput: (e) => {
+      const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+      if (digits !== e.target.value) e.target.value = digits;
+    },
+    onBlur: () => setPick(parseInt(input.value, 10)),
+    onKeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); add(); } },
+  });
+  function setPick(n) {
+    pick = Number.isFinite(n) ? Math.min(MAX_CARTONS, Math.max(1, n)) : pick;
+    if (document.activeElement !== input) input.value = String(pick);
+  }
+  const inCart = h('span', { class: 'p-in-cart', 'aria-live': 'polite' });
+  const button = h('button', { type: 'button', class: 'p-add', onClick: () => add() },
+    h('span', { class: 'p-add-icon', 'aria-hidden': 'true' }), REQUEST_LABELS.action);
+  let resetTimer = null;
+  function add() {
+    setPick(parseInt(input.value, 10));
+    addToCart(item, pick);
+    button.classList.add('p-added');
+    button.lastChild.textContent = `${REQUEST_LABELS.added} ✓`;
+    if (resetTimer !== null) window.clearTimeout(resetTimer);
+    resetTimer = window.setTimeout(() => {
+      button.classList.remove('p-added');
+      button.lastChild.textContent = REQUEST_LABELS.action;
+      resetTimer = null;
+    }, 1200);
+    setPick(1);
+  }
+  setChildren(host,
+    h('div', { class: 'p-pick' },
+      h('button', { type: 'button', class: 'p-pick-step', 'aria-label': 'One carton fewer', onClick: () => setPick(pick - 1) }, '−'),
+      input,
+      h('button', { type: 'button', class: 'p-pick-step', 'aria-label': 'One carton more', onClick: () => setPick(pick + 1) }, '+')),
+    button,
+    inCart);
+  const sync = () => {
+    const q = quantityOf(item.barcode);
+    inCart.textContent = q ? `${q} in cart` : '';
+  };
+  sync();
+  scope.add(onCartChange(sync));
+  scope.add(() => { if (resetTimer !== null) window.clearTimeout(resetTimer); });
 }
