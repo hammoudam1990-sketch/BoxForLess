@@ -738,3 +738,15 @@ html[data-theme="dark"] .c-card { box-shadow: 0 8px 22px rgba(0, 0, 0, .5), 0 2p
 button.c-header-account { border: 0; background: transparent; font: inherit; cursor: pointer; }
 .c-menu-account { margin: 4px 14px 6px; color: var(--c-muted, #57524b); font-size: 15px; overflow-wrap: anywhere; }
 .c-menu-account strong { display: block; color: var(--c-ink, #1a1612); font-size: 17px; }
+
+/* The redesign shows the list in one column, so the filters are no longer a sidebar.
+   catalog.css still makes them sticky from 1024px, which left them floating over the
+   product cards on scroll. Keep them in the page flow. */
+@media (min-width: 1024px) {
+  .c-page-list > .c-controls {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+  }
+}
