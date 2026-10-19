@@ -460,8 +460,11 @@ test('the catalog pages are served at /catalog and /catalog/product/:id', async 
       assert.ok(html.includes('/js/catalog.js'), `${url} loads assets by absolute path`);
       assert.ok(html.includes('/css/shop-redesign.css'), `${url} loads the customer shop redesign`);
     }
-    const slideshow = await fetch(`${base}/js/catalog/slideshow.js`);
-    assert.equal(slideshow.status, 200, 'the customer slideshow module is served');
+    // the welcome banner (with its rotating pictures) lives in the pages module since the Oct 2026 redesign
+    const pages = await fetch(`${base}/js/catalog/pages.js`);
+    assert.equal(pages.status, 200, 'the customer pages module (welcome banner) is served');
+    const portalCss = await fetch(`${base}/css/shop-portal.css`);
+    assert.equal(portalCss.status, 200, 'the customer portal stylesheet is served');
     for (const image of ['/img/shop-slide-warehouse.png', '/img/shop-slide-sugar.png', '/img/shop-slide-biscuits.png']) {
       const response = await fetch(`${base}${image}`);
       assert.equal(response.status, 200, `${image} is served for the customer shop slideshow`);
