@@ -1,10 +1,16 @@
-// Routing for the catalogue: /catalog (list) and /catalog/product/:id (detail).
+// Routing for the catalogue.
 //
-// The server hands both URLs the same page, so the path is what the browser reads. Links
-// inside the catalogue move with history.pushState, which keeps navigation to one page load
-// on a phone and lets the list keep its filters while a product is open.
+//   /catalog                    home (welcome banner, featured products, account column)
+//   /catalog?p=products         the full product list with search and filters
+//   /catalog?p=orders|balance|invoices|settings|help|brands
+//   /catalog/product/:id        one product
+//
+// The server hands every /catalog URL the same page, so the path and ?p= are what the browser
+// reads. Links inside the catalogue move with history.pushState, which keeps navigation to one
+// page load on a phone and lets the list keep its filters while a product is open.
 
 const listeners = new Set();
+export const PAGES = ['products', 'orders', 'balance', 'invoices', 'settings', 'help', 'brands'];
 
 /** Move to an in-app URL without reloading the page. */
 export function navigate(href) {
@@ -20,11 +26,16 @@ export function onRouteChange(fn) {
   return () => { listeners.delete(fn); window.removeEventListener('popstate', fn); };
 }
 
-/** "/catalog/product/123" -> { name: 'detail', id: '123' }; anything else is the list. */
-export function parsePath(pathname = window.location.pathname) {
+/** The current route: { name: 'detail', id } | { name: 'home' } | { name: <one of PAGES> }. */
+export function parsePath(pathname = window.location.pathname, search = window.location.search) {
   const m = pathname.match(/^\/catalog\/product\/(.+)$/);
-  return m ? { name: 'detail', id: decodeURIComponent(m[1]) } : { name: 'list' };
+  if (m) return { name: 'detail', id: decodeURIComponent(m[1]) };
+  const page = new URLSearchParams(search).get('p');
+  return { name: PAGES.includes(page) ? page : 'home' };
 }
+
+/** The URL of a page: pageUrl('orders') -> '/catalog?p=orders'; pageUrl('home') -> '/catalog'. */
+export const pageUrl = (name) => (name === 'home' ? '/catalog' : `/catalog?p=${name}`);
 
 /**
  * Make every ordinary click on a catalogue link (<a href="/catalog…">) navigate in place.

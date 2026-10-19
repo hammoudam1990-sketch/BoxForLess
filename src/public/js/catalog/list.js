@@ -229,7 +229,7 @@ export function mountList(container, { onChange = () => {} } = {}) {
   }
 
   function renderAll() {
-    productsTitle.textContent = state.view === 'available' ? 'Featured Products' : 'Full Catalogue';
+    productsTitle.textContent = state.view === 'available' ? 'Products Available Now' : 'Full Catalogue';
     toggleHidden(viewAllButton, state.view === 'full');
     availableTab.setAttribute('aria-selected', String(state.view === 'available'));
     fullTab.setAttribute('aria-selected', String(state.view === 'full'));

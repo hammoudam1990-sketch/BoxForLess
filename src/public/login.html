@@ -63,10 +63,10 @@
     <section class="login-panel" aria-labelledby="login-heading">
       <div class="login-topbar">
         <span>Don't have an account?</span>
-        <button id="contactSales" class="contact-sales" type="button">
-          Contact Sales
+        <a id="registerLink" class="contact-sales" href="/register.html">
+          Create account
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
+        </a>
       </div>
 
       <div class="login-content">
@@ -129,6 +129,14 @@
             Sign in with Google
           </button>
         </form>
+
+        <p class="register-prompt">New to Box for Less? <a href="/register.html">Create an account</a> · <a href="/catalog">Browse without signing in</a></p>
+
+        <details class="demo-box">
+          <summary>Trying it out? Demo accounts</summary>
+          <p>Accounts are saved in this browser only, until the real sign-in is connected. Tap one to fill the form.</p>
+          <ul id="demoAccounts" class="demo-list"></ul>
+        </details>
 
         <p class="security-note">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 3v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>

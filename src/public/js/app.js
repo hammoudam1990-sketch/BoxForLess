@@ -7,6 +7,7 @@ import { renderImports, renderImportDetail } from './imports.js';
 import { renderChanges } from './changes.js';
 import { renderRequests, renderRequestDetail } from './requests.js';
 import { renderAccessCodes, renderAccessRequests } from './access.js';
+import { renderComingSoon, renderCategories } from './coming-soon.js';
 
 const view = document.getElementById('view');
 const side = document.getElementById('side');
@@ -44,7 +45,38 @@ async function refreshBadge() {
     setBadge('accessBadge', access);
   } catch { /* ignore */ }
   setBadge('bellCount', reviews + access);
+  refreshConnection();
 }
+
+/** The sidebar footer: whether the stock data is current. Odoo itself is not connected until Phase 1. */
+async function refreshConnection() {
+  const box = document.getElementById('connStatus');
+  if (!box) return;
+  try {
+    const stock = await api.requestStockStatus();
+    const ok = stock.hasData && stock.fresh;
+    const at = stock.asOf ? new Date(stock.asOf).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    box.innerHTML = `<span class="conn-dot ${ok ? 'ok' : 'warn'}" aria-hidden="true"></span>
+      <span><b>${ok ? 'Stock data current' : stock.hasData ? 'Stock data out of date' : 'No stock data yet'}</b>
+      <small>${at ? `Last import: ${at}` : 'Run a product import'}</small></span>`;
+  } catch { /* leave the last state */ }
+}
+
+// ---- the user menu in the top bar: catalogue link, theme, sign out ----
+const userBtn = document.getElementById('userBtn');
+const userMenu = document.getElementById('userMenu');
+const themeToggle = document.getElementById('themeToggle');
+function openUserMenu(open) {
+  userMenu.hidden = !open;
+  userBtn.setAttribute('aria-expanded', String(open));
+  if (open && themeToggle) themeToggle.textContent = window.bflTheme?.isDark() ? 'Light mode' : 'Dark mode';
+}
+userBtn?.addEventListener('click', () => openUserMenu(userMenu.hidden));
+themeToggle?.addEventListener('click', () => { window.bflTheme?.toggle(); openUserMenu(false); });
+document.addEventListener('pointerdown', (e) => {
+  if (userMenu && !userMenu.hidden && !e.target.closest('.adm-user')) openUserMenu(false);
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && userMenu && !userMenu.hidden) { openUserMenu(false); userBtn.focus(); } });
 
 // ---- the drawer on phones and small laptops ----
 function openSide(open) {
@@ -91,6 +123,8 @@ async function route() {
     else if (path === 'requests') { setActiveNav('requests'); await renderRequests(view); }
     else if (path === 'codes') { setActiveNav('codes'); await renderAccessCodes(view); }
     else if (path === 'access') { setActiveNav('access'); await renderAccessRequests(view); }
+    else if (path === 'categories') { setActiveNav('categories'); await renderCategories(view); }
+    else if (path === 'soon' && arg) { setActiveNav(`soon-${arg}`); renderComingSoon(view, arg); }
     else { location.hash = '#/dashboard'; return; }
   } catch (e) {
     view.innerHTML = `<div class="card errbox">Error: ${e.message}</div>`;

@@ -1,225 +1,238 @@
-// The customer catalogue: header, phone menu, the page in the middle, and the tab bar.
+// The customer catalogue shell, after the Oct 2026 customer mockup: a navy header (brand, search,
+// notifications, account), a left menu, the page in the middle, and a navy footer. On phones the
+// left menu folds into the header menu and the tab bar at the bottom (see request.js).
 //
-// Talks ONLY to /api/catalog, which returns customer-safe payloads — nothing here ever
-// receives a price, a stock quantity or an internal id, so there is nothing to hide.
-// It must stay that way: do not import ../api.js (the staff client) here.
-import { h, setChildren, svg, toggleHidden } from '../lib/dom.js';
-import { hideHeaderOnScroll } from '../lib/util.js';
-import { navigate, onRouteChange, parsePath, interceptLinks } from './router.js';
-import { mountList, showEverything, listTab } from './list.js';
+// Talks ONLY to /api/catalog, which returns customer-safe payloads. Prices, credit and orders
+// on screen are SAMPLE figures (./sample-data.js) shown only to a signed-in customer.
+// Do not import ../api.js (the staff client) here.
+import { h, setChildren, svg } from '../lib/dom.js';
+import { navigate, onRouteChange, parsePath, interceptLinks, pageUrl } from './router.js';
+import { mountList, showEverything, patchList, state as listState } from './list.js';
 import { mountDetail } from './detail.js';
 import { mountRequestUI } from './request.js';
-import { mountSlideshow } from './slideshow.js';
+import {
+  mountHome, mountOrders, mountBalance, mountInvoices, mountSettings, mountHelp, mountBrands,
+} from './pages.js';
 import { REQUEST_LABELS } from './labels.js';
+import { accounts } from '../lib/local-accounts.js';
+import { sampleOrders } from './sample-data.js';
 
-const LIST_TITLE = 'Box for Less — Digital Product Catalog';
+const TITLE = 'Box for Less — Wholesale Catalogue';
 
-// Plain line icons for the header and the phone menu (decorative: every control has a text label).
 const PATHS = {
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5',
   menu: 'M4 7h16M4 12h16M4 17h16',
   close: 'M6 6l12 12M18 6L6 18',
   home: 'M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z',
-  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   box: 'M3 7.5 12 3l9 4.5v9L12 21l-9-4.5zM3.5 7.7 12 12l8.5-4.3M12 12v9',
-  request: 'M7 3h10a1 1 0 0 1 1 1v17l-3.5-2-2.5 2-2.5-2L6 21V4a1 1 0 0 1 1-1zM9.5 8h5M9.5 12h5',
-  moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
-  print: 'M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2M7 14h10v6H7z',
-  staff: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0',
+  cart: 'M3 4h2.2l2.3 11h10.8l2-8H6.4M9.5 19.5h.01M17 19.5h.01',
+  orders: 'M5 4h14v17H5zM9 8h6M9 12h6M9 16h3M8 2v4M16 2v4',
+  balance: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6',
+  invoice: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3',
+  settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4.9a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.5a7 7 0 0 0-2 1.2l-2.4-.9-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-.9a7 7 0 0 0 2 1.2L10 21h4l.5-2.5a7 7 0 0 0 2-1.2l2.4.9 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z',
+  tag: 'M3 12V4h8l10 10-8 8L3 12zM7.5 8.5h.01',
+  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01',
+  bell: 'M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9zM10 21h4',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0',
+  chevron: 'm6 9 6 6 6-6',
+  signOut: 'M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3M10 8l-4 4 4 4M6 12h10',
 };
-const icon = (name) => svg(`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${PATHS[name]}"/></svg>`);
-const brandMark = () => svg(`<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-  <path d="M16 2.5 29 9.3v13.4L16 30.5 3 22.7V9.3L16 2.5Z" fill="currentColor"/>
-  <path d="m3.5 9.5 12.5 7 12.5-7M16 16.5V30" fill="none" stroke="#0b2b4b" stroke-width="2.1" stroke-linejoin="round"/>
-  <path d="m9.5 6 12.7 7" fill="none" stroke="#0b2b4b" stroke-width="2.1" stroke-linecap="round"/>
+const icon = (name) => svg(`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${PATHS[name]}"/></svg>`);
+const brandMark = () => svg(`<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+  <path d="m24 3 19 10.5v21L24 45 5 34.5v-21L24 3Z" fill="currentColor"/>
+  <path d="m5.5 13.5 18.5 10 18.5-10M24 24v20.5M15 8l19 11M33 8 14 19" fill="none" stroke="#0b2a55" stroke-width="2.6" stroke-linejoin="round"/>
 </svg>`);
+const brand = (cls) => h('a', { class: cls, href: '/catalog' },
+  h('span', { class: 'p-logo' }, brandMark()),
+  h('span', {}, h('b', {}, 'Box for Less'), h('small', {}, 'Bigger boxes. Better value.')));
+
+const PAGE_MOUNTS = {
+  orders: mountOrders, balance: mountBalance, invoices: mountInvoices,
+  settings: mountSettings, help: mountHelp, brands: mountBrands,
+};
 
 /** Start the catalogue in `root`. */
 export function startCatalog(root) {
   let current = null;        // the page on screen: { destroy }
   let route = parsePath();
+  const store = accounts();
+  const account = store.currentAccount();
+  const signOut = () => { store.signOut(); location.assign('/login.html'); };
 
-  // ---------------------------------------------------------------- header and menu
+  // ---------------------------------------------------------------- header
+  // The search: on the Products page it filters as you type; elsewhere Enter (or the button)
+  // opens Products with the term. The field is built once and never rebuilt.
+  const searchInput = h('input', {
+    type: 'search', inputmode: 'search', autocomplete: 'off', 'aria-label': 'Search products',
+    placeholder: 'Search for products, barcodes or categories…',
+    onInput: (e) => { if (route.name === 'products') patchList({ search: e.target.value, offset: 0 }); },
+  });
+  const searchForm = h('form', {
+    class: 'p-search', role: 'search',
+    onSubmit: (e) => {
+      e.preventDefault();
+      patchList({ search: searchInput.value, offset: 0 });
+      if (route.name !== 'products') navigate(pageUrl('products'));
+    },
+  }, searchInput, h('button', { type: 'submit', class: 'p-search-btn', 'aria-label': 'Search' }, icon('search')));
+
+  const pending = account ? sampleOrders().filter((o) => o.status === 'pending').length : 0;
+  const bell = h('a', {
+    class: 'p-bell', href: account ? pageUrl('orders') : '/login.html?next=/catalog',
+    'aria-label': pending ? `${pending} order waiting for approval` : 'Notifications',
+  }, icon('bell'), pending ? h('span', { class: 'p-badge' }, pending) : null);
+
+  const userMenu = h('div', { class: 'p-user-menu', role: 'menu', hidden: true },
+    account
+      ? [h('p', { class: 'p-user-menu-head' }, 'Signed in as', h('b', {}, account.company)),
+        h('a', { href: pageUrl('balance'), role: 'menuitem' }, icon('balance'), 'Account Balance'),
+        h('a', { href: pageUrl('orders'), role: 'menuitem' }, icon('orders'), 'Orders'),
+        h('a', { href: pageUrl('settings'), role: 'menuitem' }, icon('settings'), 'Settings'),
+        h('hr'),
+        h('button', { type: 'button', role: 'menuitem', onClick: signOut }, icon('signOut'), 'Sign out')]
+      : [h('a', { href: '/login.html?next=/catalog', role: 'menuitem' }, icon('user'), 'Sign in'),
+        h('a', { href: '/register.html', role: 'menuitem' }, icon('box'), 'Create an account')]);
+  const userBtn = h('button', {
+    type: 'button', class: 'p-user', 'aria-haspopup': 'menu', 'aria-expanded': 'false',
+    onClick: () => setUserMenu(userMenu.hidden),
+  },
+  h('span', { class: 'p-avatar' }, icon('user')),
+  h('span', { class: 'p-user-name' }, account ? `Hello, ${account.company}` : 'Sign in'),
+  icon('chevron'));
+  function setUserMenu(open) {
+    userMenu.hidden = !open;
+    userBtn.setAttribute('aria-expanded', String(open));
+  }
+
   const menuBtn = h('button', {
-    type: 'button', class: 'c-icon-btn c-menu-btn', 'aria-label': 'Open menu',
-    'aria-expanded': 'false', 'aria-controls': 'siteMenu', 'aria-haspopup': 'menu',
-    onClick: () => setMenu(menu.classList.contains('hidden')),
+    type: 'button', class: 'p-menu-btn', 'aria-label': 'Open menu', 'aria-expanded': 'false', 'aria-controls': 'pSide',
+    onClick: () => setSide(!side.classList.contains('open')),
   }, icon('menu'));
 
-  const themeLabel = h('span', {}, 'Dark mode');
-  const item = (name, label, fn) => h('button', {
-    type: 'button', class: 'c-menu-item', role: 'menuitem', onClick: () => { setMenu(false); fn(); },
-  }, icon(name), label);
-  const menu = h('div', { class: 'c-menu hidden', id: 'siteMenu', role: 'menu' },
-    item('home', 'Shop', () => goHome()),
-    item('grid', 'Categories', () => goCategories()),
-    item('search', 'Search products', () => focusSearch()),
-    item('request', REQUEST_LABELS.name, () => requestUI.open()),
-    h('hr'),
-    item('moon', themeLabel, () => window.bflTheme && window.bflTheme.toggle()),
-    item('print', 'Print this page', () => window.print()),
-    h('a', { href: '/login.html', role: 'menuitem' }, icon('staff'), 'Sign in'));
+  const header = h('header', { class: 'p-header' },
+    h('div', { class: 'p-header-inner' },
+      menuBtn,
+      brand('p-brand'),
+      searchForm,
+      h('div', { class: 'p-header-actions' }, bell, h('div', { class: 'p-user-wrap' }, userBtn, userMenu))));
 
-  function setMenu(open) {
-    toggleHidden(menu, !open);
+  // ---------------------------------------------------------------- left menu
+  // The cart badge is kept up to date by request.js (.c-side-request-badge).
+  const cartBadge = h('span', { class: 'c-side-request-badge p-badge p-badge-blue', hidden: true });
+  const navLink = (name, label, iconName, extra) => h('a', { class: 'p-nav-link', href: pageUrl(name), 'data-page': name }, icon(iconName), h('span', {}, label), extra);
+  const cartLink = h('button', {
+    type: 'button', class: 'p-nav-link c-side-request', 'aria-label': REQUEST_LABELS.name,
+    onClick: () => { setSide(false); window.dispatchEvent(new Event('bfl:open-request')); },
+  }, icon('cart'), h('span', {}, REQUEST_LABELS.name), cartBadge);
+  const side = h('aside', { class: 'p-side', id: 'pSide', 'aria-label': 'Shop navigation' },
+    h('nav', { class: 'p-nav' },
+      navLink('home', 'Home', 'home'),
+      navLink('products', 'Products', 'box'),
+      cartLink,
+      navLink('orders', 'Orders', 'orders'),
+      navLink('balance', 'Account Balance', 'balance'),
+      navLink('invoices', 'Invoices', 'invoice'),
+      navLink('settings', 'Settings', 'settings')),
+    h('hr'),
+    h('p', { class: 'p-side-label' }, 'Quick Links'),
+    h('nav', { class: 'p-nav p-nav-small', 'aria-label': 'Quick links' },
+      navLink('brands', 'View All Brands', 'tag'),
+      h('button', { type: 'button', class: 'p-nav-link', onClick: () => { setSide(false); goCategories(); } }, icon('grid'), h('span', {}, 'View All Categories')),
+      navLink('help', 'Help & Support', 'help')),
+    account ? h('button', { type: 'button', class: 'p-nav-link p-signout', onClick: signOut }, icon('signOut'), h('span', {}, 'Sign out')) : null);
+  const scrim = h('div', { class: 'p-scrim', hidden: true, onClick: () => setSide(false) });
+  function setSide(open) {
+    side.classList.toggle('open', open);
+    scrim.hidden = !open;
     menuBtn.setAttribute('aria-expanded', String(open));
     menuBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
     setChildren(menuBtn, icon(open ? 'close' : 'menu'));
-    if (open) themeLabel.textContent = window.bflTheme && window.bflTheme.isDark() ? 'Light mode' : 'Dark mode';
   }
-  // the menu closes on Escape and on a click anywhere outside it
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setSide(false); setUserMenu(false); } });
   document.addEventListener('pointerdown', (e) => {
-    if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !e.target.closest('.c-menu-btn')) setMenu(false);
+    if (!userMenu.hidden && !e.target.closest('.p-user-wrap')) setUserMenu(false);
   });
 
-  const headerSearch = h('div', { class: 'c-header-search' });
-  const requestHeaderBadge = h('span', { class: 'c-header-request-badge', hidden: true });
-  const requestHeaderBtn = h('button', {
-    type: 'button', class: 'c-header-request', 'aria-label': REQUEST_LABELS.name,
-    onClick: () => window.dispatchEvent(new Event('bfl:open-request')),
-  }, icon('request'), requestHeaderBadge, h('span', { class: 'c-header-request-label' }, REQUEST_LABELS.name));
-  const accountLink = h('a', { class: 'c-header-account', href: '/login.html', 'aria-label': 'Sign in' },
-    icon('staff'), h('span', {}, 'Sign in'));
-  const header = h('header', { class: 'c-header' },
-    h('div', { class: 'c-header-inner' },
-      h('a', { class: 'c-brand', href: '/catalog' },
-        h('span', { class: 'c-logo' }, brandMark()),
-        h('span', { class: 'c-brand-text' },
-          h('span', { class: 'c-brand-title' }, 'Box for Less'),
-          h('span', { class: 'c-brand-sub' }, 'Bigger boxes. Better value.'))),
-      headerSearch,
-      h('div', { class: 'c-header-actions' },
-        requestHeaderBtn,
-        accountLink,
-        menuBtn,
-        menu)));
-  hideHeaderOnScroll(header);
-
-  const navButton = (name, label, onClick) => h('button', {
-    type: 'button', class: 'c-side-link', onClick,
-  }, icon(name), h('span', {}, label));
-  const homeNav = navButton('home', 'Home', () => goHome());
-  homeNav.setAttribute('aria-current', 'page');
-  const productsNav = navButton('box', 'Products', () => focusSearch());
-  const categoriesNav = navButton('grid', 'View all categories', () => goCategories());
-  const requestSideBadge = h('span', { class: 'c-side-request-badge', hidden: true });
-  const requestNav = h('button', {
-    type: 'button', class: 'c-side-link c-side-request', 'aria-label': REQUEST_LABELS.name,
-    onClick: () => window.dispatchEvent(new Event('bfl:open-request')),
-  }, icon('request'), h('span', {}, REQUEST_LABELS.name), requestSideBadge);
-  const accountSideLink = h('a', { class: 'c-side-link', href: '/login.html', 'aria-label': 'Sign in' },
-    icon('staff'), h('span', {}, 'Sign in'));
-  const sidebar = h('aside', { class: 'c-sidebar', 'aria-label': 'Shop navigation' },
-    h('nav', { class: 'c-side-nav' }, homeNav, productsNav, requestNav, categoriesNav, accountSideLink));
-
-  const main = h('main', { class: 'c-main', tabindex: '-1' });
-  const hero = h('section', { class: 'c-shop-hero', 'aria-labelledby': 'shop-hero-title' },
-    h('div', { class: 'c-shop-hero-copy' },
-      h('p', { class: 'c-shop-eyebrow' }, 'WELCOME TO BOX FOR LESS'),
-      h('h1', { id: 'shop-hero-title' }, 'Your Trusted Wholesale Partner'),
-      h('p', {}, 'Quality products for your business, delivered reliably.'),
-      h('div', { class: 'c-shop-hero-actions' },
-        h('button', { type: 'button', class: 'c-hero-button', onClick: () => focusSearch() }, 'View Products', icon('search')),
-        h('button', { type: 'button', class: 'c-hero-link', onClick: () => goCategories() }, 'View categories'))),
-    h('div', { class: 'c-slideshow-slot' }));
-  const slideshow = mountSlideshow(hero.querySelector('.c-slideshow-slot'));
-  const quickAction = (name, title, detail, onClick) => h('button', {
-    type: 'button', class: 'c-quick-action', onClick,
-  }, icon(name), h('span', {}, h('strong', {}, title), h('small', {}, detail)));
-  const guide = h('aside', { class: 'c-shop-guide', 'aria-label': 'Quick actions' },
-    h('p', { class: 'c-guide-eyebrow' }, 'HERE TO HELP'),
-    h('h2', {}, 'Quick actions'),
-    h('div', { class: 'c-quick-actions' },
-      quickAction('box', 'Browse products', 'Find items for your business.', () => focusSearch()),
-      quickAction('grid', 'View categories', 'Explore the catalogue by category.', () => goCategories()),
-      quickAction('request', REQUEST_LABELS.name, 'Review the items you selected.', () => window.dispatchEvent(new Event('bfl:open-request')))));
-  const primary = h('div', { class: 'c-shop-primary' }, hero, main);
-  const workspace = h('div', { class: 'c-shop-workspace' }, primary, guide);
-  const networkNotice = h('div', {
-    class: 'c-network-notice', role: 'status', hidden: true,
-  }, 'You are offline. Previously loaded catalog content remains available.');
+  // ---------------------------------------------------------------- page area and footer
+  const main = h('main', { class: 'p-main', tabindex: '-1' });
+  const networkNotice = h('div', { class: 'c-network-notice', role: 'status', hidden: true },
+    'You are offline. Previously loaded catalogue content remains available.');
   const updateNetworkNotice = () => { networkNotice.hidden = navigator.onLine; };
   window.addEventListener('offline', updateNetworkNotice);
   window.addEventListener('online', updateNetworkNotice);
   updateNetworkNotice();
-  const content = h('div', { class: 'c-content' }, networkNotice, workspace);
-  const footer = h('footer', { class: 'c-shop-footer' },
-    h('div', { class: 'c-footer-brand' },
-      h('span', { class: 'c-footer-logo' }, brandMark()),
-      h('span', {}, h('strong', {}, 'Box for Less'), h('small', {}, 'Bigger boxes. Better value.'))),
-    h('span', { class: 'c-footer-copy' }, `© ${new Date().getFullYear()} Box for Less · Wholesale product catalogue`));
-  setChildren(root, h('div', { class: 'c-app-shell' }, header, sidebar, content, footer));
 
-  const requestUI = mountRequestUI({ onHome: () => goHome(), onCategories: () => goCategories() });
-  const syncTab = () => {
-    const tab = route.name === 'list' ? listTab() : '';
-    requestUI.setTab(tab);
-    homeNav.toggleAttribute('aria-current', tab === 'home');
-    categoriesNav.toggleAttribute('aria-current', tab === 'categories');
-    productsNav.toggleAttribute('aria-current', false);
-  };
+  const footLink = (href, text) => h('a', { href }, text);
+  const footer = h('footer', { class: 'p-footer' },
+    h('div', { class: 'p-footer-inner' },
+      brand('p-brand p-brand-foot'),
+      h('nav', { class: 'p-footer-links', 'aria-label': 'Footer' },
+        footLink(pageUrl('help'), 'About Us'), footLink(pageUrl('help'), 'Contact'),
+        footLink(pageUrl('help'), 'Terms & Conditions'), footLink(pageUrl('help'), 'Privacy Policy')),
+      h('span', { class: 'p-copy' }, `© ${new Date().getFullYear()} Box for Less. All rights reserved.`)));
+
+  setChildren(root, h('div', { class: 'p-shell' },
+    header,
+    h('div', { class: 'p-body' }, side, h('div', { class: 'p-content' }, networkNotice, main)),
+    footer,
+    scrim));
+
+  const requestUI = mountRequestUI({
+    onHome: () => navigate('/catalog'),
+    onProducts: () => goProducts(),
+    onAccount: () => navigate(pageUrl(account ? 'balance' : 'settings')),
+  });
 
   // ---------------------------------------------------------------- pages
   function show(first = false) {
     route = parsePath();
-    headerSearch.replaceChildren();
     current?.destroy();
-    const isList = route.name !== 'detail';
-    hero.classList.toggle('hidden', !isList);
-    guide.classList.toggle('hidden', !isList);
-    workspace.classList.toggle('c-detail-workspace', !isList);
-    slideshow.setActive(isList);
-    // a fresh wrapper each time, so the page's rise-in animation plays again
-    const page = h('div', { class: `c-page${route.name === 'list' ? ' c-page-list' : ''}` });
+    side.querySelectorAll('[data-page]').forEach((a) => {
+      if (a.dataset.page === route.name) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    requestUI.setTab(route.name === 'home' ? 'home' : route.name === 'products' ? 'products'
+      : ['balance', 'orders', 'invoices', 'settings'].includes(route.name) ? 'account' : '');
+    const page = h('div', { class: `c-page p-page-${route.name}${route.name === 'products' ? ' c-page-list' : ''}` });
     setChildren(main, page);
     if (route.name === 'detail') {
       current = mountDetail(page, route.id);
+    } else if (route.name === 'products') {
+      document.title = `Products — ${TITLE}`;
+      current = mountList(page, { onChange: () => {} });
+      // the list has its own search box; the header search stands in for it
+      page.querySelector('.c-search')?.remove();
+      searchInput.value = listState.search;
+    } else if (route.name === 'home') {
+      document.title = TITLE;
+      current = mountHome(page);
     } else {
-      document.title = LIST_TITLE;
-      current = mountList(page, { onChange: syncTab });
-      const search = page.querySelector('.c-search');
-      if (search) headerSearch.append(search);
+      current = PAGE_MOUNTS[route.name](page);
+      document.title = `${page.querySelector('h1')?.textContent || 'Box for Less'} — ${TITLE}`;
     }
-    syncTab();
-    setMenu(false);
-    // After moving between the list and a product, put keyboard and screen-reader focus at the
-    // top of the new content. Not on the first load, which would steal focus.
+    setSide(false);
+    setUserMenu(false);
     if (!first) main.focus({ preventScroll: true });
   }
 
   // ---------------------------------------------------------------- actions
-  // Home and Categories both clear the filters; Home goes to the top, Categories to the tiles.
-  function scrollPageTo(top) {
-    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
-    window.scrollTo({ top, behavior });
-  }
+  const scrollPageTo = (top) => window.scrollTo({ top, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 
-  function goHome() {
-    showEverything();
-    if (route.name === 'list') scrollPageTo(0);
-    else navigate('/catalog');
+  function goProducts() {
+    if (route.name !== 'products') navigate(pageUrl('products'));
+    else scrollPageTo(0);
   }
 
   function goCategories() {
     showEverything();
-    if (route.name !== 'list') navigate('/catalog');
-    // wait for the list (and its tiles) to be on screen before scrolling to them
+    if (route.name !== 'products') navigate(pageUrl('products'));
+    // wait for the list (and its category tiles) to be on screen before scrolling to them
     setTimeout(() => {
       const el = document.getElementById('shop-by-category');
-      if (el) scrollPageTo(el.getBoundingClientRect().top + window.scrollY - 76);
-    }, 120);
-  }
-
-  // Search: jump to the product search field (going to the list first if a product is open).
-  function focusSearch() {
-    if (parsePath().name !== 'list') navigate('/catalog');
-    setTimeout(() => {
-      const input = document.querySelector('.c-search input');
-      if (!input) return;
-      scrollPageTo(0);
-      input.focus();
-    }, 160);
+      if (el) scrollPageTo(el.getBoundingClientRect().top + window.scrollY - 90);
+    }, 200);
   }
 
   // "/" focuses the search, as on most sites — unless the person is already typing somewhere
@@ -228,7 +241,7 @@ export function startCatalog(root) {
     const t = e.target;
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     e.preventDefault();
-    focusSearch();
+    searchInput.focus();
   });
 
   interceptLinks(document);

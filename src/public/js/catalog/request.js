@@ -24,7 +24,9 @@ const normalizeCodeInput = (v) => String(v ?? '').toUpperCase().split('')
 const ICONS = {
   home: 'M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
-  request: 'M7 3h10a1 1 0 0 1 1 1v17l-3.5-2-2.5 2-2.5-2L6 21V4a1 1 0 0 1 1-1zM9.5 8h5M9.5 12h5',
+  request: 'M3 4h2.2l2.3 11h10.8l2-8H6.4M9.5 19.5h.01M17 19.5h.01',
+  box: 'M3 7.5 12 3l9 4.5v9L12 21l-9-4.5zM3.5 7.7 12 12l8.5-4.3M12 12v9',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0',
 };
 const icon = (name) => svg(`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-linecap="round" stroke-linejoin="round"><path d="${ICONS[name]}"/></svg>`);
 
@@ -36,10 +38,10 @@ function field(id, label, control, ...hint) {
 }
 
 /**
- * Build the tab bar (Shop, Categories, Request), the desktop request button and the drawer.
- * Returns { setTab(tab), open() }. `tab` is 'home', 'categories' or '' (on a product page).
+ * Build the tab bar (Home, Products, Cart, Account), the floating cart button and the drawer.
+ * Returns { setTab(tab), open() }. `tab` is 'home', 'products', 'account' or '' (elsewhere).
  */
-export function mountRequestUI({ onHome, onCategories }) {
+export function mountRequestUI({ onHome, onProducts, onAccount }) {
   const drawer = createDrawer();
   const headerRequestButton = document.querySelector('.c-header-request');
   const headerRequestBadge = headerRequestButton?.querySelector('.c-header-request-badge');
@@ -47,13 +49,14 @@ export function mountRequestUI({ onHome, onCategories }) {
   const sideRequestBadge = sideRequestButton?.querySelector('.c-side-request-badge');
 
   // ---- the tab bar (phones) ----
-  const homeTab = h('button', { type: 'button', class: 'c-tab', onClick: onHome }, icon('home'), h('span', {}, 'Shop'));
-  const catTab = h('button', { type: 'button', class: 'c-tab', onClick: onCategories }, icon('grid'), h('span', {}, 'Categories'));
+  const homeTab = h('button', { type: 'button', class: 'c-tab', onClick: onHome }, icon('home'), h('span', {}, 'Home'));
+  const productsTab = h('button', { type: 'button', class: 'c-tab', onClick: onProducts }, icon('box'), h('span', {}, 'Products'));
+  const accountTab = h('button', { type: 'button', class: 'c-tab', onClick: onAccount }, icon('user'), h('span', {}, 'Account'));
   const tabIcon = h('span', { class: 'c-tab-icon' }, icon('request'));
   const requestTab = h('button', {
     type: 'button', class: 'c-tab', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', onClick: () => drawer.open(),
   }, tabIcon, h('span', {}, REQUEST_LABELS.tab));
-  const tabbar = h('nav', { class: 'c-tabbar', 'aria-label': 'Shop navigation' }, homeTab, catTab, requestTab);
+  const tabbar = h('nav', { class: 'c-tabbar', 'aria-label': 'Shop navigation' }, homeTab, productsTab, requestTab, accountTab);
 
   // ---- the floating button (wider screens) ----
   const fab = h('button', { type: 'button', class: 'c-request-fab', 'aria-haspopup': 'dialog', onClick: () => drawer.open() },
@@ -95,7 +98,7 @@ export function mountRequestUI({ onHome, onCategories }) {
 
   return {
     setTab(tab) {
-      for (const [button, name] of [[homeTab, 'home'], [catTab, 'categories']]) {
+      for (const [button, name] of [[homeTab, 'home'], [productsTab, 'products'], [accountTab, 'account']]) {
         if (tab === name) button.setAttribute('aria-current', 'page');
         else button.removeAttribute('aria-current');
       }

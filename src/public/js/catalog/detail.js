@@ -5,11 +5,11 @@
 import { h, setChildren } from '../lib/dom.js';
 import { createScope } from '../lib/util.js';
 import { getJSON } from './http.js';
-import { availabilityPill, productImage } from './cards.js';
+import { availabilityPill, productImage, priceLine } from './cards.js';
 import { bindRequestControl } from './qty.js';
 import { doodle, doodleFor } from './doodles.js';
 
-const backLink = () => h('a', { class: 'c-back', href: '/catalog' }, '← Back to Catalog');
+const backLink = () => h('a', { class: 'c-back', href: '/catalog?p=products' }, '← Back to Products');
 
 /** Build the product page for `id` into `container`. Returns { destroy }. */
 export function mountDetail(container, id) {
@@ -62,6 +62,7 @@ function render(p, scope) {
       h('div', {},
         p.image ? null : h('div', { class: 'c-doodle-hero' }, doodle(doodleFor(p), { size: 'lg' })),
         h('h1', {}, p.name),
+        priceLine(p),
         h('div', { class: 'c-facts' },
           fact('Barcode', h('div', { class: 'c-fact-v' }, p.barcode)),
           p.pack ? fact('Pack / UoM', h('div', { class: 'c-fact-v' }, p.pack)) : null,
@@ -70,6 +71,6 @@ function render(p, scope) {
             h('div', { class: 'c-pack', style: { marginTop: '2px' } }, p.category.path)) : null,
           fact('Availability', h('div', {}, availabilityPill(p.availability)))),
         actions,
-        h('a', { class: 'c-btn', href: '/catalog', style: { display: 'inline-block', textDecoration: 'none', marginTop: '14px' } },
-          'Back to Catalog'))));
+        h('a', { class: 'c-btn', href: '/catalog?p=products', style: { display: 'inline-block', textDecoration: 'none', marginTop: '14px' } },
+          'Back to Products'))));
 }
