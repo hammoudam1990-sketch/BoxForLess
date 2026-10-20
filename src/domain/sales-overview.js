@@ -34,7 +34,8 @@ function windowTotals(db, fromIso, toIso) {
 
 export function salesOverview(db, { days = 30, now = new Date() } = {}) {
   const span = WINDOWS.includes(Number(days)) ? Number(days) : 30;
-  const end = new Date(now).getTime() + DAY_MS; // include today
+  const nowMs = new Date(now).getTime();
+  const end = nowMs - (((nowMs % DAY_MS) + DAY_MS) % DAY_MS) + DAY_MS; // UTC midnight after today
   const endIso = new Date(end).toISOString();
   const startIso = new Date(end - span * DAY_MS).toISOString();
   const prevStartIso = new Date(end - 2 * span * DAY_MS).toISOString();
@@ -63,7 +64,8 @@ export function salesOverview(db, { days = 30, now = new Date() } = {}) {
        LEFT JOIN customers c ON c.id = r.customer_id
        LEFT JOIN request_items i ON i.request_id = r.id
       WHERE COALESCE(r.status, '') != ? AND r.submitted_at >= ? AND r.submitted_at < ?
-      GROUP BY COALESCE(CAST(r.customer_id AS TEXT), COALESCE(r.unlisted_company, r.unlisted_contact, CAST(r.id AS TEXT)))
+      GROUP BY CASE WHEN r.customer_id IS NOT NULL THEN 'c' || r.customer_id
+                    ELSE 'u' || COALESCE(r.unlisted_company, r.unlisted_contact, CAST(r.id AS TEXT)) END
       ORDER BY cartons DESC, requests DESC LIMIT 5`
   ).all(WITHDRAWN, startIso, endIso);
 
@@ -77,7 +79,7 @@ export function salesOverview(db, { days = 30, now = new Date() } = {}) {
        JOIN requests r ON r.id = i.request_id
        LEFT JOIN products p ON p.id = i.product_id
       WHERE COALESCE(r.status, '') != ? AND r.submitted_at >= ? AND r.submitted_at < ?
-      GROUP BY i.product_id
+      GROUP BY COALESCE(CAST(i.product_id AS TEXT), 'n:' || i.product_name_at_request)
       ORDER BY cartons DESC LIMIT 5`
   ).all(WITHDRAWN, startIso, endIso);
 
@@ -90,8 +92,8 @@ export function salesOverview(db, { days = 30, now = new Date() } = {}) {
   ).get(WITHDRAWN).n;
   const statusCounts = Object.fromEntries(db.prepare(
     `SELECT COALESCE(status, 'UNKNOWN') AS status, COUNT(*) AS n
-       FROM requests WHERE submitted_at >= ? AND submitted_at < ? GROUP BY status`
-  ).all(startIso, endIso).map((r) => [r.status, r.n]));
+       FROM requests WHERE COALESCE(status, '') != ? AND submitted_at >= ? AND submitted_at < ? GROUP BY status`
+  ).all(WITHDRAWN, startIso, endIso).map((r) => [r.status, r.n]));
 
   // Only what the sales manager needs to read: no phone numbers, addresses or notes.
   const recent = listRequests(db, { limit: 8 }).items.map((r) => ({

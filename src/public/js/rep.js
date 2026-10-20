@@ -255,4 +255,4 @@ function route() {
   if (m) renderVisit(Number(m[1])); else renderHome();
 }
 window.addEventListener('hashchange', route);
-api('/api/rep/me').then((me) => { repName = me.name; route(); }).catch(() => {});
+api('/api/rep/me').then((me) => { repName = me.name; }).catch(() => {}).finally(() => route());

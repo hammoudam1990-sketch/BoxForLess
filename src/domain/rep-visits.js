@@ -120,12 +120,12 @@ export function saveVisit(db, { customerId, repName, contactName, noReturnAgreed
   const customer = db.prepare('SELECT id FROM customers WHERE id = ? AND is_active = 1').get(customerId);
   if (!customer) throw new VisitError('Shop not found.', 404);
 
-  const lotStmt = db.prepare('SELECT id, delivered_ctn FROM delivery_lots WHERE id = ? AND customer_id = ?');
+  const lotStmt = db.prepare(`SELECT l.id, l.delivered_ctn FROM delivery_lots l WHERE l.id = ? AND l.customer_id = ? AND ${OPEN_LOT}`);
   const clean = [];
   const seen = new Set();
   for (const line of lines) {
     const lot = lotStmt.get(Number(line.lotId), customerId);
-    if (!lot) throw new VisitError('A lot does not belong to this shop.');
+    if (!lot) throw new VisitError('A lot does not belong to this shop or is already closed.');
     if (seen.has(lot.id)) throw new VisitError('A lot appears twice.');
     seen.add(lot.id);
     const outcome = line.outcome || 'OK';
