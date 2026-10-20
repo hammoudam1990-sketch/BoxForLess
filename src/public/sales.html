@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" data-theme-default="light" data-theme-toggle="false">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <script src="/js/theme-init.js"></script>
+  <title>Sales Manager — Box for Less</title>
+  <link rel="stylesheet" href="/css/backdrop.css" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/extras.css" />
+  <link rel="stylesheet" href="/css/dark.css" />
+  <link rel="stylesheet" href="/css/admin.css" />
+  <link rel="stylesheet" href="/css/sales.css" />
+  <link rel="stylesheet" href="/css/print.css" media="print" />
+</head>
+<body class="adm sm-page">
+  <!-- The Sales Manager dashboard: a separate app from the admin panel (no admin sidebar, its
+       own sign-in at /sales/login, its own API at /api/sales). Read-only. -->
+  <div class="adm-body">
+    <header class="adm-top sm-top">
+      <a class="sm-brand" href="/sales" aria-label="Box for Less Sales Manager">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path d="m24 3 19 10.5v21L24 45 5 34.5v-21L24 3Z" fill="#0b2341"/>
+          <path d="m5.5 13.5 18.5 10 18.5-10M24 24v20.5M15 8l19 11M33 8 14 19" fill="none" stroke="#fff" stroke-width="2.6" stroke-linejoin="round"/>
+        </svg>
+        <span><b>Box for Less</b><small>Sales Manager</small></span>
+      </a>
+      <div class="adm-top-right">
+        <div class="adm-user">
+          <button id="userBtn" class="adm-user-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="userMenu">
+            <span class="adm-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21a8.5 8.5 0 0 1 17 0z"/></svg></span>
+            <span><b>Sales Manager</b><small>Read-only</small></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div id="userMenu" class="adm-user-menu" role="menu" hidden>
+            <a href="/catalog" role="menuitem">Open customer catalogue</a>
+            <hr />
+            <button id="salesLogout" type="button" role="menuitem">Sign out</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main id="view" class="view sm-view"></main>
+    <footer class="adm-foot"><span>Box for Less Sales Manager</span><span>© Box for Less. All rights reserved.</span></footer>
+  </div>
+  <script type="module" src="/js/sales.js"></script>
+</body>
+</html>

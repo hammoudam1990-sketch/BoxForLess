@@ -1,0 +1,11 @@
+/* Sales Manager page shell: a single-column variant of the admin layout, no sidebar. */
+body.adm.sm-page { grid-template-columns: minmax(0, 1fr); }
+.sm-top { justify-content: space-between; padding-left: 24px; }
+.sm-brand { display: flex; align-items: center; gap: 11px; color: var(--ink); text-decoration: none; }
+.sm-brand svg { width: 38px; height: 38px; flex: none; }
+.sm-brand b { display: block; font-size: 20px; line-height: 1.1; letter-spacing: -.02em; }
+.sm-brand small { display: block; color: var(--muted); font-size: 12.5px; }
+.sm-view { width: 100%; max-width: 1400px; margin: 0 auto; padding: 24px; box-sizing: border-box; }
+html[data-theme="dark"] .sm-brand svg path:first-child { fill: #fff; }
+html[data-theme="dark"] .sm-brand svg path:last-child { stroke: #0b2341; }
+@media (max-width: 759px) { .sm-view { padding: 16px; } .sm-top { padding-left: 16px; } }

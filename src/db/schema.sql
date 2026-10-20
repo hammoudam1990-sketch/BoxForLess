@@ -277,3 +277,39 @@ CREATE TABLE IF NOT EXISTS quotations (
   created_at     TEXT,
   updated_at     TEXT
 );
+
+-- ---------------------------------------------------------------------------
+-- Sales rep app. Quantities only: nothing here holds a price, amount or discount.
+-- delivery_lots: what was delivered to a shop, with the lot's expiry date. Filled by a future
+-- delivery import (demo data for now). Rows are never deleted by an import.
+-- rep_visits / rep_visit_lines: a rep's shelf check at a shop. Append-only history.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS delivery_lots (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id   INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+  product_id    INTEGER NOT NULL REFERENCES products(id)  ON DELETE RESTRICT,
+  lot_code      TEXT    NOT NULL,
+  delivered_ctn INTEGER NOT NULL,
+  expiry_date   TEXT    NOT NULL,   -- YYYY-MM-DD
+  delivered_at  TEXT,
+  created_at    TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_delivery_lots_customer ON delivery_lots(customer_id, expiry_date);
+CREATE TABLE IF NOT EXISTS rep_visits (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id         INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+  rep_name            TEXT    NOT NULL,
+  contact_name        TEXT    NOT NULL,
+  no_return_agreed    INTEGER NOT NULL DEFAULT 0,
+  visited_at          TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_rep_visits_customer ON rep_visits(customer_id, visited_at);
+CREATE TABLE IF NOT EXISTS rep_visit_lines (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  visit_id    INTEGER NOT NULL REFERENCES rep_visits(id)   ON DELETE CASCADE,
+  lot_id      INTEGER NOT NULL REFERENCES delivery_lots(id) ON DELETE RESTRICT,
+  shelf_ctn   INTEGER,
+  outcome     TEXT    NOT NULL,     -- OK | SOLD_OUT | RETURN | NOT_CHECKED
+  photo_file  TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_rep_visit_lines_lot ON rep_visit_lines(lot_id);

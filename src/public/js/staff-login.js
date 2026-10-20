@@ -7,6 +7,10 @@ const togglePassword = document.getElementById('togglePassword');
 const button = document.getElementById('loginButton');
 const label = button.querySelector('.submit-label');
 const message = document.getElementById('loginMessage');
+// The Sales Manager sign-in reuses this script with its own endpoints and landing page.
+const loginUrl = form.dataset.login || '/api/staff/login';
+const sessionUrl = form.dataset.session || '/api/staff/session';
+const home = form.dataset.home || '/index.html';
 
 function showError(text, input) {
   message.textContent = text;
@@ -28,7 +32,7 @@ function clearError() {
 
 function nextPath() {
   const next = new URLSearchParams(location.search).get('next') || '';
-  return next.startsWith('/') && !next.startsWith('//') ? next : '/index.html';
+  return next.startsWith('/') && !next.startsWith('//') ? next : home;
 }
 
 togglePassword.addEventListener('click', () => {
@@ -50,7 +54,7 @@ form.addEventListener('submit', async (event) => {
   button.disabled = true;
   label.textContent = 'Signing in…';
   try {
-    const response = await fetch('/api/staff/login', {
+    const response = await fetch(loginUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: username.value.trim(), password: password.value }),
@@ -68,7 +72,7 @@ form.addEventListener('submit', async (event) => {
 });
 
 // Already signed in (for example, a bookmarked sign-in page): go straight on.
-fetch('/api/staff/session')
+fetch(sessionUrl)
   .then((response) => (response.ok ? response.json() : null))
   .then((status) => { if (status?.authenticated) location.replace(nextPath()); })
   .catch(() => {});

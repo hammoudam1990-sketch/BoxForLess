@@ -14,7 +14,9 @@ import changesRouter from './routes/changes.js';
 import catalogRouter from './routes/catalog.js';
 import customerImportsRouter from './routes/customer-imports.js';
 import { customerRouter as requestsCustomerRouter, staffRouter as requestsStaffRouter } from './routes/requests.js';
-import { hasStaffSession, requireStaff, staffLogin, staffLogout, staffSessionStatus } from './staff-auth.js';
+import { hasStaffSession, requireStaff, staffLogin, staffLogout, staffSessionStatus, hasSalesSession, requireSales, salesLogin, salesLogout, salesSessionStatus, hasRepSession, requireRep, repLogin, repLogout, repSessionStatus } from './staff-auth.js';
+import salesRouter from './routes/sales.js';
+import repRouter from './routes/rep.js';
 import { enterAccessCode, accessStatus, exitAccess } from './customer-access.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,6 +34,16 @@ export function createApp(db) {
   app.get('/api/staff/session', staffSessionStatus);
   app.post('/api/staff/login', staffLogin);
   app.post('/api/staff/logout', staffLogout);
+  // The Sales Manager dashboard has its own account, cookie and API.
+  app.get('/api/sales/session', salesSessionStatus);
+  app.post('/api/sales/login', salesLogin);
+  app.post('/api/sales/logout', salesLogout);
+  app.use('/api/sales', requireSales, salesRouter);
+  // The sales rep phone app: its own account, cookie and API.
+  app.get('/api/rep/session', repSessionStatus);
+  app.post('/api/rep/login', repLogin);
+  app.post('/api/rep/logout', repLogout);
+  app.use('/api/rep', requireRep, repRouter);
   // Customer access code — public by necessity: entering a code is how a customer
   // identifies themselves. Rate-limited per IP in customer-access.js.
   app.get('/api/catalog/access', accessStatus);
@@ -80,6 +92,29 @@ export function createApp(db) {
   app.get('/staff/login', (_req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.sendFile(path.join(publicDir, 'staff-login.html'));
+  });
+  // Sales Manager: a separate dashboard with its own sign-in. /sales.html is the shell file;
+  // send it through /sales so the session check is never skipped.
+  app.get('/sales.html', (_req, res) => res.redirect('/sales'));
+  app.get('/sales', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!hasSalesSession(req)) return res.redirect('/sales/login');
+    res.sendFile(path.join(publicDir, 'sales.html'));
+  });
+  app.get('/sales/login', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(publicDir, 'sales-login.html'));
+  });
+  // Sales rep phone app: separate sign-in; /rep.html is only the shell file.
+  app.get('/rep.html', (_req, res) => res.redirect('/rep'));
+  app.get('/rep', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!hasRepSession(req)) return res.redirect('/rep/login');
+    res.sendFile(path.join(publicDir, 'rep.html'));
+  });
+  app.get('/rep/login', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(publicDir, 'rep-login.html'));
   });
 
   app.use(express.static(publicDir, { index: false }));

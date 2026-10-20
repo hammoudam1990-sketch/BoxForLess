@@ -106,6 +106,8 @@ node scripts/demo-seed.js
 | `BFL_STAFF_USERNAME` | `admin` | Staff sign-in name |
 | `BFL_STAFF_PASSWORD` | `DemoPass123456` | Staff password (≥12 chars) |
 | `BFL_SESSION_SECRET` | `demo-secret-1234567890123456789012` | Session cookie secret (≥32 chars) |
+| `BFL_REP_USERNAME` / `BFL_REP_PASSWORD` / `BFL_REP_NAME` | `rep` / `RepPass1234567` / `Kwame Mensah` | Sales rep phone app login (separate from admin and sales manager; password ≥12 chars). Sign in at `/rep/login`, app at `/rep`. Demo lots: `node scripts/demo-seed-lots.js --confirm`. |
+| `BFL_SALES_USERNAME` / `BFL_SALES_PASSWORD` | `sales` / `SalesPass123456` | Sales Manager dashboard login (separate from admin; password ≥12 chars). Sign in at `/sales/login`, dashboard at `/sales`. Read-only and price-free. |
 | `NODE_ENV` | `development` | Skip HTTPS checks on LAN |
 | `BFL_PUBLIC_URL` | *(optional)* | Public catalog URL (defaults to `http://localhost:3000`) |
 
