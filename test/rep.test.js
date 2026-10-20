@@ -77,6 +77,15 @@ test('a visit records shelf counts, resolves sold-out and returned lots, and is 
   assert.equal(after.lots[0].shelfCtn, 40, 'the form starts from the last counted shelf');
 });
 
+test('a closed lot cannot receive another visit line (retried save)', () => {
+  const db = freshDb();
+  const { a, ids } = seed(db);
+  const visit = { customerId: a, repName: 'Kwame', contactName: 'Ama', lines: [{ lotId: ids.a2, shelfCtn: 0, outcome: 'SOLD_OUT' }] };
+  saveVisit(db, visit, { now: NOW });
+  assert.throws(() => saveVisit(db, visit, { now: NOW }), /closed/);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM rep_visits').get().n, 1);
+});
+
 test('a visit photo is validated and stored; a bad photo rolls the whole visit back', () => {
   const db = freshDb();
   const { a, ids } = seed(db);

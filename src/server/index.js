@@ -135,6 +135,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const app = createApp(db);
   const { host, port } = config;
 
+  if (process.env.NODE_ENV === 'production'
+      && (!process.env.BFL_CUSTOMER_SESSION_SECRET || !process.env.BFL_CUSTOMER_HANDLE_SECRET)) {
+    console.warn('WARNING: BFL_CUSTOMER_SESSION_SECRET / BFL_CUSTOMER_HANDLE_SECRET are not set; '
+      + 'built-in default secrets are in use and customer session cookies can be forged. Set both.');
+  }
   // HTTP — always on. Explicit bind to config.host (default 0.0.0.0) so phones
   // on the same LAN can reach it; localhost still works via the loopback.
   http.createServer(app).listen(port, host, () => {

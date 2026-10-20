@@ -60,3 +60,11 @@ test('sales overview never exposes a price or amount', () => {
 test('an unsupported window falls back to 30 days', () => {
   assert.equal(salesOverview(freshDb(), { days: 5 }).days, 30);
 });
+
+test('the status chart excludes withdrawn requests', () => {
+  const db = seed();
+  submitRequest(db, { lines: [line(A, 1)], unlisted: unlisted('Melcom') });
+  const b = submitRequest(db, { lines: [line(B, 1)], unlisted: unlisted('Shoprite') });
+  deleteRequest(db, b.requestId);
+  assert.equal(salesOverview(db, { days: 7 }).statusCounts.DELETED, undefined);
+});
