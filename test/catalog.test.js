@@ -97,7 +97,8 @@ test('3. a product WITH an image exposes an image URL (no filename, no internal 
 
   const p = getCatalogProduct(db, CHICKEN.barcode);
   assert.ok(p.image, 'image present');
-  assert.equal(p.image.url, `/api/catalog/products/${CHICKEN.barcode}/image`);
+  assert.ok(p.image.url.startsWith(`/api/catalog/products/${CHICKEN.barcode}/image`));
+  assert.ok(p.image.url.includes('?v='));
   assert.ok(!/\.jpg|\.png/.test(JSON.stringify(p)), 'storage filename never disclosed');
   assert.ok(!p.image.url.includes('/api/products/'), 'does not use the internal-id image route');
   db.close();

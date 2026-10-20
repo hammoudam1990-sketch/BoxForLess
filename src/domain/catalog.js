@@ -70,8 +70,12 @@ export function publicId(productRow) {
 }
 
 /** Customer-facing image URL, keyed by the PUBLIC id (never products.id). */
-export function catalogImageUrl(id) {
-  return `/api/catalog/products/${encodeURIComponent(id)}/image`;
+export function catalogImageUrl(id, version = null) {
+  const base = `/api/catalog/products/${encodeURIComponent(id)}/image`;
+  if (!version) return base;
+  const asMs = Date.parse(version);
+  const token = Number.isFinite(asMs) ? String(asMs) : String(version);
+  return `${base}?v=${encodeURIComponent(token)}`;
 }
 
 /**
@@ -93,7 +97,7 @@ export function toCatalogProduct(row, thresholds = config.stock) {
     pack: row.box_uom || null,
     category: c ? { top_level: c.topLevel, parent: c.parent, name: c.name, path: c.path } : null,
     availability: { ...toAvailability(row, thresholds) },
-    image: row.primary_image_id ? { url: catalogImageUrl(id) } : null,
+    image: row.primary_image_id ? { url: catalogImageUrl(id, row.updated_at) } : null,
     // Requests are whole cartons only, so a product holding less than one full
     // carton is not requestable even though it still shows as Limited Stock.
     // A BOOLEAN, never the count — the exact figure stays server-side.
@@ -199,7 +203,7 @@ export function searchCatalog(db, q = {}, thresholds = config.stock) {
   // Only the columns the serializer needs are selected — the query itself is a
   // second, independent barrier in front of toCatalogProduct().
   const rows = db.prepare(
-    `SELECT p.name, p.barcode, p.box_uom, p.primary_image_id, p.odoo_category_path,
+    `SELECT p.name, p.barcode, p.box_uom, p.primary_image_id, p.odoo_category_path, p.updated_at,
             p.${thresholds.availabilityField}
      FROM products p
      ${whereSql}
@@ -218,7 +222,7 @@ export function searchCatalog(db, q = {}, thresholds = config.stock) {
 export function getCatalogProduct(db, id, thresholds = config.stock) {
   if (id === null || id === undefined || String(id).trim() === '') return null;
   const row = db.prepare(
-    `SELECT p.name, p.barcode, p.box_uom, p.primary_image_id, p.odoo_category_path,
+    `SELECT p.name, p.barcode, p.box_uom, p.primary_image_id, p.odoo_category_path, p.updated_at,
             p.${thresholds.availabilityField}
      FROM products p
      WHERE p.barcode = ? AND p.is_active = 1`
