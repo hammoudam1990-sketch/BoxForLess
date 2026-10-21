@@ -35,6 +35,7 @@ export async function renderImports(view) {
   const drop = view.querySelector('#drop');
   const fileInput = view.querySelector('#file');
   const previewArea = view.querySelector('#previewArea');
+  const history = view.querySelector('#history');
 
   const doPreview = async (file) => {
     if (!file) return;
@@ -109,7 +110,15 @@ export async function renderImports(view) {
   ['dragleave', 'drop'].forEach((ev) => custDrop.addEventListener(ev, (e) => { e.preventDefault(); custDrop.classList.remove('drag'); }));
   custDrop.addEventListener('drop', (e) => doCustomerPreview(e.dataTransfer.files[0]));
 
-  await Promise.all([loadHistory(view.querySelector('#history')), doCustomerHistory()]);
+  history.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-delete-source-file]');
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    await removeSourceFile(button, () => loadHistory(history));
+  });
+
+  await Promise.all([loadHistory(history), doCustomerHistory()]);
 }
 
 /** Preview panel for a customer import. Confirmation is always explicit. */
@@ -190,14 +199,20 @@ async function loadHistory(node) {
   node.innerHTML = `<table><thead><tr>
     <th>#</th><th>File</th><th>Imported</th><th>Status</th>
     <th class="num">Rows</th><th class="num">New</th><th class="num">Updated</th><th class="num">Inactivated</th>
-    <th class="num">Errors</th></tr></thead><tbody>
-    ${items.map((b) => `<tr class="clickable" onclick="location.hash='#/imports/${b.id}'">
+    <th class="num">Errors</th><th>Stored source</th></tr></thead><tbody>
+    ${items.map((b) => `<tr class="clickable" data-open-import="${b.id}">
       <td>#${b.id}</td><td>${esc(b.filename)}</td><td>${esc(b.imported_at)}</td>
       <td><span class="pill ${b.status === 'COMPLETED' ? 'ok' : b.status === 'FAILED' ? 'err' : 'warn'}">${b.status}</span></td>
       <td class="num">${num(b.total_rows)}</td><td class="num">${num(b.created_count)}</td>
       <td class="num">${num(b.updated_count)}</td><td class="num">${num(b.inactive_count)}</td>
-      <td class="num">${num(b.error_count)}</td>
+      <td class="num">${num(b.error_count)}</td><td>${sourceFileAction(b)}</td>
     </tr>`).join('')}</tbody></table>`;
+  node.querySelectorAll('[data-open-import]').forEach((row) => {
+    row.addEventListener('click', (event) => {
+      if (event.target.closest('button')) return;
+      location.hash = `#/imports/${row.dataset.openImport}`;
+    });
+  });
 }
 
 export async function renderImportDetail(view, id) {
@@ -219,6 +234,11 @@ export async function renderImportDetail(view, id) {
       </div>
     </div>
     <div class="card">
+      <h2>Uploaded source file</h2>
+      ${sourceFileAction(b)}
+      <p class="muted">Removing the stored spreadsheet does not delete the import record, product data, or change log. A preview file cannot be removed until its import is confirmed or failed.</p>
+    </div>
+    <div class="card">
       <div class="section-title">Change log (${changes.length})</div>
       ${changes.length ? `<table><thead><tr><th>Type</th><th>Barcode</th><th>Field</th><th>Old</th><th>New</th><th>Review</th><th>Message</th></tr></thead><tbody>
         ${changes.map((c) => `<tr>
@@ -227,4 +247,36 @@ export async function renderImportDetail(view, id) {
           <td>${c.review_status === 'NA' ? '' : esc(c.review_status)}</td><td>${esc(c.message || '')}</td>
         </tr>`).join('')}</tbody></table>` : '<div class="muted">No change-log entries.</div>'}
     </div>`;
+  const deleteButton = view.querySelector('[data-delete-source-file]');
+  deleteButton?.addEventListener('click', async () => {
+    await removeSourceFile(deleteButton, () => renderImportDetail(view, id), b.filename);
+  });
+}
+
+function sourceFileAction(batch) {
+  if (batch.has_source_file && ['COMPLETED', 'FAILED'].includes(batch.status)) {
+    return `<button class="danger" type="button" data-delete-source-file="${batch.id}">Delete stored file</button>`;
+  }
+  if (batch.has_source_file) return '<span class="pill warn">Required to confirm</span>';
+  if (batch.source_file_deleted_at) {
+    return `<span class="pill muted">Deleted ${esc(batch.source_file_deleted_at.replace('T', ' ').slice(0, 16))}</span>`;
+  }
+  return '<span class="pill muted">No stored file</span>';
+}
+
+async function removeSourceFile(button, refresh, filename = '') {
+  const id = button.dataset.deleteSourceFile;
+  const label = filename || button.closest('tr')?.querySelector('td:nth-child(2)')?.textContent || `import #${id}`;
+  if (!window.confirm(`Delete the stored source file "${label}"? This cannot be undone. The import history and change log will be kept.`)) return;
+  button.disabled = true;
+  button.textContent = 'Deleting…';
+  try {
+    const result = await api.deleteImportSourceFile(id);
+    toast(result.wasPresent ? 'Stored source file deleted; import history retained.' : 'Source file was already missing; import history retained.', 'ok');
+    await refresh();
+  } catch (error) {
+    toast(error.message, 'err');
+    button.disabled = false;
+    button.textContent = 'Delete stored file';
+  }
 }

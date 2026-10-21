@@ -168,11 +168,12 @@ on every write. It **fails closed** — if `BFL_STAFF_USERNAME`,
 `BFL_STAFF_PASSWORD` (≥12 bytes) or `BFL_SESSION_SECRET` (≥32 bytes) is missing or
 too short, staff endpoints return 503 rather than opening up.
 
-`/staff/login` now forwards to the shared public `/login.html` frontend preview.
-That UI does not submit credentials or create a session; password sign-in and
-recovery are not connected. The staff API, signed cookie, and authorization
-middleware remain unchanged. Customer access remains a separate access-code flow
-in the catalogue; there is no customer password login or recovery flow.
+`/login.html` is the shared sign-in entry point for customers, staff, Sales
+Managers, and Sales Reps. Customer demo accounts are still held in the browser;
+server-configured team credentials are checked by one role-detecting login
+endpoint. Successful team sign-in creates the matching role-specific session,
+and each dashboard/API continues to enforce its own authorization. The legacy
+role-specific login URLs forward to the shared page.
 
 Two staff screens were added: **Access Codes** (search, copy a code, copy a
 ready-to-send message, issue/reissue) and **Access Requests** (approve or reject,

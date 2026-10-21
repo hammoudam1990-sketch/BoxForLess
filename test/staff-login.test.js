@@ -42,14 +42,14 @@ after(async () => {
   }
 });
 
-test('customer login page uses browser-only accounts and never calls the server', async () => {
+test('the universal sign-in page detects customer and team accounts', async () => {
   const response = await fetch(`${baseUrl}/login.html`);
   const html = await response.text();
 
   assert.equal(response.status, 200);
-  assert.match(html, /Welcome back/);
+  assert.match(html, /ONE SIGN-IN · ALL BOX FOR LESS ACCOUNTS/);
   assert.match(html, /id="generalLoginForm"/);
-  assert.match(html, /Email or Phone Number/);
+  assert.match(html, /Email, phone or username/);
   assert.match(html, /Remember me/);
   assert.match(html, /Forgot password\?/);
   assert.match(html, /name="password"/);
@@ -61,7 +61,9 @@ test('customer login page uses browser-only accounts and never calls the server'
   assert.doesNotMatch(html, /Staff portal|Staff access only|Admin Login/i);
 
   const script = await fetch(`${baseUrl}/js/login.js`).then((response) => response.text());
-  assert.doesNotMatch(script, /fetch\s*\(|\/api\//);
+  assert.match(script, /\/api\/auth\/login/);
+  assert.match(script, /store\.signIn/);
+  assert.match(script, /nextPath\(result\.role\)/);
   assert.match(script, /lib\/local-accounts\.js/);
   assert.match(script, /Google sign-in is not connected yet/);
 
@@ -80,33 +82,36 @@ test('customer login page uses browser-only accounts and never calls the server'
 
 });
 
-test('staff sign-in page is separate from the customer page and posts to the staff API', async () => {
-  const response = await fetch(`${baseUrl}/staff/login`);
-  const html = await response.text();
-  assert.equal(response.status, 200);
-  assert.equal(response.headers.get('cache-control'), 'no-store');
-  assert.match(html, /id="staffLoginForm"/);
-  assert.match(html, /name="username"/);
-  assert.match(html, /name="password"/);
-  assert.match(html, /\/js\/staff-login\.js/);
-  assert.doesNotMatch(html, /http-equiv="refresh"/);
-
-  const script = await fetch(`${baseUrl}/js/staff-login.js`).then((r) => r.text());
-  assert.match(script, /\/api\/staff\/login/);
-  // ?next= may only send the browser to a path on this site
-  assert.match(script, /startsWith\('\/'\) && !next\.startsWith\('\/\/'\)/);
+test('all role-specific sign-in routes point to the same universal page', async () => {
+  for (const [path, destination] of [
+    ['/staff/login?next=%2Fscan.html', '/login.html?next=%2Fscan.html'],
+    ['/sales/login', '/login.html?next=%2Fsales'],
+    ['/rep/login', '/login.html?next=%2Frep'],
+    ['/staff-login.html', '/login.html?next=%2Findex.html'],
+    ['/sales-login.html', '/login.html?next=%2Fsales'],
+    ['/rep-login.html', '/login.html?next=%2Frep'],
+  ]) {
+    const response = await fetch(`${baseUrl}${path}`, { redirect: 'manual' });
+    assert.equal(response.status, 302, path);
+    assert.equal(response.headers.get('location'), destination, path);
+    assert.equal(response.headers.get('cache-control'), 'no-store', path);
+  }
+  const html = await fetch(`${baseUrl}/login.html`).then((response) => response.text());
+  assert.match(html, /id="generalLoginForm"/);
+  assert.match(html, /Email, phone or username/);
 });
 
 test('staff sign-in validates credentials, issues a protected session and honors private-page gating', async () => {
   const protectedPage = await fetch(`${baseUrl}/index.html`, { redirect: 'manual' });
   assert.equal(protectedPage.status, 302);
-  assert.match(protectedPage.headers.get('location'), /^\/staff\/login\?next=/);
+  assert.match(protectedPage.headers.get('location'), /^\/login\.html\?next=/);
 
   const invalid = await fetch(`${baseUrl}/api/staff/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: credentials.username, password: 'incorrect-test-password' }),
   });
+
   assert.equal(invalid.status, 401);
   assert.deepEqual(await invalid.json(), { error: 'Username or password is incorrect.' });
 
@@ -140,4 +145,26 @@ test('staff sign-in validates credentials, issues a protected session and honors
   assert.deepEqual(await endedSession.json(), { authenticated: false });
   const pageAfterLogout = await fetch(`${baseUrl}/index.html`, { redirect: 'manual' });
   assert.equal(pageAfterLogout.status, 302);
+});
+
+test('unified login detects the configured team role and clears other role sessions', async () => {
+  const response = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { authenticated: true, role: 'admin' });
+  const cookies = response.headers.getSetCookie();
+  assert.ok(cookies.some((cookie) => cookie.startsWith('bfl_staff_session=')));
+  assert.ok(cookies.some((cookie) => cookie.startsWith('bfl_sales_session=') && cookie.includes('Max-Age=0')));
+  assert.ok(cookies.some((cookie) => cookie.startsWith('bfl_rep_session=') && cookie.includes('Max-Age=0')));
+});
+
+test('unified logout clears every team-role cookie', async () => {
+  const response = await fetch(`${baseUrl}/api/auth/logout`, { method: 'POST' });
+  assert.equal(response.status, 204);
+  const cookies = response.headers.getSetCookie();
+  assert.equal(cookies.length, 3);
+  assert.ok(cookies.every((cookie) => cookie.includes('Max-Age=0')));
 });

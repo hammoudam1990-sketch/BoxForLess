@@ -71,8 +71,6 @@ body.adm {
   margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; display: inline-grid; place-items: center;
   border-radius: 999px; background: #ef4444; color: #fff; font-size: 12px; font-weight: 700;
 }
-.adm-nav a .soon { margin-left: auto; padding: 1px 7px; border-radius: 999px; background: rgba(255, 255, 255, .09); color: #9fb3cd; font-size: 11px; font-weight: 600; }
-.adm-nav a.active .soon { background: rgba(255, 255, 255, .2); color: #fff; }
 .adm-nav .hidden { display: none !important; }
 
 .adm-conn { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 18px 12px 4px; color: #fff; font-size: 13px; }
@@ -290,14 +288,7 @@ body.adm {
 .ad-feed b { display: block; font-size: 13.5px; font-weight: 600; }
 .ad-feed small { display: block; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 
-/* ---------------------------------------------------------------- "coming soon" pages */
-.ad-soon { max-width: 760px; padding: 28px; }
-.ad-soon-tag { display: inline-block; margin-bottom: 12px; padding: 4px 10px; border-radius: 999px; background: var(--a-blue-soft); color: #1d4ed8; font-size: 13px; font-weight: 650; }
-.ad-soon h1 { margin: 0 0 8px !important; }
-.ad-soon > p { margin: 0 0 16px; color: var(--on-bg-muted); font-size: 16px; }
-.ad-soon ul { margin: 0 0 20px; padding-left: 20px; color: var(--ink); }
-.ad-soon li { margin: 6px 0; }
-.ad-soon .ad-btn-row { display: inline-flex; }
+.ad-source-tag { display: inline-block; margin-bottom: 12px; padding: 4px 10px; border-radius: 999px; background: var(--a-blue-soft); color: #1d4ed8; font-size: 13px; font-weight: 650; }
 
 /* categories page */
 .ad-cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }

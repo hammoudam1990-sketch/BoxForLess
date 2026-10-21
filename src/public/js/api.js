@@ -18,6 +18,11 @@ export const api = {
   },
   product: (id) => fetch(`/api/products/${id}`).then(handle),
   stats: () => fetch('/api/products/stats').then(handle),
+  workspaceStatus: () => fetch('/api/admin-workspace/status').then(handle),
+  workspaceQuotations: () => fetch('/api/admin-workspace/quotations').then(handle),
+  workspaceVisibility: () => fetch('/api/admin-workspace/visibility').then(handle),
+  workspaceStockExpiry: (band = 'all') =>
+    fetch(`/api/admin-workspace/stock-expiry?band=${encodeURIComponent(band)}`).then(handle),
 
   imports: () => fetch('/api/imports').then(handle),
   importBatch: (id) => fetch(`/api/imports/${id}`).then(handle),
@@ -27,6 +32,7 @@ export const api = {
     return fetch('/api/imports', { method: 'POST', body: fd }).then(handle);
   },
   confirmImport: (id) => fetch(`/api/imports/${id}/confirm`, { method: 'POST' }).then(handle),
+  deleteImportSourceFile: (id) => fetch(`/api/imports/${id}/source-file`, { method: 'DELETE' }).then(handle),
 
   // customer list import (staff) — separate endpoint from the product import
   customerImports: () => fetch('/api/customer-imports').then(handle),

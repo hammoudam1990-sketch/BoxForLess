@@ -352,7 +352,8 @@ export function listRequests(db, { limit = 50, offset = 0, deleted = false } = {
   const total = db.prepare(`SELECT COUNT(*) AS n FROM requests ${countWhere}`).get(DELETED_STATUS).n;
   const items = db.prepare(
     `SELECT r.*, c.name AS customer_name,
-            (SELECT COUNT(*) FROM request_items i WHERE i.request_id = r.id) AS item_count
+         (SELECT COUNT(*) FROM request_items i WHERE i.request_id = r.id) AS item_count,
+         (SELECT COALESCE(SUM(i.quantity_ctn), 0) FROM request_items i WHERE i.request_id = r.id) AS cartons
        FROM requests r
        LEFT JOIN customers c ON c.id = r.customer_id
        ${where}

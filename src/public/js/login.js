@@ -1,5 +1,4 @@
-// Customer sign-in. Accounts live in this browser's localStorage for now (see
-// lib/local-accounts.js); nothing is sent to the server until Phase 2 accounts exist.
+// One sign-in form detects customer accounts in the browser and team roles on the server.
 import { accounts, DEMO_LOGINS } from './lib/local-accounts.js';
 
 const store = accounts();
@@ -37,10 +36,30 @@ function requireValue(input, label) {
   return false;
 }
 
-// Where to go after signing in: ?next= when it is a path on this site, else the catalogue.
-function nextPath() {
+function requestedPath() {
   const next = new URLSearchParams(location.search).get('next') || '';
-  return next.startsWith('/') && !next.startsWith('//') ? next : '/catalog';
+  if (!next.startsWith('/') || next.startsWith('//')) return '';
+  try {
+    const url = new URL(next, location.origin);
+    return url.origin === location.origin ? `${url.pathname}${url.search}${url.hash}` : '';
+  } catch {
+    return '';
+  }
+}
+
+function nextPath(role) {
+  const next = requestedPath();
+  const pathname = next ? new URL(next, location.origin).pathname : '';
+  if (role === 'customer') {
+    return pathname === '/catalog' || pathname.startsWith('/catalog/')
+      ? next : '/catalog';
+  }
+  if (role === 'admin') {
+    return ['/index.html', '/scan.html'].includes(pathname) ? next : '/index.html';
+  }
+  if (role === 'sales') return pathname === '/sales' ? next : '/sales';
+  if (role === 'rep') return pathname === '/rep' ? next : '/rep';
+  throw new Error('This account role is not recognized.');
 }
 
 togglePassword.addEventListener('click', () => {
@@ -60,27 +79,60 @@ forgotPassword.addEventListener('click', () => {
 });
 
 googleSignIn.addEventListener('click', () => {
-  showMessage('Google sign-in is not connected yet. Sign in with your email or phone number instead.');
+  showMessage('Google sign-in is not connected yet. Use your email, phone number or team username instead.');
 });
 
-form.addEventListener('submit', (event) => {
+form.addEventListener('submit', async (event) => {
   event.preventDefault();
   clearMessage();
-  if (!requireValue(identifier, 'email address or phone number')) return;
+  if (!requireValue(identifier, 'email address, phone number or username')) return;
   if (!requireValue(password, 'password')) return;
 
-  const result = store.signIn(identifier.value, password.value, rememberMe.checked);
-  if (!result.ok) {
-    showMessage(result.error, result.pending ? 'info' : 'error');
-    if (!result.pending) {
-      password.setAttribute('aria-invalid', 'true');
-      password.select();
-    }
-    return;
-  }
   loginButton.disabled = true;
-  showMessage(`Signed in as ${result.account.company}. Opening the catalogue…`, 'success');
-  location.assign(nextPath());
+  const submitLabel = loginButton.querySelector('.submit-label');
+  submitLabel.textContent = 'Signing in…';
+  let navigating = false;
+  try {
+    const customer = store.signIn(identifier.value, password.value, rememberMe.checked);
+    if (customer.ok) {
+      const logout = await fetch('/api/auth/logout', { method: 'POST' });
+      if (!logout.ok) throw new Error('Could not clear another signed-in team account. Please try again.');
+      showMessage(`Signed in as ${customer.account.company}. Opening your catalogue…`, 'success');
+      const destination = nextPath('customer');
+      navigating = true;
+      location.assign(destination);
+      return;
+    }
+    if (customer.pending) {
+      showMessage(customer.error, 'info');
+      return;
+    }
+
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: identifier.value.trim(), password: password.value }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `Sign in failed (${response.status}).`);
+    const roleNames = { admin: 'staff dashboard', sales: 'Sales Manager dashboard', rep: 'Sales Rep app' };
+    showMessage(`Signed in. Opening your ${roleNames[result.role] || 'workspace'}…`, 'success');
+    const destination = nextPath(result.role);
+    store.signOut();
+    navigating = true;
+    location.assign(destination);
+  } catch (error) {
+    showMessage(error instanceof TypeError
+      ? 'Could not reach the sign-in service. Check your connection and try again.'
+      : error.message || 'Sign in failed. Please try again.', 'error');
+    password.setAttribute('aria-invalid', 'true');
+    password.select();
+  } finally {
+    if (!navigating) {
+      loginButton.disabled = false;
+      submitLabel.textContent = 'Sign In';
+    }
+  }
 });
 
 // Demo accounts: tapping one fills the form, so the screens can be tried quickly.

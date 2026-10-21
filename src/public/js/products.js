@@ -1,5 +1,5 @@
 import { api, esc, num, toast, stockPill } from './api.js';
-import { primaryImageSrc } from './product-image.js';
+import { mountPhoto } from './photo.js';
 
 function qualityPill(p) {
   if (p.data_quality_status === 'WARNING') return '<span class="pill warn">Warning</span>';
@@ -11,21 +11,6 @@ function reviewFlags(p) {
   if (p.barcode_change_pending) out.push('<span class="pill info">Barcode review</span>');
   if (p.uom_change_pending) out.push('<span class="pill info">UoM review</span>');
   return out.join(' ');
-}
-
-// Render the actual primary image via the existing GET /api/products/:id/image
-// endpoint. Falls back to a clean placeholder (no image) or an "unavailable"
-// state (image request fails) — never a broken-image icon.
-function primaryImageHtml(p, images = []) {
-  const src = primaryImageSrc(p, { cacheBust: true });
-  if (!src) return '<div class="img-ph">No product image</div>';
-  const primaryRow = images.find((i) => i.is_primary && i.is_active) || images.find((i) => i.is_primary);
-  const filename = primaryRow?.filename;
-  return `
-    <img class="saved-photo" src="${esc(src)}" alt="${esc(p.name)} product photo"
-         onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');" />
-    <div class="img-ph hidden">Image unavailable</div>
-    ${filename ? `<div class="muted" style="font-size:12px;margin-top:6px;word-break:break-all">${esc(filename)}</div>` : ''}`;
 }
 
 export async function renderProducts(view) {
@@ -219,8 +204,7 @@ export async function renderProductDetail(view, id) {
         </div>
       </div>
       <div class="card" style="flex:1 1 220px">
-        <div class="section-title">Primary Image</div>
-        ${primaryImageHtml(p, d.images)}
+        <div id="productPhotoManager"></div>
       </div>
     </div>
 
@@ -233,6 +217,8 @@ export async function renderProductDetail(view, id) {
       <div class="section-title">Change History</div>
       ${d.changeHistory.length ? changeTable(d.changeHistory) : '<div class="muted">No changes recorded.</div>'}
     </div>`;
+
+  mountPhoto(view.querySelector('#productPhotoManager'), p, { uploadOnly: true, title: 'Primary Image' });
 }
 
 function importHistTable(batches) {

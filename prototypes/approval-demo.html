@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>CEO review demo — Box for Less</title>
+  <style>
+    :root{font-family:Arial,system-ui,sans-serif;color:#15243b;background:#f3f6fb;font-synthesis:none;font-size:15px;line-height:1.5;--navy:#0b2a52;--blue:#1557d6;--muted:#60718a;--line:#dfe6f0;--green:#187647;--amber:#995500;--red:#b42336;--white:#fff}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh}button,input,select{font:inherit}button,a{touch-action:manipulation}button{cursor:pointer}
+    .shell{min-height:100vh}.side{position:fixed;inset:0 auto 0 0;width:254px;background:var(--navy);color:#fff;padding:22px 16px;display:flex;flex-direction:column;z-index:3}
+    .brand{display:flex;align-items:center;gap:12px;font-size:16px;font-weight:700;padding:4px 8px 22px}.mark{width:36px;height:36px;border:1px solid #ffffff66;border-radius:12px;display:grid;place-items:center;font-size:18px}
+    .flag{margin:0 5px 18px;padding:10px 12px;border:1px solid #ffffff35;border-radius:12px;background:#ffffff12;color:#e5edff;font-size:12px;font-weight:700;letter-spacing:.04em}
+    .nav-label{padding:0 10px 8px;color:#b6c6df;text-transform:uppercase;font-size:11px;letter-spacing:.09em}.nav{display:grid;gap:5px}
+    .nav button{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:#e5edff;text-align:left}
+    .nav button:hover,.nav button:focus-visible{background:#ffffff18}.nav button.active{background:#fff;color:var(--navy);font-weight:700}
+    .side-foot{margin-top:auto;color:#b6c6df;font-size:12px;line-height:1.6;padding:12px 8px 4px}
+    main{margin-left:254px;min-height:100vh}.top{height:66px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(18px,3vw,44px);gap:12px}
+    .crumb{font-size:13px;color:var(--muted)}.user{font-weight:700;color:var(--navy);font-size:13px}.wrap{width:min(1440px,100%);padding:28px clamp(18px,3vw,44px) 56px;margin:auto}
+    .eyebrow{margin:0 0 7px;color:var(--blue);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+    h1{font-size:clamp(27px,3vw,38px);line-height:1.15;letter-spacing:-.03em;color:var(--navy);margin:0 0 10px}
+    h2{font-size:21px;line-height:1.25;color:var(--navy);margin:0 0 14px}h3{font-size:16px;color:var(--navy);margin:0 0 6px}
+    p{margin:0 0 12px}.lead{max-width:760px;color:#445671;font-size:17px}.muted{color:var(--muted)}.small{font-size:12px}
+    .banner{border:1px solid #f0d39a;background:#fff8e8;color:#68480d;border-radius:13px;padding:13px 16px;margin:18px 0 22px}
+    .banner strong{color:#533800}.banner p{margin:3px 0 0}.grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(4,minmax(0,1fr));margin:20px 0}
+    .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:19px;box-shadow:0 3px 12px #0b2a5208}
+    .stat b{display:block;color:var(--navy);font-size:28px;line-height:1.2}.stat span{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+    .columns{grid-template-columns:minmax(0,1.3fr) minmax(280px,.7fr)}.steps{display:grid;gap:10px}
+    .step{display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:start}.step-num{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#e9f0ff;color:var(--blue);font-weight:700}
+    .step p{color:var(--muted);font-size:13px;margin:0}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:13px}
+    .flow button{min-height:116px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;text-align:left;color:var(--navy)}
+    .flow button:hover{border-color:var(--blue);box-shadow:0 4px 16px #1557d615}.flow b{display:block;margin:8px 0 2px}.flow span{font-size:12px;color:var(--muted)}
+    .step-icon{display:grid;place-items:center;background:#edf3ff;color:var(--blue);width:32px;height:32px;border-radius:10px;font-weight:700}
+    .page{display:none}.page.active{display:block}.controls{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.btn{border:0;border-radius:10px;background:var(--blue);color:#fff;font-weight:700;padding:11px 16px;min-height:44px}
+    .btn.secondary{background:#fff;border:1px solid var(--line);color:var(--navy)}.btn.danger{background:#fff;color:var(--red);border:1px solid #efc3ca}
+    .btn:focus-visible,.nav button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #ffbf47;outline-offset:2px}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px;background:#fff}table{width:100%;border-collapse:collapse;min-width:670px}
+    th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:middle}th{background:#f8faff;color:#50627b;font-size:12px;font-weight:700}
+    td{font-size:13px}tr:last-child td{border-bottom:0}.tag{display:inline-flex;padding:4px 9px;border-radius:99px;font-weight:700;font-size:11px;background:#edf1f7;color:#47566d}
+    .tag.pending,.tag.warning{color:var(--amber);background:#fff1cf}.tag.approved,.tag.healthy{color:var(--green);background:#e2f5e9}.tag.rejected,.tag.expired,.tag.critical{color:var(--red);background:#fde8eb}
+    .tag.proposed{color:#364b72;background:#eaf0fb}.shop-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+    .shop-card+.shop-card{margin-top:12px}.shop-meta{color:var(--muted);font-size:13px}.lot-info{padding:13px;border:1px solid var(--line);border-radius:12px;background:#fbfcff;margin-top:14px}
+    .outcomes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}.outcomes button{min-height:48px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--navy);font-weight:700}
+    .outcomes button[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:#fff}.product-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .product{border:1px solid var(--line);border-radius:13px;padding:15px;background:#fff}.product .pic{height:62px;width:62px;border-radius:12px;background:#edf3ff;color:var(--blue);display:grid;place-items:center;font-size:24px;margin-bottom:12px}
+    .product p{font-size:12px;color:var(--muted);margin:0}.decision{display:grid;grid-template-columns:1fr 1fr;gap:10px}.decision label{display:block;font-weight:700;font-size:13px;margin-bottom:5px}
+    .decision input,.decision select{width:100%;height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fff}
+    .alert{padding:13px 15px;border-radius:12px;background:#eff5ff;color:#24436f;margin:14px 0}.footer-note{border-top:1px solid var(--line);margin-top:24px;padding-top:14px;color:var(--muted);font-size:12px}
+    dialog{width:min(520px,calc(100% - 28px));border:0;border-radius:18px;padding:24px;box-shadow:0 22px 80px #061a3a45;color:#15243b}
+    dialog::backdrop{background:#07172b88}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+    .mobile-toggle{display:none}.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 8px 28px #0b2a5233;z-index:6}
+    @media(max-width:1000px){.side{width:220px}main{margin-left:220px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.columns{grid-template-columns:1fr}.flow{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:700px){.side{width:min(300px,86vw);transform:translateX(-102%);transition:transform .2s ease}.side.open{transform:translateX(0);box-shadow:10px 0 40px #07172b55}main{margin-left:0}.mobile-toggle{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--navy);font-size:20px}.top{justify-content:flex-start}.user{margin-left:auto}.wrap{padding-top:22px}.product-list{grid-template-columns:repeat(2,minmax(0,1fr))}.shop-card{grid-template-columns:1fr}.shop-card .btn{width:100%}}
+    @media(max-width:430px){.stats{gap:9px}.stat{padding:14px}.stat b{font-size:23px}.flow{gap:8px}.flow button{padding:11px}.outcomes{grid-template-columns:repeat(2,1fr)}.decision{grid-template-columns:1fr}.product-list{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="side" id="sidebar">
+      <div class="brand"><span class="mark" aria-hidden="true">B</span><span>Box for Less<br><small style="font-weight:400;color:#c4d2e6">CEO decision walkthrough</small></span></div>
+      <p class="flag">CONCEPT ONLY · NOT LIVE</p>
+      <div class="nav-label">Walkthrough</div>
+      <nav class="nav" aria-label="Demo screens">
+        <button class="active" data-page="overview" aria-current="page"><span aria-hidden="true">◫</span> Overview</button>
+        <button data-page="rep"><span aria-hidden="true">◉</span> 1 · Rep visit</button>
+        <button data-page="manager"><span aria-hidden="true">✓</span> 2 · Manager review</button>
+        <button data-page="customer"><span aria-hidden="true">▦</span> 3 · Customer view</button>
+        <button data-page="stock"><span aria-hidden="true">▤</span> 4 · Expiry & returns</button>
+        <button data-page="decision"><span aria-hidden="true">?</span> CEO decision</button>
+      </nav>
+      <div class="side-foot">No prices shown. No live records changed.<br>Sample figures are illustrative and need validation.</div>
+    </aside>
+    <main>
+      <header class="top">
+        <button class="mobile-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+        <div class="crumb">Box for Less <span aria-hidden="true">/</span> <span id="crumb">Overview</span></div>
+        <div class="user">CEO review copy</div>
+      </header>
+      <div class="wrap">
+        <section class="page active" id="page-overview" aria-labelledby="title-overview">
+          <p class="eyebrow">Decision preview · interactive prototype</p>
+          <h1 id="title-overview">A safer way to manage short-dated stock</h1>
+          <p class="lead">Walk through a possible process from a shop visit to a manager decision, customer visibility and expiry follow-up—then decide whether the business should proceed.</p>
+          <div class="banner"><strong>Approval is being requested—not assumed.</strong><p>This is a local prototype with no live customer or Odoo connection. The product/customer examples and sample quantities came from the proposal notes; they have not been checked against the current export. No prices are displayed.</p></div>
+          <div class="grid stats">
+            <div class="card stat"><b>4</b><span>sample customer names</span></div>
+            <div class="card stat"><b>10</b><span>sample products</span></div>
+            <div class="card stat"><b>1,150</b><span>sample cartons in notes</span></div>
+            <div class="card stat"><b>0</b><span>live records changed</span></div>
+          </div>
+          <div class="grid columns">
+            <div class="card">
+              <h2>Click through the proposed workflow</h2>
+              <div class="flow">
+                <button data-go="rep"><span class="step-icon">1</span><b>Rep records visit</b><span>Checks a lot and selects an outcome.</span></button>
+                <button data-go="manager"><span class="step-icon">2</span><b>Manager reviews</b><span>Approves or rejects a request.</span></button>
+                <button data-go="customer"><span class="step-icon">3</span><b>Customer sees status</b><span>Only an approved example is shown.</span></button>
+                <button data-go="stock"><span class="step-icon">4</span><b>Team follows up</b><span>Tracks expiry and expected returns.</span></button>
+              </div>
+            </div>
+            <div class="card">
+              <h2>Sample allocation from proposal</h2>
+              <div class="steps">
+                <div class="step"><span class="step-num">400</span><div><h3>Sweet Jesus</h3><p>3 sample product rows</p></div></div>
+                <div class="step"><span class="step-num">250</span><div><h3>Agnes Prempeh</h3><p>2 sample product rows</p></div></div>
+                <div class="step"><span class="step-num">250</span><div><h3>Vicbon Enterprise</h3><p>5 illustrative rows</p></div></div>
+                <div class="step"><span class="step-num">250</span><div><h3>Nestap Ent.</h3><p>5 illustrative rows</p></div></div>
+              </div>
+              <p class="footer-note">Known quantities were copied from the proposal. Remaining allocations are illustrative. This is not an Odoo import or verified stock report.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="page-rep" aria-labelledby="title-rep">
+          <p class="eyebrow">Step 1 · Sales rep view</p><h1 id="title-rep">Record a shop visit</h1>
+          <p class="lead">A rep checks a short-dated lot, records what happened and submits a discount request for manager review. This prototype does not submit anything to the server.</p>
+          <div class="banner"><strong>Prototype data</strong><p>Sweet Jesus and the product/quantity examples below are from the proposal notes, not verified against an uploaded Odoo export.</p></div>
+          <div class="card shop-card"><div><h2>Sweet Jesus</h2><div class="shop-meta">Sample customer · sample ref SJ-DEMO · Accra</div></div><button class="btn" id="startVisit">Open sample visit</button></div>
+          <div class="card" id="visitPanel" hidden>
+            <h2>Visit · sample lot L-SJ-014</h2>
+            <div class="shop-meta">Senac 375ml · 200 cartons from supplied example · expiry band: Critical (illustrative)</div>
+            <div class="lot-info"><b>Choose one outcome</b><div class="outcomes" role="group" aria-label="Visit outcome">
+              <button type="button" data-outcome="Sold out" aria-pressed="false">Sold out</button><button type="button" data-outcome="Discount" aria-pressed="false">Request discount</button><button type="button" data-outcome="Return" aria-pressed="false">Return expected</button><button type="button" data-outcome="Not checked" aria-pressed="false">Not checked</button>
+            </div><p class="small muted" id="outcomeHelp" aria-live="polite">Choose an outcome to preview the next step.</p></div>
+            <div class="controls"><button class="btn secondary" id="saveVisit">Preview saved visit</button><button class="btn secondary" data-go="manager">See manager review →</button></div>
+          </div>
+          <div class="alert">Proposed guardrail: the rep records observations; only an authorized manager makes a discount decision.</div>
+        </section>
+
+        <section class="page" id="page-manager" aria-labelledby="title-manager">
+          <p class="eyebrow">Step 2 · Manager view</p><h1 id="title-manager">Review discount requests</h1>
+          <p class="lead">Pending items can be approved or rejected with a reason. This demonstrates a proposed control—not a live approval capability.</p>
+          <div class="banner"><strong>Requires CEO policy approval.</strong><p>The decision and percentage below exist only in this browser session and are not saved.</p></div>
+          <div class="table-wrap"><table><thead><tr><th>Rep</th><th>Customer</th><th>Product · lot</th><th>Expiry</th><th>On shelf</th><th>Status</th><th>Action</th></tr></thead><tbody id="requestRows">
+            <tr data-request="1"><td>Kwame Mensah (demo)</td><td>Sweet Jesus</td><td>Senac 375ml · SJ-014</td><td>25 Oct 2026*</td><td>64 cartons*</td><td><span class="tag pending status">Pending</span></td><td><button class="btn review" data-request-id="1">Review</button></td></tr>
+            <tr data-request="2"><td>Abena Owusu (demo)</td><td>Agnes Prempeh</td><td>St Peters Communion · AP-032</td><td>05 Nov 2026*</td><td>22 cartons*</td><td><span class="tag approved status">Approved · 10%</span></td><td><button class="btn secondary" disabled>Recorded</button></td></tr>
+            <tr data-request="3"><td>Yaw Boateng (demo)</td><td>Vicbon Enterprise</td><td>Zomba Sparkling · VB-009</td><td>10 Nov 2026*</td><td>0 cartons*</td><td><span class="tag rejected status">Rejected · sample</span></td><td><button class="btn secondary" disabled>Recorded</button></td></tr>
+          </tbody></table></div>
+          <p class="footer-note">*All names, lot IDs, dates and shelf counts in this table are fictional/illustrative. Percentages are workflow examples only, not approved policy.</p>
+        </section>
+
+        <section class="page" id="page-customer" aria-labelledby="title-customer">
+          <p class="eyebrow">Step 3 · Customer view preview</p><h1 id="title-customer">Show approved status—never a pending request</h1>
+          <p class="lead">The proposed customer experience is intentionally scoped: only an approved item would appear to its eligible customer. No product price is shown in this decision demo.</p>
+          <div class="banner"><strong>Not a live catalogue.</strong><p>These cards are illustrative. Customer-specific data, availability and any price display require separate server-side controls and approval.</p></div>
+          <div class="card"><div class="shop-meta">Customer preview · Sweet Jesus · sample product only</div><div class="product-list" style="margin-top:14px">
+            <article class="product"><div class="pic" aria-hidden="true">▣</div><h3>Senac 375ml</h3><p>Pack: sample carton · status: approved sample</p><span class="tag proposed">10% demo discount</span></article>
+            <article class="product"><div class="pic" aria-hidden="true">▣</div><h3>Senac 750ml</h3><p>Pack: sample carton · no approved sample</p><span class="tag">Regular catalogue item</span></article>
+            <article class="product"><div class="pic" aria-hidden="true">▣</div><h3>Senac Communion</h3><p>Pack: sample carton · sample expiry follow-up</p><span class="tag warning">Not customer-visible yet</span></article>
+          </div></div>
+          <div class="alert">Decision needed: should customers ever see approved short-dated offers? If yes, confirm eligibility, price source, wording and expiry/return rules first.</div>
+        </section>
+
+        <section class="page" id="page-stock" aria-labelledby="title-stock">
+          <p class="eyebrow">Step 4 · Staff follow-up</p><h1 id="title-stock">Expiry bands and returns</h1>
+          <p class="lead">A single view can help teams prioritize follow-up and classify return expectations. Values below are illustrations, not stock truth.</p>
+          <div class="banner"><strong>Illustrative dates and counts.</strong><p>Expiry bands and sample quantities must be reconciled with Odoo before operational use. No stock values are written back.</p></div>
+          <div class="table-wrap"><table><thead><tr><th>Product</th><th>Customer</th><th>Sample lot</th><th>Expiry date</th><th>Days left*</th><th>Band</th><th>Follow-up</th></tr></thead><tbody>
+            <tr><td>Senac 375ml</td><td>Sweet Jesus</td><td>SJ-014</td><td>10 Oct 2026*</td><td>-11</td><td><span class="tag expired">Expired · sample</span></td><td>Review with manager</td></tr>
+            <tr><td>Senac 750ml</td><td>Sweet Jesus</td><td>SJ-016</td><td>25 Oct 2026*</td><td>4</td><td><span class="tag critical">Critical · sample</span></td><td>Rep visit due</td></tr>
+            <tr><td>Zomba Sparkling</td><td>Agnes Prempeh</td><td>AP-032</td><td>12 Nov 2026*</td><td>22</td><td><span class="tag warning">Warning · sample</span></td><td>Plan follow-up</td></tr>
+            <tr><td>Juver Big</td><td>Vicbon Enterprise</td><td>VB-019</td><td>14 Mar 2027*</td><td>144</td><td><span class="tag healthy">Healthy · sample</span></td><td>Routine</td></tr>
+          </tbody></table></div>
+          <div class="card" style="margin-top:16px"><h2>Return classification (concept)</h2><p><span class="tag pending">Return expected · sample</span> Sweet Jesus · Senac 375ml · awaiting staff classification: damaged, expired or other.</p><button class="btn secondary" id="classifyReturn">Preview classification</button></div>
+        </section>
+
+        <section class="page" id="page-decision" aria-labelledby="title-decision">
+          <p class="eyebrow">Approval request</p><h1 id="title-decision">What decision is needed?</h1>
+          <p class="lead">This walkthrough is intended to make the proposal concrete. Choosing to explore it does not activate pricing or change how staff or customers use the live system.</p>
+          <div class="grid columns">
+            <div class="card"><h2>Decisions requested</h2><div class="steps">
+              <div class="step"><span class="step-num">1</span><div><h3>Authorize a controlled pilot?</h3><p>Limit to named users, sample customers and a defined review period.</p></div></div>
+              <div class="step"><span class="step-num">2</span><div><h3>Who may approve a discount?</h3><p>Confirm role, percentage limits, rejection reasons and audit requirements.</p></div></div>
+              <div class="step"><span class="step-num">3</span><div><h3>What can a customer see?</h3><p>Decide eligibility, any price display, expiry language and return rules.</p></div></div>
+              <div class="step"><span class="step-num">4</span><div><h3>How should Odoo remain authoritative?</h3><p>Confirm which records are read-only and whether a BFL-only workflow is acceptable.</p></div></div>
+              <div class="step"><span class="step-num">5</span><div><h3>Who owns go-live approval?</h3><p>Document the approver, date, scope and safeguards before implementation.</p></div></div>
+            </div></div>
+            <div class="card"><h2>Before any live build</h2><p>Request written approval covering the exact screens, audiences, price source and discount authority.</p>
+              <p>Provide the authorized Odoo export to validate real product and customer records; use only permitted fields.</p>
+              <p>Complete backend access controls, privacy review, audit/history, tests and an explicit go-live sign-off.</p>
+              <div class="alert">Current demo state: concept only · not connected to Odoo · not connected to live customer data.</div>
+              <button class="btn" data-go="overview">Restart walkthrough</button>
+            </div>
+          </div>
+        </section>
+        <p class="footer-note">Box for Less · CEO decision walkthrough · Proposal examples as provided, unverified · No live data/API writes · No prices shown</p>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="reviewDialog" aria-labelledby="reviewTitle">
+    <form method="dialog" id="reviewForm">
+      <p class="eyebrow">Local prototype action</p><h2 id="reviewTitle">Review sample request</h2>
+      <p id="reviewSummary" class="muted"></p>
+      <div class="decision">
+        <div><label for="percent">Illustrative discount percent</label><input id="percent" type="number" min="1" max="90" value="10"></div>
+        <div><label for="reason">Decision reason (required to reject)</label><input id="reason" type="text" placeholder="Enter a sample reason"></div>
+      </div>
+      <p class="small muted" style="margin-top:10px">This percentage is a demonstration only; it is not approved policy or a product price.</p>
+      <div class="dialog-actions"><button class="btn secondary" value="cancel">Cancel</button><button class="btn danger" id="rejectBtn" type="button">Reject</button><button class="btn" id="approveBtn" type="button">Approve sample</button></div>
+    </form>
+  </dialog>
+  <script>
+    (() => {
+      const pages = [...document.querySelectorAll('.page')];
+      const navButtons = [...document.querySelectorAll('.nav button[data-page]')];
+      const crumb = document.getElementById('crumb');
+      const labels = {overview:'Overview',rep:'Rep visit',manager:'Manager review',customer:'Customer view',stock:'Expiry & returns',decision:'CEO decision'};
+      const sidebar = document.getElementById('sidebar');
+      const menuToggle = document.getElementById('menuToggle');
+      let selectedRequest = null;
+      let approvedPercent = 10;
+
+      function go(name) {
+        if (!labels[name]) return;
+        pages.forEach((page) => { page.classList.toggle('active', page.id === `page-${name}`); });
+        navButtons.forEach((button) => {
+          const active = button.dataset.page === name;
+          button.classList.toggle('active', active);
+          if (active) button.setAttribute('aria-current', 'page');
+          else button.removeAttribute('aria-current');
+        });
+        crumb.textContent = labels[name];
+        sidebar.classList.remove('open');
+        menuToggle.setAttribute('aria-expanded','false');
+        window.scrollTo(0,0);
+      }
+      document.addEventListener('click', (event) => {
+        const nav = event.target.closest('[data-page],[data-go]');
+        if (!nav) return;
+        go(nav.dataset.page || nav.dataset.go);
+      });
+      menuToggle.addEventListener('click', () => {
+        const open = sidebar.classList.toggle('open');
+        menuToggle.setAttribute('aria-expanded',String(open));
+      });
+
+      const visitPanel = document.getElementById('visitPanel');
+      document.getElementById('startVisit').addEventListener('click', () => {
+        visitPanel.hidden = false;
+        document.getElementById('startVisit').textContent = 'Sample visit opened';
+        visitPanel.scrollIntoView({behavior:'smooth',block:'nearest'});
+      });
+      document.querySelectorAll('[data-outcome]').forEach((button) => button.addEventListener('click', () => {
+        document.querySelectorAll('[data-outcome]').forEach((other) => other.setAttribute('aria-pressed',String(other === button)));
+        const messages = {
+          'Sold out':'Preview: record the lot as checked and sold.',
+          'Discount':'Preview: send a pending request to the manager; the rep does not choose the final decision.',
+          'Return':'Preview: mark return expected for staff classification.',
+          'Not checked':'Preview: keep the alert open and set a follow-up reminder.',
+        };
+        document.getElementById('outcomeHelp').textContent = messages[button.dataset.outcome];
+      }));
+      document.getElementById('saveVisit').addEventListener('click', () => showToast('Sample only — no visit was saved.'));
+      document.getElementById('classifyReturn').addEventListener('click', () => showToast('Prototype only — return not classified.'));
+
+      const dialog = document.getElementById('reviewDialog');
+      const percent = document.getElementById('percent');
+      const reason = document.getElementById('reason');
+      const summary = document.getElementById('reviewSummary');
+      document.querySelectorAll('.review').forEach((button) => button.addEventListener('click', () => {
+        selectedRequest = document.querySelector(`tr[data-request="${button.dataset.requestId}"]`);
+        summary.textContent = `${selectedRequest.cells[0].textContent} · ${selectedRequest.cells[1].textContent} · ${selectedRequest.cells[2].textContent}`;
+        percent.value = '10';
+        reason.value = '';
+        dialog.showModal();
+        percent.focus();
+      }));
+      document.getElementById('approveBtn').addEventListener('click', () => {
+        const value = Number(percent.value);
+        if (!Number.isInteger(value) || value < 1 || value > 90) {
+          percent.setCustomValidity('Enter a whole number from 1 to 90.');
+          percent.reportValidity();
+          percent.addEventListener('input', () => percent.setCustomValidity(''), {once:true});
+          return;
+        }
+        if (value > 50 && !window.confirm('This is only a prototype. Preview an illustrative decision above 50%?')) return;
+        approvedPercent = value;
+        setDecision('approved',`Approved · ${value}%`);
+      });
+      document.getElementById('rejectBtn').addEventListener('click', () => {
+        if (!reason.value.trim()) {
+          reason.setCustomValidity('Enter a reason for this sample rejection.');
+          reason.reportValidity();
+          reason.addEventListener('input', () => reason.setCustomValidity(''), {once:true});
+          return;
+        }
+        setDecision('rejected','Rejected · sample');
+      });
+      function setDecision(state, label) {
+        if (!selectedRequest) return;
+        const status = selectedRequest.querySelector('.status');
+        status.className = `tag ${state} status`;
+        status.textContent = label;
+        const action = selectedRequest.querySelector('.review');
+        if (action) { action.textContent = 'Recorded'; action.disabled = true; action.className = 'btn secondary'; action.removeAttribute('data-request-id'); }
+        const customerTag = document.querySelector('#page-customer .product .tag');
+        customerTag.className = `tag ${state}`;
+        customerTag.textContent = state === 'approved' ? `${approvedPercent}% demo discount` : 'Sample request rejected';
+        dialog.close();
+        showToast(`Prototype decision shown: ${label}. Nothing was saved.`);
+      }
+      function showToast(message) {
+        const old = document.querySelector('.toast');
+        if (old) old.remove();
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.setAttribute('role','status');
+        toast.textContent = message;
+        document.body.append(toast);
+        window.setTimeout(() => toast.remove(),3200);
+      }
+      go('overview');
+    })();
+  </script>
+</body>
+</html>

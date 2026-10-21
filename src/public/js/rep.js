@@ -40,13 +40,13 @@ function toast(text) {
 let repName = '';
 
 async function signOut() {
-  await fetch('/api/rep/logout', { method: 'POST' }).catch(() => {});
+  await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   location.href = '/rep/login';
 }
 
 /* ---------- Screen 1: My visits ---------- */
 async function renderHome() {
-  const list = h('div');
+  const list = h('div', { class: 'rp-shop-grid' });
   const tiles = h('div', { class: 'rp-tiles' });
   const heading = h('h2', { class: 'rp-h' }, 'Shops');
   let timer;

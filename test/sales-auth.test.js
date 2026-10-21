@@ -53,20 +53,18 @@ after(async () => {
   }
 });
 
-test('the sales sign-in page is its own page, wired to the sales API', async () => {
-  const res = await fetch(`${baseUrl}/sales/login`);
-  const html = await res.text();
-  assert.equal(res.status, 200);
-  assert.match(html, /Sales Manager/);
-  assert.match(html, /data-login="\/api\/sales\/login"/);
-  assert.match(html, /data-home="\/sales"/);
-  assert.doesNotMatch(html, /Staff sign in to/);
+test('the sales sign-in route redirects to the universal sign-in page', async () => {
+  const res = await fetch(`${baseUrl}/sales/login`, { redirect: 'manual' });
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get('location'), '/login.html?next=%2Fsales');
+  const html = await fetch(`${baseUrl}/login.html`).then((r) => r.text());
+  assert.match(html, /ONE SIGN-IN · ALL BOX FOR LESS ACCOUNTS/);
 });
 
 test('/sales needs a sales session and is not reachable with the admin session', async () => {
   const anon = await fetch(`${baseUrl}/sales`, { redirect: 'manual' });
   assert.equal(anon.status, 302);
-  assert.equal(anon.headers.get('location'), '/sales/login');
+  assert.equal(anon.headers.get('location'), '/login.html?next=%2Fsales');
 
   const shell = await fetch(`${baseUrl}/sales.html`, { redirect: 'manual' });
   assert.equal(shell.status, 302, 'the shell file is not served directly');
@@ -74,6 +72,7 @@ test('/sales needs a sales session and is not reachable with the admin session',
   const adminCookie = await signIn('/api/staff/login', admin);
   const asAdmin = await fetch(`${baseUrl}/sales`, { headers: { Cookie: adminCookie }, redirect: 'manual' });
   assert.equal(asAdmin.status, 302);
+  assert.equal(asAdmin.headers.get('location'), '/login.html?next=%2Fsales');
 
   const salesCookie = await signIn('/api/sales/login', sales);
   const asSales = await fetch(`${baseUrl}/sales`, { headers: { Cookie: salesCookie } });
@@ -85,7 +84,7 @@ test('a sales session cannot open the admin app or admin API', async () => {
   const salesCookie = await signIn('/api/sales/login', sales);
   const page = await fetch(`${baseUrl}/index.html`, { headers: { Cookie: salesCookie }, redirect: 'manual' });
   assert.equal(page.status, 302);
-  assert.match(page.headers.get('location'), /^\/staff\/login/);
+  assert.equal(page.headers.get('location'), '/login.html?next=%2Findex.html');
   const api = await fetch(`${baseUrl}/api/requests`, { headers: { Cookie: salesCookie } });
   assert.equal(api.status, 401);
   const products = await fetch(`${baseUrl}/api/products`, { headers: { Cookie: salesCookie } });
@@ -106,7 +105,28 @@ test('the sales API needs a sales session; the admin session does not work on it
   assert.doesNotMatch(JSON.stringify(body), /price|amount|pricelist|credit|phone/i);
 });
 
-test('sales credentials only work on the sales sign-in, and sign-out ends the session', async () => {
+test('the CEO approval walkthrough is private, local-only and uses clearly labeled proposal examples', async () => {
+  const anon = await fetch(`${baseUrl}/approval-demo`, { redirect: 'manual' });
+  assert.equal(anon.status, 302);
+  assert.equal(anon.headers.get('location'), '/login.html?next=%2Fapproval-demo');
+
+  for (const credentials of [admin, sales]) {
+    const cookie = await signIn(credentials === admin ? '/api/staff/login' : '/api/sales/login', credentials);
+    const response = await fetch(`${baseUrl}/approval-demo`, { headers: { Cookie: cookie } });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow');
+    const html = await response.text();
+    assert.match(html, /CONCEPT ONLY · NOT LIVE/);
+    assert.match(html, /not been checked against the current export/);
+    assert.match(html, /No live records changed/);
+    assert.match(html, /Sweet Jesus/);
+    assert.match(html, /1,150/);
+    assert.doesNotMatch(html, /GH₵|GH¢|\\bGH₵\\s*\\d/i);
+  }
+});
+
+test('sales credentials only create a sales session, and sign-out ends the session', async () => {
   const wrong = await post('/api/staff/login', sales);
   assert.equal(wrong.status, 401, 'sales credentials are not admin credentials');
   const wrong2 = await post('/api/sales/login', admin);

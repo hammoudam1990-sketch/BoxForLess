@@ -6,10 +6,11 @@
 import { listRequests } from './requests.js';
 import { listAccessRequests } from './access-requests.js';
 import { reviewCounts } from './review.js';
+import config from '../config.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WITHDRAWN = 'DELETED';
-const WINDOWS = [7, 30, 90];
+const WINDOWS = [7, 14, 30, 90];
 
 const dayKey = (t) => new Date(t).toISOString().slice(0, 10);
 
@@ -45,6 +46,7 @@ export function salesOverview(db, { days = 30, now = new Date() } = {}) {
 
   const byDay = new Map(db.prepare(
     `SELECT substr(r.submitted_at, 1, 10) AS day, COUNT(*) AS requests,
+            SUM(CASE WHEN r.status = 'ACCEPTED' THEN 1 ELSE 0 END) AS accepted,
             COALESCE(SUM((SELECT COALESCE(SUM(i.quantity_ctn), 0) FROM request_items i WHERE i.request_id = r.id)), 0) AS cartons
        FROM requests r
       WHERE COALESCE(r.status, '') != ? AND r.submitted_at >= ? AND r.submitted_at < ?
@@ -53,8 +55,24 @@ export function salesOverview(db, { days = 30, now = new Date() } = {}) {
   const series = Array.from({ length: span }, (_, i) => {
     const date = dayKey(end - (span - i) * DAY_MS);
     const hit = byDay.get(date);
-    return { date, requests: hit?.requests || 0, cartons: hit?.cartons || 0 };
+    return { date, requests: hit?.requests || 0, accepted: hit?.accepted || 0, cartons: hit?.cartons || 0 };
   });
+
+  const todayStart = new Date(end - DAY_MS).toISOString();
+  const today = windowTotals(db, todayStart, endIso);
+  const activeCustomers = db.prepare('SELECT COUNT(*) AS n FROM customers WHERE is_active = 1').get().n;
+  const inventory = db.prepare(
+    `SELECT COUNT(*) AS total,
+            SUM(CASE WHEN free_to_use > ? THEN 1 ELSE 0 END) AS inStock,
+            SUM(CASE WHEN free_to_use > ? AND free_to_use <= ? THEN 1 ELSE 0 END) AS limited,
+            SUM(CASE WHEN free_to_use <= ? THEN 1 ELSE 0 END) AS outOfStock
+       FROM products WHERE is_active = 1`
+  ).get(
+    config.stock.limitedAtOrBelow,
+    config.stock.outOfStockAtOrBelow,
+    config.stock.limitedAtOrBelow,
+    config.stock.outOfStockAtOrBelow,
+  );
 
   const topCustomers = db.prepare(
     `SELECT COALESCE(c.name, r.unlisted_company, r.unlisted_contact, 'Unnamed customer') AS name,
@@ -101,6 +119,7 @@ export function salesOverview(db, { days = 30, now = new Date() } = {}) {
     reference: r.reference,
     customer: r.customer?.displayName || r.customer_name || 'Unnamed customer',
     lines: r.item_count,
+    cartons: r.cartons,
     status: r.status,
     submittedAt: r.submitted_at,
   }));
@@ -109,6 +128,14 @@ export function salesOverview(db, { days = 30, now = new Date() } = {}) {
     days: span,
     current,
     previous,
+    today,
+    activeCustomers,
+    inventory: {
+      total: inventory.total || 0,
+      inStock: inventory.inStock || 0,
+      limited: inventory.limited || 0,
+      outOfStock: inventory.outOfStock || 0,
+    },
     series,
     topCustomers,
     topProducts,

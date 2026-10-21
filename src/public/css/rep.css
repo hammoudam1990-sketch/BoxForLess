@@ -1,4 +1,4 @@
-/* Sales rep phone app. Self-contained, mobile first. */
+/* Sales rep app. Mobile first, with a full-width desktop workspace. */
 :root {
   --navy: #0b2a52; --navy-2: #123f78; --blue: #1557d6; --ink: #14233b; --muted: #61728a;
   --line: #dfe6f0; --bg: #f2f6fb; --card: #fff;
@@ -80,3 +80,20 @@ h2.rp-h small { font-weight: 400; color: var(--muted); font-size: 13px; }
 .rp-check { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; font-size: 14px; }
 .rp-check input { width: 20px; height: 20px; margin-top: 1px; }
 .rp-count { text-align: center; color: var(--muted); font-size: 13px; margin: 6px 0 10px; }
+
+@media (min-width: 768px) {
+  body.rep { min-height: 100vh; background: var(--bg); }
+  .rep-app { width: 100%; max-width: none; min-height: 100vh; padding-bottom: 40px; }
+  .rp-head { padding: 22px clamp(24px, 4vw, 64px) 20px; border-radius: 0; }
+  .rp-head > .row, .rp-head > h1, .rp-head > p { max-width: 1680px; margin-left: auto; margin-right: auto; }
+  .rp-head h1 { margin-top: 18px; }
+  .rp-body { width: 100%; max-width: 1680px; margin: 0 auto; padding: 24px clamp(24px, 4vw, 64px); }
+  .rp-search { max-width: 640px; margin-bottom: 20px; }
+  .rp-tiles { max-width: 820px; gap: 14px; margin-bottom: 24px; }
+  .rp-tile { padding: 16px 12px; font-size: 13px; }
+  .rp-tile b { font-size: 26px; }
+  .rp-shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); align-items: stretch; gap: 16px; }
+  .rp-shop-grid .rp-card { height: 100%; margin-bottom: 0; }
+  .rp-shop-grid .rp-shop { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .rp-form { max-width: 1240px; }
+}

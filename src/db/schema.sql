@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS import_batches (
   filename             TEXT NOT NULL,
   file_hash            TEXT,
   stored_path          TEXT,
+  source_file_deleted_at TEXT,
   imported_at          TEXT NOT NULL,     -- when preview was created
   confirmed_at         TEXT,
   completed_at         TEXT,

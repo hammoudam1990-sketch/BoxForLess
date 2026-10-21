@@ -50,10 +50,16 @@ endpoints fail closed. Keep these values in the hosting provider's secret
 settings; never commit them to this repository. Customer browsing and request
 submission continue to work without a staff account.
 
-The public `/login.html` page is currently a frontend-only visual preview: it
-does not submit credentials or establish a session. `/staff/login` forwards to
-that page. The existing staff API and protection remain in place, but staff
-credential entry is not available through this preview UI.
+The public `/login.html` page is the shared sign-in entry point. Customer
+accounts are detected in the browser; configured admin, Sales Manager, and Sales
+Rep credentials are detected by the server and routed to the matching workspace.
+The role-specific login URLs forward to this page, while each dashboard and API
+continues to enforce its own signed role session.
+
+The Sales Manager workspace at `/sales` provides a read-only dashboard for request
+activity, customer counts, product availability, recent imports, and request details.
+Request and report exports are available there; approving requests and changing
+product or customer data remain admin-only.
 
 ### Import the Odoo export
 
@@ -81,8 +87,23 @@ node scripts/make-fixtures.js   # regenerate fixtures/sample-products.xlsx (read
 - **Repeatable imports**: new products created, existing updated, missing ones **marked inactive (never deleted)**.
 - **Human-in-the-loop safety**: barcode and UoM changes are **flagged for review**, never applied silently.
 - **Full audit trail**: every import is a batch; every effect is a change-log row.
-- **Admin UI**: Product Master (search + filters), Imports (history + preview/confirm), Change Review (accept/reject).
+- **Source-file cleanup**: Admins can delete the application's stored copy after an import is complete or failed. The import batch and change log remain; a pending preview keeps its source file until it is confirmed.
+- **Admin UI**: Product Master (search + filters), Imports (history + preview/confirm/source-file cleanup), Change Review (accept/reject).
 - **Stock status** (IN / LIMITED / OUT) is **computed on read** — ready for the customer catalog with no schema change.
+
+## Staff workspace pages
+
+The staff sidebar opens live, read-only views over data this application actually stores:
+
+- Quotations lists existing local quotation records; it does not create or send Odoo quotations.
+- Product Visibility reports the current active/inactive catalogue policy. Customer-specific visibility rules are not configured.
+- Stock & Expiry classifies local delivery lots into expiry bands. It does not change inventory, and those lots are not an Odoo feed.
+- Users & Roles shows whether each deployment role is configured without exposing account names or credentials. Accounts are still configured through environment variables.
+- Settings reports current stock thresholds and data counts. It is read-only.
+- Sync Logs combines product/customer import history; it is not an automatic Odoo sync monitor.
+- Invoices, Payments, and Credit & Balances require a verified Odoo data source. These pages intentionally show no fabricated financial records.
+
+Odoo quotations, financial records, customer-specific visibility, user administration, editable settings, automatic sync, and Odoo delivery-lot imports require additional approved data contracts/workflows before they can be represented as operational.
 
 ## Architecture at a glance
 
@@ -92,7 +113,7 @@ src/
   db/        schema.sql, connection.js, migrate.js
   domain/    constants.js, normalize.js, stock.js, products.js, review.js
   import/    reader → headers → validate → planner → commit → service
-  server/    index.js (Express) + routes/{products,imports,changes}.js
+  server/    index.js (Express) + routes/{products,imports,changes,admin-workspace}.js
   public/    index.html + css + js (plain JavaScript, no framework, no build step)
 scripts/     import-cli.js, data-quality-report.js, make-fixtures.js
 test/        36 tests covering the 18 required scenarios + edge cases

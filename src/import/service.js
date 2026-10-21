@@ -135,4 +135,66 @@ export function confirmImport(db, batchId, opts = {}) {
   }
 }
 
-export default { createPreview, confirmImport, toPreviewPayload };
+export function deleteImportSourceFile(db, batchId, { uploadsDir = config.uploadsDir } = {}) {
+  const id = Number(batchId);
+  if (!Number.isSafeInteger(id) || id < 1) {
+    const error = new Error('Import batch not found');
+    error.status = 404;
+    throw error;
+  }
+
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const batch = db.prepare(
+      'SELECT id, status, stored_path, source_file_deleted_at FROM import_batches WHERE id = ?'
+    ).get(id);
+    if (!batch) {
+      const error = new Error('Import batch not found');
+      error.status = 404;
+      throw error;
+    }
+    if (batch.status === ImportStatus.PREVIEW || batch.status === ImportStatus.CONFIRMED) {
+      const error = new Error('This source file is still required to confirm the import.');
+      error.status = 409;
+      throw error;
+    }
+
+    let wasPresent = false;
+    if (batch.stored_path) {
+      const root = path.resolve(uploadsDir);
+      const relative = path.relative(root, path.resolve(batch.stored_path));
+      if (!relative || relative.startsWith('..') || path.isAbsolute(relative)
+        || relative.includes(path.sep) || !path.basename(relative).startsWith(`${id}-`)) {
+        const error = new Error('The stored import file is outside the managed upload location.');
+        error.status = 409;
+        throw error;
+      }
+
+      try {
+        const uploadRoot = fs.realpathSync(root);
+        const fileStat = fs.lstatSync(batch.stored_path);
+        const fileRoot = fs.realpathSync(path.dirname(batch.stored_path));
+        if (!fileStat.isFile() || fileRoot !== uploadRoot) {
+          const error = new Error('The stored import file is not a regular file in the managed upload location.');
+          error.status = 409;
+          throw error;
+        }
+        fs.unlinkSync(batch.stored_path);
+        wasPresent = true;
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+    }
+
+    const deletedAt = batch.source_file_deleted_at || nowIso();
+    db.prepare('UPDATE import_batches SET stored_path = NULL, source_file_deleted_at = ? WHERE id = ?')
+      .run(deletedAt, id);
+    db.exec('COMMIT');
+    return { batchId: id, deletedAt, wasPresent };
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
+export default { createPreview, confirmImport, deleteImportSourceFile, toPreviewPayload };

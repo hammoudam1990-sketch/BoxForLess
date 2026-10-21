@@ -80,6 +80,9 @@ export function applyMigrations(db) {
   if (!columnsOf(db, 'products').includes('odoo_category_path')) {
     db.exec('ALTER TABLE products ADD COLUMN odoo_category_path TEXT');
   }
+  addColumns(db, 'import_batches', {
+    source_file_deleted_at: 'TEXT',
+  });
   db.exec('CREATE INDEX IF NOT EXISTS ix_products_category ON products(category_id)');
   db.exec('CREATE INDEX IF NOT EXISTS ix_products_odoo_category_path ON products(odoo_category_path)');
 

@@ -1,9 +1,9 @@
-// Staff sign-in for two separate dashboards, each with its own account and cookie:
+// Team sign-in uses one credential resolver, then keeps a separate session for each role:
 //   admin  — BFL_STAFF_USERNAME / BFL_STAFF_PASSWORD  -> the admin app (/index.html)
 //   sales  — BFL_SALES_USERNAME / BFL_SALES_PASSWORD  -> the Sales Manager dashboard (/sales)
 //   rep    — BFL_REP_USERNAME / BFL_REP_PASSWORD (+ optional BFL_REP_NAME)  -> the sales rep app (/rep)
 // All are signed with BFL_SESSION_SECRET. Credentials come from the host environment; no
-// password is stored in the database. A session for one role is never valid for the other.
+// password is stored in the database. A session for one role is never valid for another.
 import crypto from 'node:crypto';
 
 const SESSION_SECONDS = 8 * 60 * 60;
@@ -16,6 +16,7 @@ const ROLES = {
   rep: { cookie: 'bfl_rep_session', userVar: 'BFL_REP_USERNAME', passVar: 'BFL_REP_PASSWORD', label: 'Sales rep login' },
 };
 const attempts = { admin: new Map(), sales: new Map(), rep: new Map() };
+const unifiedAttempts = new Map();
 
 function settings(role = 'admin') {
   const r = ROLES[role];
@@ -46,6 +47,32 @@ function safeEqual(left, right) {
 }
 
 const isSecure = () => process.env.NODE_ENV === 'production' || process.env.BFL_COOKIE_SECURE === 'true';
+
+function issueSession(res, role, config, now = Date.now(), clearOtherRoles = false) {
+  const payload = Buffer.from(JSON.stringify({ user: config.username, role, exp: now + SESSION_SECONDS * 1000 })).toString('base64url');
+  const secure = isSecure() ? '; Secure' : '';
+  const cookies = clearOtherRoles
+    ? Object.entries(ROLES)
+      .filter(([otherRole]) => otherRole !== role)
+      .map(([, other]) => `${other.cookie}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`)
+    : [];
+  cookies.push(`${ROLES[role].cookie}=${payload}.${sign(payload, config.secret)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_SECONDS}${secure}`);
+  res.setHeader('Set-Cookie', clearOtherRoles ? cookies : cookies[0]);
+}
+
+function recordAttempt(bucket, ip, now) {
+  if (bucket.size > 500) {
+    for (const [key, value] of bucket) {
+      if (now - value.started >= LOGIN_WINDOW_MS) bucket.delete(key);
+    }
+  }
+  const prior = bucket.get(ip);
+  const recent = prior && now - prior.started < LOGIN_WINDOW_MS ? prior : { started: now, count: 0 };
+  if (recent.count >= LOGIN_MAX_ATTEMPTS) return false;
+  recent.count += 1;
+  bucket.set(ip, recent);
+  return true;
+}
 
 function hasSession(req, role) {
   const config = settings(role);
@@ -82,29 +109,55 @@ function login(role) {
     const bucket = attempts[role];
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
-    if (bucket.size > 500) {
-      for (const [key, value] of bucket) {
-        if (now - value.started >= LOGIN_WINDOW_MS) bucket.delete(key);
-      }
-    }
-    const prior = bucket.get(ip);
-    const recent = prior && now - prior.started < LOGIN_WINDOW_MS ? prior : { started: now, count: 0 };
-    if (recent.count >= LOGIN_MAX_ATTEMPTS) {
+    if (!recordAttempt(bucket, ip, now)) {
       return res.status(429).json({ error: 'Too many sign-in attempts. Please wait 15 minutes and try again.' });
     }
-    recent.count += 1;
-    bucket.set(ip, recent);
 
     const body = req.body || {};
     if (!safeEqual(body.username || '', config.username) || !safeEqual(body.password || '', config.password)) {
       return res.status(401).json({ error: 'Username or password is incorrect.' });
     }
     bucket.delete(ip);
-
-    const payload = Buffer.from(JSON.stringify({ user: config.username, role, exp: now + SESSION_SECONDS * 1000 })).toString('base64url');
-    res.setHeader('Set-Cookie', `${ROLES[role].cookie}=${payload}.${sign(payload, config.secret)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_SECONDS}${isSecure() ? '; Secure' : ''}`);
+    issueSession(res, role, config, now);
     res.json({ authenticated: true });
   };
+}
+
+export function unifiedLogin(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
+  const configured = Object.keys(ROLES)
+    .map((role) => [role, settings(role)])
+    .filter(([, config]) => config);
+  if (!configured.length) return res.status(503).json({ error: 'No staff accounts are configured on this server.' });
+
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  if (!recordAttempt(unifiedAttempts, ip, now)) {
+    return res.status(429).json({ error: 'Too many sign-in attempts. Please wait 15 minutes and try again.' });
+  }
+
+  const body = req.body || {};
+  const matches = configured.filter(([, config]) =>
+    safeEqual(body.username || '', config.username) && safeEqual(body.password || '', config.password));
+  if (matches.length > 1) {
+    return res.status(409).json({ error: 'These credentials match more than one team role. Ask an administrator to give each role a unique username or password.' });
+  }
+  if (!matches.length) {
+    return res.status(401).json({ error: 'The email, phone number, username or password is not correct.' });
+  }
+
+  const [role, config] = matches[0];
+  unifiedAttempts.delete(ip);
+  issueSession(res, role, config, now, true);
+  res.json({ authenticated: true, role });
+}
+
+export function unifiedLogout(_req, res) {
+  res.setHeader('Cache-Control', 'no-store');
+  const secure = isSecure() ? '; Secure' : '';
+  res.setHeader('Set-Cookie', Object.values(ROLES)
+    .map(({ cookie }) => `${cookie}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`));
+  res.status(204).end();
 }
 
 function logout(role) {
@@ -156,7 +209,7 @@ export const repLogout = logout('rep');
 export const requireRep = guard('rep', 'Please sign in to the sales rep app.');
 
 export default {
-  hasStaffSession, staffSessionStatus, staffLogin, staffLogout, requireStaff,
+  hasStaffSession, staffSessionStatus, staffLogin, staffLogout, requireStaff, unifiedLogin,
   hasSalesSession, salesSessionStatus, salesLogin, salesLogout, requireSales,
   hasRepSession, repSessionStatus, repLogin, repLogout, requireRep,
 };

@@ -14,9 +14,10 @@ import changesRouter from './routes/changes.js';
 import catalogRouter from './routes/catalog.js';
 import customerImportsRouter from './routes/customer-imports.js';
 import { customerRouter as requestsCustomerRouter, staffRouter as requestsStaffRouter } from './routes/requests.js';
-import { hasStaffSession, requireStaff, staffLogin, staffLogout, staffSessionStatus, hasSalesSession, requireSales, salesLogin, salesLogout, salesSessionStatus, hasRepSession, requireRep, repLogin, repLogout, repSessionStatus } from './staff-auth.js';
+import { hasStaffSession, requireStaff, staffLogin, staffLogout, staffSessionStatus, hasSalesSession, requireSales, salesLogin, salesLogout, salesSessionStatus, hasRepSession, requireRep, repLogin, repLogout, repSessionStatus, unifiedLogin, unifiedLogout } from './staff-auth.js';
 import salesRouter from './routes/sales.js';
 import repRouter from './routes/rep.js';
+import adminWorkspaceRouter from './routes/admin-workspace.js';
 import { enterAccessCode, accessStatus, exitAccess } from './customer-access.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -43,6 +44,8 @@ export function createApp(db) {
   app.get('/api/rep/session', repSessionStatus);
   app.post('/api/rep/login', repLogin);
   app.post('/api/rep/logout', repLogout);
+  app.post('/api/auth/login', unifiedLogin);
+  app.post('/api/auth/logout', unifiedLogout);
   app.use('/api/rep', requireRep, repRouter);
   // Customer access code — public by necessity: entering a code is how a customer
   // identifies themselves. Rate-limited per IP in customer-access.js.
@@ -51,6 +54,7 @@ export function createApp(db) {
   app.post('/api/catalog/access/exit', exitAccess);
   // Internal / admin API (Product Master) — unchanged.
   app.use('/api/products', requireStaff, productsRouter);
+  app.use('/api/admin-workspace', requireStaff, adminWorkspaceRouter);
   app.use('/api/imports', requireStaff, importsRouter);
   app.use('/api/reviews', requireStaff, changesRouter);
   // Customer-list import — staff only, and a separate audit from product imports.
@@ -81,7 +85,7 @@ export function createApp(db) {
   // The staff shell and scanner are private; the catalog remains public.
   const privatePage = (filename) => (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    if (!hasStaffSession(req)) return res.redirect(`/staff/login?next=${encodeURIComponent(req.path)}`);
+    if (!hasStaffSession(req)) return res.redirect(`/login.html?next=${encodeURIComponent(req.path)}`);
     res.sendFile(path.join(publicDir, filename));
   };
   // The front door: one public page linking to the catalogue, the staff app and the
@@ -89,32 +93,40 @@ export function createApp(db) {
   app.get('/', (_req, res) => res.sendFile(path.join(publicDir, 'home.html')));
   app.get('/index.html', privatePage('index.html'));
   app.get('/scan.html', privatePage('scan.html'));
-  app.get('/staff/login', (_req, res) => {
+  const unifiedLoginRedirect = (defaultNext) => (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.sendFile(path.join(publicDir, 'staff-login.html'));
-  });
-  // Sales Manager: a separate dashboard with its own sign-in. /sales.html is the shell file;
-  // send it through /sales so the session check is never skipped.
+    const next = req.query.next || defaultNext;
+    res.redirect(`/login.html?next=${encodeURIComponent(next)}`);
+  };
+  app.get('/staff/login', unifiedLoginRedirect('/index.html'));
+  app.get('/staff-login.html', unifiedLoginRedirect('/index.html'));
+  // Sales Manager keeps its own session; sign-in is shared and detects this role.
+  // /sales.html is the shell file, so send it through /sales for the session check.
   app.get('/sales.html', (_req, res) => res.redirect('/sales'));
   app.get('/sales', (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    if (!hasSalesSession(req)) return res.redirect('/sales/login');
+    if (!hasSalesSession(req)) return res.redirect('/login.html?next=%2Fsales');
     res.sendFile(path.join(publicDir, 'sales.html'));
   });
-  app.get('/sales/login', (_req, res) => {
-    res.setHeader('Cache-Control', 'no-store');
-    res.sendFile(path.join(publicDir, 'sales-login.html'));
-  });
-  // Sales rep phone app: separate sign-in; /rep.html is only the shell file.
+  app.get('/sales/login', unifiedLoginRedirect('/sales'));
+  app.get('/sales-login.html', unifiedLoginRedirect('/sales'));
+  // Sales rep phone app keeps its own session; /rep.html is only the shell file.
   app.get('/rep.html', (_req, res) => res.redirect('/rep'));
   app.get('/rep', (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    if (!hasRepSession(req)) return res.redirect('/rep/login');
+    if (!hasRepSession(req)) return res.redirect('/login.html?next=%2Frep');
     res.sendFile(path.join(publicDir, 'rep.html'));
   });
-  app.get('/rep/login', (_req, res) => {
+  app.get('/rep/login', unifiedLoginRedirect('/rep'));
+  app.get('/rep-login.html', unifiedLoginRedirect('/rep'));
+
+  app.get('/approval-demo', (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.sendFile(path.join(publicDir, 'rep-login.html'));
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    if (!hasStaffSession(req) && !hasSalesSession(req)) {
+      return res.redirect('/login.html?next=%2Fapproval-demo');
+    }
+    return res.sendFile(path.join(__dirname, '..', '..', 'prototypes', 'approval-demo.html'));
   });
 
   app.use(express.static(publicDir, { index: false }));

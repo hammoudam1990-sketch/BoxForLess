@@ -51,13 +51,15 @@ The server runs on `http://localhost:3000`.
   (codes are random, eight characters, shown as `XXXX-XXXX`).
 
 ### 🔐 **Staff View** (Requires Login)
-- Staff credentials and server-side authorization remain configured as above.
-- Staff sign in at `/staff/login` with the username and password above; opening
-  any staff page while signed out goes there first.
-- The customer `/login.html` page keeps accounts in the browser's localStorage only
-  (demo accounts are listed under the form) until Phase 2 server accounts exist.
+- All roles use the same sign-in page at `/login.html`. Enter a customer email/phone
+  or a team username; the app detects the account and opens the matching workspace.
+- Opening the staff, Sales Manager or Sales Rep app while signed out redirects to
+  that same sign-in page and returns to the requested workspace after sign-in.
+- Customer demo accounts are stored in this browser's localStorage; team credentials
+  are configured on the server as shown below.
 - **Dashboard** – orders, customers, pending approvals, order lines, system status
 - **Products** – search, filter, review stock status
+- **Barcode scanner** – scan or manually look up a product, then take a photo or upload a JPEG/PNG
 - **Imports** – preview / confirm product updates (try uploading `fixtures/sample-products.xlsx`)
 - **Requests** – view customer orders, approve, or export to Excel
 - **Changes** – review flagged import changes (barcode/UoM updates)
@@ -106,8 +108,8 @@ node scripts/demo-seed.js
 | `BFL_STAFF_USERNAME` | `admin` | Staff sign-in name |
 | `BFL_STAFF_PASSWORD` | `DemoPass123456` | Staff password (≥12 chars) |
 | `BFL_SESSION_SECRET` | `demo-secret-1234567890123456789012` | Session cookie secret (≥32 chars) |
-| `BFL_REP_USERNAME` / `BFL_REP_PASSWORD` / `BFL_REP_NAME` | `rep` / `RepPass1234567` / `Kwame Mensah` | Sales rep phone app login (separate from admin and sales manager; password ≥12 chars). Sign in at `/rep/login`, app at `/rep`. Demo lots: `node scripts/demo-seed-lots.js --confirm`. |
-| `BFL_SALES_USERNAME` / `BFL_SALES_PASSWORD` | `sales` / `SalesPass123456` | Sales Manager dashboard login (separate from admin; password ≥12 chars). Sign in at `/sales/login`, dashboard at `/sales`. Read-only and price-free. |
+| `BFL_REP_USERNAME` / `BFL_REP_PASSWORD` / `BFL_REP_NAME` | `rep` / `RepPass1234567` / `Kwame Mensah` | Sales Rep account (password ≥12 chars). Sign in at `/login.html`; the app opens `/rep`. Demo lots: `node scripts/demo-seed-lots.js --confirm`. |
+| `BFL_SALES_USERNAME` / `BFL_SALES_PASSWORD` | `sales` / `SalesPass123456` | Sales Manager account (password ≥12 chars). Sign in at `/login.html`; the app opens `/sales`. Read-only and price-free. |
 | `NODE_ENV` | `development` | Skip HTTPS checks on LAN |
 | `BFL_PUBLIC_URL` | *(optional)* | Public catalog URL (defaults to `http://localhost:3000`) |
 

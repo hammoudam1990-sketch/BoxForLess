@@ -1,5 +1,5 @@
 // Sales rep app: the shop list (nearest expiry first), the visit form data, saving a visit,
-// and the separate rep login. Quantities and dates only — no price, amount or discount.
+// and the shared role-detecting login. Quantities and dates only — no price, amount or discount.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
@@ -14,6 +14,13 @@ import { repShops, shopLots, saveVisit, VisitError } from '../src/domain/rep-vis
 
 const NOW = new Date('2026-10-20T10:00:00Z');
 const day = (offset) => new Date(NOW.getTime() + offset * 86400000).toISOString().slice(0, 10);
+
+test('sales rep app uses a full-width desktop workspace and responsive shop grid', () => {
+  const css = fs.readFileSync(new URL('../src/public/css/rep.css', import.meta.url), 'utf8');
+  assert.match(css, /@media\s*\(min-width:\s*768px\)/);
+  assert.match(css, /\.rep-app\s*\{[^}]*max-width:\s*none/);
+  assert.match(css, /\.rp-shop-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit/);
+});
 
 function seed(db) {
   const prod = db.prepare("INSERT INTO products (barcode, name, box_uom, created_at, updated_at) VALUES (?, ?, ?, datetime('now'), datetime('now'))");
@@ -154,10 +161,13 @@ after(async () => {
 test('/rep and /api/rep need a rep session; admin and sales sessions do not open them', async () => {
   const anon = await fetch(`${baseUrl}/rep`, { redirect: 'manual' });
   assert.equal(anon.status, 302);
-  assert.equal(anon.headers.get('location'), '/rep/login');
+  assert.equal(anon.headers.get('location'), '/login.html?next=%2Frep');
   assert.equal((await fetch(`${baseUrl}/rep.html`, { redirect: 'manual' })).status, 302);
   assert.equal((await fetch(`${baseUrl}/api/rep/shops`)).status, 401);
-  assert.match(await fetch(`${baseUrl}/rep/login`).then((r) => r.text()), /data-login="\/api\/rep\/login"/);
+  const login = await fetch(`${baseUrl}/rep/login`, { redirect: 'manual' });
+  assert.equal(login.status, 302);
+  assert.equal(login.headers.get('location'), '/login.html?next=%2Frep');
+  assert.match(await fetch(`${baseUrl}/login.html`).then((r) => r.text()), /ONE SIGN-IN · ALL BOX FOR LESS ACCOUNTS/);
 
   for (const [url, creds] of [['/api/staff/login', admin], ['/api/sales/login', sales]]) {
     const cookie = await signIn(url, creds);

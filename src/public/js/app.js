@@ -7,7 +7,7 @@ import { renderImports, renderImportDetail } from './imports.js';
 import { renderChanges } from './changes.js';
 import { renderRequests, renderRequestDetail } from './requests.js';
 import { renderAccessCodes, renderAccessRequests } from './access.js';
-import { renderComingSoon, renderCategories } from './coming-soon.js';
+import { renderWorkspacePage, renderCategories } from './workspace.js';
 
 const view = document.getElementById('view');
 const side = document.getElementById('side');
@@ -109,7 +109,8 @@ const LOADING = '<div class="card"><div class="sk-lines" role="status" aria-labe
 
 async function route() {
   const hash = location.hash || '#/dashboard';
-  const [, path, arg] = hash.split('/'); // "#", "products", "123"
+  const [routeHash] = hash.split('?');
+  const [, path, arg] = routeHash.split('/'); // "#", "products", "123"
   openSide(false);
   view.innerHTML = LOADING;
   try {
@@ -124,7 +125,7 @@ async function route() {
     else if (path === 'codes') { setActiveNav('codes'); await renderAccessCodes(view); }
     else if (path === 'access') { setActiveNav('access'); await renderAccessRequests(view); }
     else if (path === 'categories') { setActiveNav('categories'); await renderCategories(view); }
-    else if (path === 'soon' && arg) { setActiveNav(`soon-${arg}`); renderComingSoon(view, arg); }
+    else if (path === 'workspace' && arg) { setActiveNav(`workspace-${arg}`); await renderWorkspacePage(view, arg); }
     else { location.hash = '#/dashboard'; return; }
   } catch (e) {
     view.innerHTML = `<div class="card errbox">Error: ${e.message}</div>`;
@@ -135,7 +136,7 @@ async function route() {
 window.addEventListener('hashchange', route);
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('staffLogout')?.addEventListener('click', async () => {
-    await fetch('/api/staff/logout', { method: 'POST' });
+    await fetch('/api/auth/logout', { method: 'POST' });
     location.assign('/staff/login');
   });
   route();
