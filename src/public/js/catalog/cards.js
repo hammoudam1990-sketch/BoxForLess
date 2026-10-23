@@ -1,11 +1,13 @@
 // Pieces shared by the catalogue list and the product page.
 //
 // Everything here receives customer-safe payloads from /api/catalog: no price, no stock
-// quantity, no internal id. There is nothing in this file to hide.
+// quantity, no internal id. A price is added only by prices.js, from /api/catalog/prices,
+// and only for a signed-in customer.
 import { h } from '../lib/dom.js';
 import { reveal } from '../lib/util.js';
 import { doodle, doodleFor } from './doodles.js';
 import { bindRequestControl } from './qty.js';
+import { onPrices, priceOf, wantPrice, formatPrice, offerOf } from './prices.js';
 
 const NO_IMAGE_TEXT = 'No product image available';
 
@@ -47,6 +49,45 @@ function tileTop(product) {
     productImage(product.image, product.name));
 }
 
+/**
+ * "GHS 55.86 / carton" for the signed-in customer; an empty element (nothing at all) for anyone
+ * else. Built once and updated in place when the session or the prices change.
+ */
+export function createPriceLine(barcode, scope) {
+  const el = h('div', { class: 'c-price hidden' });
+  const paint = () => {
+    const p = priceOf(barcode);
+    el.textContent = p === null ? '' : `${formatPrice(p)} / carton`;
+    el.classList.toggle('hidden', p === null);
+  };
+  scope.add(onPrices(paint));
+  paint();
+  wantPrice(barcode);
+  return el;
+}
+
+/**
+ * The discounted near-expiry offer on a product, for the signed-in customer; nothing at all for anyone else or
+ * when there is none. "20% off, best before 12 Nov 2026, GHS 76.80 per carton, up to 14 cartons".
+ */
+export function createOfferLine(barcode, scope) {
+  const el = h('div', { class: 'c-offer hidden' });
+  const paint = () => {
+    const o = offerOf(barcode);
+    el.classList.toggle('hidden', !o);
+    if (!o) { el.replaceChildren(); return; }
+    el.replaceChildren(
+      h('span', { class: 'c-offer-badge' }, `${o.discountPct}% off`),
+      h('span', { class: 'c-offer-text' },
+        ` Best before ${o.bestBefore}`,
+        o.discountedPrice !== null ? [' · ', h('b', null, formatPrice(o.discountedPrice)), ' / carton ', h('s', { class: 'c-offer-was' }, formatPrice(o.price))] : null,
+        `, up to ${o.maxCartons} carton${o.maxCartons === 1 ? '' : 's'} at this price. Not returnable.`));
+  };
+  scope.add(onPrices(paint));
+  paint();
+  return el;
+}
+
 /** One product tile. `scope` collects its cart subscription. */
 export function createProductCard(product, scope) {
   const actions = h('div', { class: 'c-card-actions' });
@@ -59,7 +100,9 @@ export function createProductCard(product, scope) {
         h('div', { class: 'c-name' }, product.name),
         product.pack && product.image ? h('div', { class: 'c-pack' }, product.pack) : null,
         product.category ? h('div', { class: 'c-cat' }, product.category.name) : null,
-        availabilityPill(product.availability))),
+        availabilityPill(product.availability),
+        createPriceLine(product.id, scope),
+        createOfferLine(product.id, scope))),
     actions);
   reveal(card);
   return card;

@@ -1,0 +1,15 @@
+{
+  "_about": "SAMPLE price classes for building the registration and price screens before Odoo is connected. The class NAMES are the ones already on the customer list; the multipliers are made up. In the real system a price class is an Odoo pricelist and the carton price for a product comes from its pricelist items (product.pricelist / product.pricelist.item), read by the sync. Nothing here is a real price.",
+  "currency": "GHS",
+  "default": "CLASS A (GHS)",
+  "cash": "CASH ACCOUNT (GHS)",
+  "classes": [
+    { "name": "CLASS A (GHS)",      "multiplier": 1.00 },
+    { "name": "CLASS B (GHS)",      "multiplier": 0.97 },
+    { "name": "CLASS C (GHS)",      "multiplier": 0.94 },
+    { "name": "CLASS D (GHS)",      "multiplier": 0.91 },
+    { "name": "SHOPRITE (GHS)",     "multiplier": 0.89 },
+    { "name": "PALACE NEW (GHS)",   "multiplier": 0.92 },
+    { "name": "CASH ACCOUNT (GHS)", "multiplier": 1.06 }
+  ]
+}

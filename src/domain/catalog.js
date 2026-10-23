@@ -11,6 +11,7 @@ import { computeStockStatus } from './stock.js';
 import { StockStatus, STOCK_FIELDS } from './constants.js';
 import { parseCategoryPath } from './categories.js';
 import { wholeCartons } from './stock-source.js';
+import { hiddenClause } from './visibility.js';
 import config from '../config.js';
 
 /**
@@ -144,7 +145,7 @@ export function searchCatalog(db, q = {}, thresholds = config.stock) {
     search = '', availability = 'ALL', withImage = false,
     availableOnly = false,
     topLevel = null, categoryPath = null,
-    sort = DEFAULT_SORT, limit, offset,
+    sort = DEFAULT_SORT, limit, offset, viewer = null,
   } = q;
 
   // Inactive products are invisible to customers. This is not a filter the
@@ -188,6 +189,10 @@ export function searchCatalog(db, q = {}, thresholds = config.stock) {
     params.push(c, `${c} / %`);
   }
 
+  // Products hidden from THIS viewer (a customer, their price class, or everyone) are not in any list or count.
+  const hidden = hiddenClause(db, viewer);
+  if (hidden) { where.push(hidden.sql); params.push(...hidden.params); }
+
   const whereSql = `WHERE ${where.join(' AND ')}`;
   const orderSql = SORTS[sort] || SORTS[DEFAULT_SORT];
 
@@ -215,14 +220,15 @@ export function searchCatalog(db, q = {}, thresholds = config.stock) {
  * Returns null for an unknown id AND for any inactive product, so an inactive
  * product is indistinguishable from a non-existent one.
  */
-export function getCatalogProduct(db, id, thresholds = config.stock) {
+export function getCatalogProduct(db, id, thresholds = config.stock, viewer = null) {
   if (id === null || id === undefined || String(id).trim() === '') return null;
+  const hidden = hiddenClause(db, viewer);
   const row = db.prepare(
     `SELECT p.name, p.barcode, p.box_uom, p.primary_image_id, p.odoo_category_path,
             p.${thresholds.availabilityField}
      FROM products p
-     WHERE p.barcode = ? AND p.is_active = 1`
-  ).get(String(id).trim());
+     WHERE p.barcode = ? AND p.is_active = 1${hidden ? ` AND ${hidden.sql}` : ''}`
+  ).get(String(id).trim(), ...(hidden ? hidden.params : []));
   return row ? toCatalogProduct(row, thresholds) : null;
 }
 
@@ -231,14 +237,16 @@ export function getCatalogProduct(db, id, thresholds = config.stock) {
  * (the image route needs it to reach the existing image store). The internal id
  * is never put into a response. Inactive products never resolve.
  */
-export function resolveInternalId(db, id) {
+export function resolveInternalId(db, id, viewer = null) {
   if (id === null || id === undefined || String(id).trim() === '') return null;
-  const row = db.prepare('SELECT id FROM products WHERE barcode = ? AND is_active = 1').get(String(id).trim());
+  const hidden = hiddenClause(db, viewer);
+  const row = db.prepare(`SELECT p.id FROM products p WHERE p.barcode = ? AND p.is_active = 1${hidden ? ` AND ${hidden.sql}` : ''}`).get(String(id).trim(), ...(hidden ? hidden.params : []));
   return row ? row.id : null;
 }
 
 /** Counts per availability state, for the filter chips. Active products only. */
-export function catalogFacets(db, thresholds = config.stock) {
+export function catalogFacets(db, thresholds = config.stock, viewer = null) {
+  const hidden = hiddenClause(db, viewer);
   const f = thresholds.availabilityField;
   if (!STOCK_FIELDS.includes(f)) throw new Error(`Unsafe availability field: ${f}`);
   const r = db.prepare(
@@ -247,9 +255,9 @@ export function catalogFacets(db, thresholds = config.stock) {
             SUM(CASE WHEN ${f} > ? AND ${f} <= ? THEN 1 ELSE 0 END) AS limited,
             SUM(CASE WHEN ${f} <= ? THEN 1 ELSE 0 END) AS out_of_stock,
             SUM(CASE WHEN primary_image_id IS NOT NULL THEN 1 ELSE 0 END) AS with_image
-     FROM products WHERE is_active = 1`
+     FROM products p WHERE p.is_active = 1${hidden ? ` AND ${hidden.sql}` : ''}`
   ).get(thresholds.limitedAtOrBelow, thresholds.outOfStockAtOrBelow,
-    thresholds.limitedAtOrBelow, thresholds.outOfStockAtOrBelow);
+    thresholds.limitedAtOrBelow, thresholds.outOfStockAtOrBelow, ...(hidden ? hidden.params : []));
   return {
     all: r.all_count || 0,
     in_stock: r.in_stock || 0,
@@ -273,15 +281,17 @@ export function catalogFacets(db, thresholds = config.stock) {
  * 2 — the three without stock were counted but not shown. A count that disagrees
  * with the list beneath it makes the customer distrust both.
  */
-export function categoryFacets(db, { view = 'full' } = {}) {
+export function categoryFacets(db, { view = 'full', viewer = null } = {}) {
   const availableOnly = view === 'available';
+  const hidden = hiddenClause(db, viewer);
   const rows = db.prepare(
-    `SELECT odoo_category_path AS path, COUNT(*) AS n
-     FROM products
-     WHERE is_active = 1 AND odoo_category_path IS NOT NULL
-       ${availableOnly ? 'AND free_to_use > 0' : ''}
-     GROUP BY odoo_category_path`
-  ).all();
+    `SELECT p.odoo_category_path AS path, COUNT(*) AS n
+     FROM products p
+     WHERE p.is_active = 1 AND p.odoo_category_path IS NOT NULL
+       ${availableOnly ? 'AND p.free_to_use > 0' : ''}
+       ${hidden ? `AND ${hidden.sql}` : ''}
+     GROUP BY p.odoo_category_path`
+  ).all(...(hidden ? hidden.params : []));
 
   // Roll each leaf path up through its ancestors so a top-level count includes
   // everything beneath it.

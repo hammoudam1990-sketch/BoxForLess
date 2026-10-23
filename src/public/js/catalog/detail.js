@@ -1,11 +1,12 @@
 // One product: /catalog/product/:id
 //
 // Everything here comes from /api/catalog, whose payloads are customer-safe: no price, no
-// stock quantity, no internal id.
-import { h, setChildren } from '../lib/dom.js';
+// stock quantity, no internal id. The price line is added from /api/catalog/prices, signed-in only.
+import { h, setChildren, toggleHidden } from '../lib/dom.js';
 import { createScope } from '../lib/util.js';
+import { onPrices, priceOf, offerOf } from './prices.js';
 import { getJSON } from './http.js';
-import { availabilityPill, productImage } from './cards.js';
+import { availabilityPill, createPriceLine, createOfferLine, productImage } from './cards.js';
 import { bindRequestControl } from './qty.js';
 import { doodle, doodleFor } from './doodles.js';
 
@@ -39,6 +40,15 @@ function fact(label, ...value) {
 }
 
 function render(p, scope) {
+  // the whole "Your price" fact is hidden for anyone who is not signed in
+  const priceFact = fact('Your price', createPriceLine(p.id, scope));
+  const syncPrice = () => toggleHidden(priceFact, priceOf(p.id) === null);
+  scope.add(onPrices(syncPrice));
+  syncPrice();
+  const offerFact = fact('Discount offer', createOfferLine(p.id, scope));
+  const syncOffer = () => toggleHidden(offerFact, offerOf(p.id) === null);
+  scope.add(onPrices(syncOffer));
+  syncOffer();
   const actions = h('div', { class: 'c-detail-actions' });
   bindRequestControl(actions, p, scope);
 
@@ -58,7 +68,9 @@ function render(p, scope) {
           p.category ? fact('Category',
             h('div', { class: 'c-fact-v' }, p.category.name),
             h('div', { class: 'c-pack', style: { marginTop: '2px' } }, p.category.path)) : null,
-          fact('Availability', h('div', {}, availabilityPill(p.availability)))),
+          fact('Availability', h('div', {}, availabilityPill(p.availability))),
+          priceFact,
+          offerFact),
         actions,
         h('a', { class: 'c-btn', href: '/catalog', style: { display: 'inline-block', textDecoration: 'none', marginTop: '14px' } },
           'Back to Catalog'))));

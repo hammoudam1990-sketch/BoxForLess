@@ -10,6 +10,8 @@
 // Validation is ALWAYS server-side and always re-reads stock: the client's idea of
 // availability is a stale copy of a copy, and is never trusted.
 import { getStockSource } from './stock-source.js';
+import { visibleBarcodes } from './visibility.js';
+import { logLowStock } from './order-log.js';
 import config from '../config.js';
 
 function nowIso() { return new Date().toISOString(); }
@@ -115,6 +117,11 @@ export function validateRequest(db, lines = [], opts = {}) {
       displayNames.set(r.barcode, r.name);
       if (r.is_active === 1) found.set(r.barcode, r.id);
     }
+    // A product hidden from this viewer is refused exactly like one that no longer exists.
+    if (found.size) {
+      const visible = visibleBarcodes(db, opts.viewer ?? null, [...found.keys()]);
+      for (const b of [...found.keys()]) if (!visible.has(b)) found.delete(b);
+    }
   }
   const availability = source.getCtnAvailability(db, [...found.values()]);
 
@@ -209,9 +216,10 @@ export function submitRequest(db, payload = {}, opts = {}) {
 
   db.exec('BEGIN IMMEDIATE');
   try {
-    const verdict = validateRequest(db, lines, { ...opts, now });
+    const verdict = validateRequest(db, lines, { ...opts, now, viewer: { customerId } });
     if (!verdict.ok) {
       db.exec('ROLLBACK');                       // nothing written
+      logLowStock(db, customerId, verdict.lines); // lost demand, for the monthly report (after the rollback, so it stays)
       throw new RequestValidationError('Request could not be submitted.', {
         errors: verdict.errors,
         stock: { fresh: verdict.stock.fresh, hasData: verdict.stock.hasData },
@@ -259,6 +267,9 @@ export function submitRequest(db, payload = {}, opts = {}) {
       // snapshots: products change, a request must still read correctly later
       insertItem.run(requestId, l.productId, l.quantityCtn, l.name, l.barcode, l.boxUom, l.availableCtn, ts);
     }
+
+    // anything that must be saved WITH the request, in the same transaction (e.g. shelf-life acceptances)
+    if (typeof payload.onInsert === 'function') payload.onInsert(requestId);
 
     if (typeof opts.faultHook === 'function') opts.faultHook(); // test seam
     db.exec('COMMIT');

@@ -864,3 +864,62 @@ body, .c-main, .c-main *, .c-header, .c-header *, .c-tabbar, .c-tabbar *, .c-dra
 .c-request-fab, .c-toast, .c-menu, .c-menu * {
   font-size: 16px !important;
 }
+
+/* ---------- shelf-life warning on a request line (W3) ---------- */
+.c-line { flex-wrap: wrap; }
+.c-line > .c-shelf { flex: 1 1 100%; }
+.c-shelf { margin-top: 8px; padding: 10px 12px; border-radius: 14px; background: var(--c-limited-bg, #fbefd0); color: var(--c-limited, #7a4f00); }
+.c-shelf-msg { font-size: 14px; font-weight: 600; line-height: 1.35; }
+.c-shelf-accept { display: flex; align-items: flex-start; gap: 10px; margin-top: 8px; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--c-ink); cursor: pointer; }
+.c-shelf-accept input { width: 24px; height: 24px; flex: none; margin-top: 1px; accent-color: var(--c-ink); }
+.c-shelf-hint { margin: 10px 2px 0; font-size: 14px; font-weight: 600; color: var(--c-limited, #7a4f00); }
+
+/* ---------- prices (signed-in customers only) ---------- */
+.c-price { margin-top: 6px; font-size: 18px; font-weight: 700; color: var(--c-ink); }
+.c-line-price { margin-top: 4px; font-size: 16px; font-weight: 600; color: var(--c-ink); }
+.c-total { margin: 10px 2px 4px; padding: 10px 12px; border-radius: 14px; background: var(--c-tile); font-size: 16px; font-weight: 700; }
+.c-pricebar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 16px; background: var(--c-tile); font-size: 16px; }
+.c-pricebar-note { font-weight: 600; }
+.c-pricebar-btn { min-height: 44px; padding: 0 14px; border: 1px solid var(--c-ink); border-radius: 12px; background: transparent; color: var(--c-ink); font-size: 16px; font-weight: 700; cursor: pointer; }
+
+/* ---------- my orders and my balance ---------- */
+.c-tabbtns { display: flex; gap: 8px; margin-bottom: 14px; }
+.c-tabbtn { flex: 1; min-height: 44px; border: 1px solid var(--c-line); border-radius: 12px; background: transparent; color: var(--c-ink); font-size: 16px; font-weight: 600; cursor: pointer; }
+.c-tabbtn[aria-selected="true"] { background: var(--c-ink); color: #fff; border-color: var(--c-ink); }
+.c-order { background: var(--c-tile); border-radius: 18px; padding: 12px 14px; margin-bottom: 10px; }
+.c-order-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.c-order-num { font-size: 20px; font-weight: 700; }
+.c-order-hint { margin: 8px 0; font-size: 16px; }
+.c-order-items { margin: 6px 0; padding-left: 18px; font-size: 16px; }
+.c-order-total { margin-top: 6px; font-size: 16px; font-weight: 700; }
+.c-steps { display: flex; gap: 6px; margin-top: 10px; }
+.c-step-dot { flex: 1; height: 6px; border-radius: 3px; background: var(--c-line); }
+.c-step-dot.on { background: var(--c-ink); }
+.c-state-cancelled { background: #f6dcd9; color: #8a1c13; }
+.c-state-paid, .c-state-invoiced { background: #dcefe0; color: #1d5a2b; }
+.c-figs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.c-fig { background: var(--c-tile); border-radius: 16px; padding: 12px; }
+.c-fig-v { font-size: 20px; font-weight: 700; margin-top: 2px; overflow-wrap: anywhere; }
+.c-fig.bad { background: #f6dcd9; color: #8a1c13; }
+.c-sub { font-size: 18px; margin: 18px 0 6px; }
+.c-inv { list-style: none; margin: 0; padding: 0; }
+.c-inv li { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--c-line); font-size: 16px; }
+
+.c-credit { margin: 10px 2px 0; padding: 10px 12px; border-radius: 14px; background: #f6dcd9; color: #8a1c13; font-size: 16px; font-weight: 600; }
+
+/* ---------- discounted near-expiry offers (signed-in customers only) ---------- */
+.c-offers { margin: 4px 0 18px; padding: 14px; border-radius: 22px; background: var(--c-limited-bg, #fbefd0); color: var(--c-ink); }
+.c-offers-title { margin: 0 0 4px; font-size: 22px; font-weight: 800; }
+.c-offers-note { margin: 0 0 12px; font-size: 16px; color: var(--c-muted); }
+.c-offers-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.c-offer-card { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 18px; background: var(--c-surface); }
+.c-offer-card .c-card-actions { margin-top: 8px; }
+.c-offer-name { font-size: 18px; font-weight: 700; color: var(--c-ink); text-decoration: none; }
+.c-offer-when, .c-offer-limit { font-size: 16px; color: var(--c-muted); }
+.c-offer-price { font-size: 18px; }
+.c-offer-was { margin-left: 4px; font-weight: 400; color: var(--c-muted); }
+.c-offer-badge { align-self: flex-start; padding: 2px 10px; border-radius: 999px; background: var(--c-orange); color: #fff; font-size: 16px; font-weight: 800; }
+.c-offer { margin-top: 6px; font-size: 16px; line-height: 1.35; }
+.c-offer-text { color: var(--c-ink); }
+.c-page-list > .c-offers { grid-column: 1 / -1; }
+.c-offer-noreturn { margin-top: 2px; font-size: 16px; font-weight: 700; color: var(--c-out); }

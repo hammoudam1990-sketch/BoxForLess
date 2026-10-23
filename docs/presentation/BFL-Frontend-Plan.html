@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Box for Less Platform — Front-end Plan</title>
+<style>
+  @page { size: A4; margin: 16mm 16mm 18mm; }
+  :root { --ink:#1a1612; --muted:#57524b; --line:#d8d3ca; --cream:#f1eee8; --orange:#a8400b; --hot:#e4571a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.45; background: #fff;
+         -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { break-after: page; }
+  .page:last-child { break-after: auto; }
+  h1 { font-size: 22pt; line-height: 1.15; margin: 0 0 6pt; }
+  h2 { font-size: 16pt; margin: 0 0 4pt; }
+  h3 { font-size: 11.5pt; margin: 12pt 0 4pt; }
+  p { margin: 0 0 7pt; }
+  .kicker { font-size: 8.5pt; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--orange); margin-bottom: 4pt; }
+  .lead { font-size: 11.5pt; color: var(--ink); margin-bottom: 10pt; }
+  .muted { color: var(--muted); }
+  ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+  li { margin-bottom: 3pt; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 4pt 0 10pt; }
+  th { text-align: left; background: var(--cream); padding: 5pt 7pt; font-weight: 700; }
+  td { padding: 5pt 7pt; border-top: 1px solid var(--line); vertical-align: top; }
+  tr { break-inside: avoid; }
+  .box { border: 1px solid var(--line); border-radius: 8pt; padding: 9pt 11pt; margin: 6pt 0 10pt; break-inside: avoid; }
+  .box.ink { background: var(--ink); color: #fff; border: 0; }
+  .box.cream { background: var(--cream); border: 0; }
+  .box.warn { border: 1.5pt solid var(--orange); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8pt; }
+  .stat { background: var(--cream); border-radius: 8pt; padding: 9pt 10pt; }
+  .stat b { display: block; font-size: 17pt; line-height: 1.1; }
+  .stat span { font-size: 9pt; color: var(--muted); }
+  figure { margin: 6pt 0 10pt; break-inside: avoid; }
+  figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 4pt; }
+  svg { width: 100%; height: auto; display: block; }
+  .tag { display: inline-block; font-size: 8pt; font-weight: 700; padding: 1pt 6pt; border-radius: 99pt; background: var(--cream); }
+  .tag.o { background: var(--orange); color: #fff; }
+  .tag.k { background: var(--ink); color: #fff; }
+  .cover { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover .mark { width: 44pt; height: 44pt; border-radius: 10pt; background: var(--ink); }
+  .cover h1 { font-size: 34pt; margin-top: 70pt; }
+  .cover .bar { height: 6pt; width: 90pt; background: var(--hot); border-radius: 3pt; margin: 14pt 0; }
+  .toc li { margin-bottom: 4pt; }
+  .small { font-size: 8.5pt; }
+  .screen-h { display: flex; align-items: baseline; gap: 8pt; margin: 10pt 0 2pt; }
+  .screen-h b { font-size: 11pt; }
+</style>
+</head>
+<body>
+
+<!-- ============================== COVER ============================== -->
+<section class="page cover">
+  <div>
+    <div class="mark" aria-hidden="true"></div>
+    <h1>Box for Less Platform<br>Front-end plan</h1>
+    <div class="bar"></div>
+    <p class="lead" style="max-width: 120mm">The screens, the journeys and how the team will build them, connected to Odoo. Prepared for the CEO and the sales team, to agree the next step.</p>
+  </div>
+  <div>
+    <ol class="toc">
+      <li>Summary and what we ask for</li>
+      <li>How the platform fits with Odoo</li>
+      <li>Who uses it, and the screen map</li>
+      <li>Journey 1: a credit customer orders</li>
+      <li>Journey 2: a cash customer orders</li>
+      <li>Journey 3: expiry, in the warehouse and in the shop</li>
+      <li>Journey 4: payment reminders</li>
+      <li>Every screen, one by one</li>
+      <li>How the front end is built</li>
+      <li>Build order and the next step</li>
+    </ol>
+    <p class="muted small">Operations &amp; Development · October 2026 · Companion documents: the technical specification and the clickable wireframes.</p>
+  </div>
+</section>
+
+<!-- ============================== 1. SUMMARY ============================== -->
+<section class="page">
+  <div class="kicker">1 · Summary</div>
+  <h2>One platform for ordering, balances, expiry and reports, with Odoo as the master</h2>
+  <p class="lead">Customers and sales reps order from a phone. Staff approve, follow up and report from a desktop. Every figure comes from Odoo; the platform adds the screens and the rules Odoo does not have.</p>
+
+  <div class="grid3">
+    <div class="stat"><b>3,883</b><span>active products in the catalogue today (8,933 in Odoo in total)</span></div>
+    <div class="stat"><b>504</b><span>customers already loaded, each with an access code</span></div>
+    <div class="stat"><b>18</b><span>screens: 9 for customers, 2 for sales reps, 7 for staff</span></div>
+  </div>
+
+  <h3>What already works today (version 0.4.2)</h3>
+  <ul>
+    <li>A customer catalogue on the phone: search, categories, stock status, carton quantities and a request cart.</li>
+    <li>Access codes per customer, a staff admin with a dashboard, imports from the Odoo Excel export, and 290 automated tests.</li>
+  </ul>
+
+  <h3>What the new front end adds</h3>
+  <ul>
+    <li><b>Proper customer accounts</b> instead of access codes, for credit customers (companies) and cash customers.</li>
+    <li><b>Prices per carton</b> from each customer's Odoo price class, shown only to approved customers.</li>
+    <li><b>Orders that land in Odoo as quotations</b> for the Sales Manager to approve, with the same order number in both systems.</li>
+    <li><b>The customer's balance</b>, invoices and a credit-limit check before an order is sent.</li>
+    <li><b>Expiry control</b> in the warehouse and on customers' shelves, with discounts approved by the Sales Manager.</li>
+    <li><b>Payment reminders</b> on each customer's own schedule, and <b>monthly reports</b> for the CEO and managers.</li>
+  </ul>
+
+  <div class="box ink">
+    <b>What we ask for at this meeting</b>
+    <ol style="margin: 6pt 0 0">
+      <li>Agreement on the screens and journeys in this document.</li>
+      <li>A go-ahead for Phase 0: the budget, the two developers, the hosting and Odoo API access.</li>
+      <li>The sales team's help with the Odoo data clean-up (section 10) and the open policies.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============================== 2. ODOO ============================== -->
+<section class="page">
+  <div class="kicker">2 · How it fits with Odoo</div>
+  <h2>Odoo stays the master; the platform reads it and sends back only two things</h2>
+  <p>The platform keeps a local copy of what it reads from Odoo, so screens are fast and keep working if Odoo is slow. It never edits Odoo's data. The only writes are draft quotations and, after approval, new credit customers. A person approves every order in Odoo.</p>
+
+  <figure>
+    <svg viewBox="0 0 680 400" role="img" aria-label="Architecture: people use BFL screens; BFL reads Odoo and writes only quotations and new customers">
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8a847a"/></marker>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#a8400b"/></marker>
+      </defs>
+      <g font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1612">
+        <!-- people -->
+        <text x="10" y="22" font-weight="700" font-size="13">People</text>
+        <rect x="10" y="40" width="150" height="64" rx="8" fill="#fff" stroke="#d8d3ca"/>
+        <text x="85" y="66" text-anchor="middle" font-weight="700">Customers</text>
+        <text x="85" y="84" text-anchor="middle" fill="#57524b" font-size="11">credit and cash, on phones</text>
+        <rect x="10" y="120" width="150" height="64" rx="8" fill="#fff" stroke="#d8d3ca"/>
+        <text x="85" y="146" text-anchor="middle" font-weight="700">Sales reps</text>
+        <text x="85" y="164" text-anchor="middle" fill="#57524b" font-size="11">on phones, in shops</text>
+        <rect x="10" y="200" width="150" height="64" rx="8" fill="#fff" stroke="#d8d3ca"/>
+        <text x="85" y="226" text-anchor="middle" font-weight="700">Staff</text>
+        <text x="85" y="244" text-anchor="middle" fill="#57524b" font-size="11">Sales Manager, Operations</text>
+        <rect x="10" y="280" width="150" height="64" rx="8" fill="#fff" stroke="#d8d3ca"/>
+        <text x="85" y="306" text-anchor="middle" font-weight="700">CEO, Finance</text>
+        <text x="85" y="324" text-anchor="middle" fill="#57524b" font-size="11">monthly reports</text>
+        <!-- BFL -->
+        <rect x="200" y="30" width="250" height="330" rx="10" fill="#fff" stroke="#1a1612" stroke-width="1.5"/>
+        <text x="216" y="54" font-weight="700" font-size="13">BFL platform (our team)</text>
+        <rect x="216" y="70" width="218" height="54" rx="8" fill="#f1eee8"/>
+        <text x="325" y="93" text-anchor="middle" font-weight="700">Screens</text>
+        <text x="325" y="110" text-anchor="middle" fill="#57524b" font-size="11">plain HTML, CSS, JavaScript</text>
+        <rect x="216" y="136" width="218" height="54" rx="8" fill="#f1eee8"/>
+        <text x="325" y="159" text-anchor="middle" font-weight="700">Server rules</text>
+        <text x="325" y="176" text-anchor="middle" fill="#57524b" font-size="11">sign-in, visibility, credit check</text>
+        <rect x="216" y="202" width="218" height="54" rx="8" fill="#f1eee8"/>
+        <text x="325" y="225" text-anchor="middle" font-weight="700">Local copy</text>
+        <text x="325" y="242" text-anchor="middle" fill="#57524b" font-size="11">of Odoo data, plus the outbox</text>
+        <rect x="216" y="268" width="104" height="76" rx="8" fill="#f1eee8"/>
+        <text x="268" y="296" text-anchor="middle" font-weight="700">Sync</text>
+        <text x="268" y="313" text-anchor="middle" fill="#57524b" font-size="11">reads every</text>
+        <text x="268" y="328" text-anchor="middle" fill="#57524b" font-size="11">5 to 15 min</text>
+        <rect x="330" y="268" width="104" height="76" rx="8" fill="#f1eee8"/>
+        <text x="382" y="296" text-anchor="middle" font-weight="700">Outbox</text>
+        <text x="382" y="313" text-anchor="middle" fill="#57524b" font-size="11">sends safely,</text>
+        <text x="382" y="328" text-anchor="middle" fill="#57524b" font-size="11">no duplicates</text>
+        <!-- Odoo -->
+        <rect x="500" y="30" width="170" height="330" rx="10" fill="#fbeee8" stroke="#a8400b" stroke-width="2"/>
+        <text x="516" y="54" font-weight="700" font-size="13">Odoo ERP (master)</text>
+        <g font-size="12">
+          <rect x="516" y="70" width="138" height="34" rx="7" fill="#fff" stroke="#d8d3ca"/><text x="585" y="92" text-anchor="middle">Sales</text>
+          <rect x="516" y="112" width="138" height="34" rx="7" fill="#fff" stroke="#d8d3ca"/><text x="585" y="134" text-anchor="middle">Contacts</text>
+          <rect x="516" y="154" width="138" height="34" rx="7" fill="#fff" stroke="#d8d3ca"/><text x="585" y="176" text-anchor="middle">Inventory and lots</text>
+          <rect x="516" y="196" width="138" height="34" rx="7" fill="#fff" stroke="#d8d3ca"/><text x="585" y="218" text-anchor="middle">Pricelists</text>
+          <rect x="516" y="238" width="138" height="34" rx="7" fill="#fff" stroke="#d8d3ca"/><text x="585" y="260" text-anchor="middle">Invoicing</text>
+          <rect x="516" y="290" width="138" height="54" rx="7" fill="#fff" stroke="#d8d3ca"/><text x="585" y="313" text-anchor="middle" font-weight="700">Integration user</text><text x="585" y="330" text-anchor="middle" fill="#57524b" font-size="11">the kill switch</text>
+        </g>
+        <!-- arrows -->
+        <g fill="none" stroke="#8a847a" stroke-width="1.3">
+          <path d="M160 72H214" marker-end="url(#a1)"/>
+          <path d="M160 152H200V100H214" marker-end="url(#a1)"/>
+          <path d="M160 232H190V112H214" marker-end="url(#a1)"/>
+          <path d="M160 312H180V124H214" marker-end="url(#a1)"/>
+          <path d="M516 330H476V380H268V346" marker-end="url(#a1)"/>
+        </g>
+        <path d="M434 300H514" fill="none" stroke="#a8400b" stroke-width="2.2" marker-end="url(#a2)"/>
+        <text x="340" y="394" text-anchor="middle" fill="#57524b" font-size="11">reads stock, customers, prices, orders, invoices, lots</text>
+      </g>
+    </svg>
+    <figcaption>Grey arrows: reading. Orange arrow: the only writes, draft quotations and approved new credit customers.</figcaption>
+  </figure>
+
+  <div class="grid2">
+    <div class="box">
+      <b>The platform never</b>
+      <ul style="margin: 4pt 0 0">
+        <li>confirms, sends or cancels an order</li>
+        <li>writes invoices, payments or stock moves</li>
+        <li>changes prices, credit limits or products</li>
+        <li>reads cost prices</li>
+      </ul>
+    </div>
+    <div class="box">
+      <b>Safety built in</b>
+      <ul style="margin: 4pt 0 0">
+        <li>built and tested on a copy of Odoo first</li>
+        <li>one integration user; disabling it stops everything</li>
+        <li>orders queue if Odoo is down, and never duplicate</li>
+        <li>a daily report compares BFL with Odoo</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 3. USERS + SCREEN MAP ============================== -->
+<section class="page">
+  <div class="kicker">3 · Who uses it</div>
+  <h2>Six kinds of user, eighteen screens</h2>
+  <table>
+    <tr><th style="width: 22%">User</th><th style="width: 18%">Device</th><th>What they do on the platform</th></tr>
+    <tr><td><b>Credit customer</b> (a company)</td><td>Phone</td><td>Browses with their own prices, orders, follows orders, sees balance and invoices, gets payment reminders.</td></tr>
+    <tr><td><b>Cash customer</b></td><td>Phone</td><td>Browses and orders for cash; no credit, balance or reminders. Their orders go on Odoo's shared cash account.</td></tr>
+    <tr><td><b>Sales rep</b></td><td>Phone</td><td>Orders for their own customers; checks short-dated stock on shop shelves and proposes discounts.</td></tr>
+    <tr><td><b>Sales Manager</b></td><td>Desktop</td><td>Approves new customers and discounts, sets visibility rules and payment schedules, approves quotations in Odoo.</td></tr>
+    <tr><td><b>Operations and Warehouse</b></td><td>Desktop</td><td>Acts on the expiry list, classifies returns, watches the sync health.</td></tr>
+    <tr><td><b>CEO and Finance</b></td><td>Email and desktop</td><td>Receive the monthly reports; Finance issues credit notes and records payments in Odoo.</td></tr>
+  </table>
+
+  <h3>The screen map</h3>
+  <figure>
+    <svg viewBox="0 0 680 330" role="img" aria-label="Screen map: 9 customer screens, 2 rep screens, 7 staff screens">
+      <g font-family="Segoe UI, sans-serif" font-size="11.5" fill="#1a1612">
+        <rect x="0" y="0" width="330" height="320" rx="10" fill="#fff" stroke="#1a1612" stroke-width="1.5"/>
+        <text x="14" y="24" font-weight="700" font-size="13">Customer screens · phone</text>
+        <g>
+          <rect x="14" y="40" width="148" height="30" rx="7" fill="#f1eee8"/><text x="24" y="60">C01 Sign in</text>
+          <rect x="168" y="40" width="148" height="30" rx="7" fill="#f1eee8"/><text x="178" y="60">C02 Register</text>
+          <rect x="14" y="78" width="148" height="30" rx="7" fill="#f1eee8"/><text x="24" y="98">C03 Catalogue</text>
+          <rect x="168" y="78" width="148" height="30" rx="7" fill="#f1eee8"/><text x="178" y="98">C04 Product</text>
+          <rect x="14" y="116" width="148" height="30" rx="7" fill="#f1eee8"/><text x="24" y="136">C05 My request</text>
+          <rect x="168" y="116" width="148" height="30" rx="7" fill="#f1eee8"/><text x="178" y="136">C06 Orders</text>
+          <rect x="14" y="154" width="148" height="30" rx="7" fill="#f1eee8"/><text x="24" y="174">C07 Balance</text>
+        </g>
+        <text x="14" y="212" font-weight="700">Cash customer versions</text>
+        <rect x="14" y="222" width="148" height="30" rx="7" fill="#fff" stroke="#a8400b" stroke-width="1.5"/><text x="24" y="242">C08 Request (cash)</text>
+        <rect x="168" y="222" width="148" height="30" rx="7" fill="#fff" stroke="#a8400b" stroke-width="1.5"/><text x="178" y="242">C09 Account (cash)</text>
+        <rect x="14" y="268" width="302" height="38" rx="8" fill="#1a1612"/>
+        <text x="165" y="292" text-anchor="middle" fill="#fff">Tab bar: Shop · Orders · Request · Account</text>
+
+        <rect x="350" y="0" width="330" height="90" rx="10" fill="#fff" stroke="#1a1612" stroke-width="1.5"/>
+        <text x="364" y="24" font-weight="700" font-size="13">Sales rep screens · phone</text>
+        <rect x="364" y="40" width="148" height="30" rx="7" fill="#f1eee8"/><text x="374" y="60">R01 My visits</text>
+        <rect x="518" y="40" width="148" height="30" rx="7" fill="#f1eee8"/><text x="528" y="60">R02 Visit form</text>
+
+        <rect x="350" y="104" width="330" height="216" rx="10" fill="#fff" stroke="#1a1612" stroke-width="1.5"/>
+        <text x="364" y="128" font-weight="700" font-size="13">Staff screens · desktop</text>
+        <rect x="364" y="144" width="148" height="30" rx="7" fill="#f1eee8"/><text x="374" y="164">S01 Approvals</text>
+        <rect x="518" y="144" width="148" height="30" rx="7" fill="#f1eee8"/><text x="528" y="164">S02 Visibility rules</text>
+        <rect x="364" y="182" width="148" height="30" rx="7" fill="#f1eee8"/><text x="374" y="202">S03 Expiry list</text>
+        <rect x="518" y="182" width="148" height="30" rx="7" fill="#f1eee8"/><text x="528" y="202">S04 Returns</text>
+        <rect x="364" y="220" width="148" height="30" rx="7" fill="#f1eee8"/><text x="374" y="240">S05 Sync health</text>
+        <rect x="518" y="220" width="148" height="30" rx="7" fill="#f1eee8"/><text x="528" y="240">S06 Monthly reports</text>
+        <rect x="364" y="258" width="148" height="30" rx="7" fill="#f1eee8"/><text x="374" y="278">S07 Payments due</text>
+        <text x="518" y="278" fill="#57524b" font-size="10.5">plus today's staff pages</text>
+      </g>
+    </svg>
+    <figcaption>Reps order through the customer screens, with an "Ordering for" bar and only their own customers. Today's staff pages (Dashboard, Product Master, Change Review, Requests, Scan) stay.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================== 4. JOURNEY CREDIT ============================== -->
+<section class="page">
+  <div class="kicker">4 · Journey 1</div>
+  <h2>A credit customer orders</h2>
+  <p>From registration to a paid invoice. The customer always sees the Odoo order number, and the order changes their balance only when Odoo posts the invoice.</p>
+  <figure><svg id="j1" viewBox="0 0 680 640" role="img" aria-label="Credit customer order journey"></svg>
+    <figcaption>Colours show who acts: dark for the customer, orange for the Sales Manager, light for the platform, outlined for Odoo and the warehouse.</figcaption></figure>
+</section>
+
+<!-- ============================== 5. JOURNEY CASH ============================== -->
+<section class="page">
+  <div class="kicker">5 · Journey 2</div>
+  <h2>A cash customer orders</h2>
+  <p>In Odoo, cash buyers share one account, and each buyer's name, phone and address go on their order. The platform keeps every cash buyer's own details, so they still get a normal account on BFL.</p>
+  <figure><svg id="j2" viewBox="0 0 680 480" role="img" aria-label="Cash customer order journey"></svg></figure>
+  <div class="box warn">
+    <b>Privacy rule for the shared cash account</b>
+    <p style="margin: 4pt 0 0">Because many buyers share it, BFL never shows that account's balance, invoices or order history to anyone. A cash customer sees only the orders they placed on BFL. Cash sales entered directly in Odoo cannot be linked to a buyer, so they are not shown.</p>
+  </div>
+</section>
+
+<!-- ============================== 6. JOURNEY EXPIRY ============================== -->
+<section class="page">
+  <div class="kicker">6 · Journey 3</div>
+  <h2>Expiry: in our warehouse and on the customer's shelf</h2>
+  <p><b>In the warehouse,</b> every lot gets an expiry band (warning periods per category; shorter for 3 to 6 month products). Each lot in a band gets an action and an owner on the expiry list (S03). Short-dated stock moves to a <b>clearance location</b> and is sold on BFL at a discount, marked "not returnable for expiry".</p>
+  <p><b>On the customer's shelf,</b> every delivered lot is tracked from the moment the truck is loaded. Before it expires, the rep visits the shop:</p>
+  <figure>
+    <svg viewBox="0 0 680 420" role="img" aria-label="Shop visit flow: alert, visit, sold, discount or return">
+      <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8a847a"/></marker></defs>
+      <g font-family="Segoe UI, sans-serif" font-size="11.5" fill="#1a1612">
+        <g fill="none" stroke="#8a847a" stroke-width="1.3">
+          <path d="M150 50H178" marker-end="url(#a3)"/><path d="M318 50H346" marker-end="url(#a3)"/><path d="M486 50H514" marker-end="url(#a3)"/>
+          <path d="M590 82V120"/><path d="M590 120H100V150" marker-end="url(#a3)"/><path d="M330 120V150" marker-end="url(#a3)"/><path d="M590 120V150" marker-end="url(#a3)"/>
+          <path d="M100 206V236" marker-end="url(#a3)"/><path d="M330 206V236" marker-end="url(#a3)"/>
+          <path d="M100 292V322" marker-end="url(#a3)"/>
+          <path d="M100 378V396H560V378" marker-end="url(#a3)"/><path d="M330 292V396"/><path d="M590 206V322" marker-end="url(#a3)"/>
+        </g>
+        <rect x="10" y="20" width="140" height="60" rx="8" fill="#f1eee8"/><text x="80" y="45" text-anchor="middle" font-weight="700">Lot delivered</text><text x="80" y="62" text-anchor="middle" fill="#57524b" font-size="10.5">lot recorded at loading</text>
+        <rect x="178" y="20" width="140" height="60" rx="8" fill="#f1eee8"/><text x="248" y="45" text-anchor="middle" font-weight="700">Alert raised</text><text x="248" y="62" text-anchor="middle" fill="#57524b" font-size="10.5">60/30 or 30 days before</text>
+        <rect x="346" y="20" width="140" height="60" rx="8" fill="#1a1612"/><text x="416" y="45" text-anchor="middle" font-weight="700" fill="#fff">Rep visits shop</text><text x="416" y="62" text-anchor="middle" fill="#e6e1d8" font-size="10.5">counts the shelf (R02)</text>
+        <rect x="514" y="20" width="152" height="62" rx="8" fill="#fff" stroke="#1a1612"/><text x="590" y="47" text-anchor="middle" font-weight="700">Still on shelf?</text><text x="590" y="64" text-anchor="middle" fill="#57524b" font-size="10.5">three outcomes</text>
+        <rect x="20" y="150" width="160" height="56" rx="8" fill="#1a1612"/><text x="100" y="173" text-anchor="middle" font-weight="700" fill="#fff">Discount proposed</text><text x="100" y="190" text-anchor="middle" fill="#e6e1d8" font-size="10.5">customer confirms</text>
+        <rect x="250" y="150" width="160" height="56" rx="8" fill="#f1eee8"/><text x="330" y="173" text-anchor="middle" font-weight="700">Return expected</text><text x="330" y="190" text-anchor="middle" fill="#57524b" font-size="10.5">customer refuses</text>
+        <rect x="510" y="150" width="160" height="56" rx="8" fill="#f1eee8"/><text x="590" y="173" text-anchor="middle" font-weight="700">Sold out</text><text x="590" y="190" text-anchor="middle" fill="#57524b" font-size="10.5">alert marked checked</text>
+        <rect x="20" y="236" width="160" height="56" rx="8" fill="#a8400b"/><text x="100" y="259" text-anchor="middle" font-weight="700" fill="#fff">Manager approves</text><text x="100" y="276" text-anchor="middle" fill="#fbe3d8" font-size="10.5">on S01</text>
+        <rect x="250" y="236" width="160" height="56" rx="8" fill="#fff" stroke="#1a1612"/><text x="330" y="259" text-anchor="middle" font-weight="700">Return in Odoo</text><text x="330" y="276" text-anchor="middle" fill="#57524b" font-size="10.5">reason set on S04</text>
+        <rect x="20" y="322" width="160" height="56" rx="8" fill="#fff" stroke="#1a1612"/><text x="100" y="345" text-anchor="middle" font-weight="700">Credit note in Odoo</text><text x="100" y="362" text-anchor="middle" fill="#57524b" font-size="10.5">by Finance</text>
+        <rect x="500" y="322" width="170" height="56" rx="8" fill="#f1eee8"/><text x="585" y="345" text-anchor="middle" font-weight="700">Alert closed</text><text x="585" y="362" text-anchor="middle" fill="#57524b" font-size="10.5">with the outcome recorded</text>
+      </g>
+    </svg>
+    <figcaption>A discount costs less than a return. A customer who accepts one confirms that the lot will not be returned for expiry.</figcaption>
+  </figure>
+  <p class="small muted">Customers can also set a minimum shelf life (for example 90 days). If only shorter-dated stock is available, they see the expiry date and must tick to accept it before ordering.</p>
+</section>
+
+<!-- ============================== 7. JOURNEY PAYMENTS ============================== -->
+<section class="page">
+  <div class="kicker">7 · Journey 4</div>
+  <h2>Payment reminders on each customer's schedule</h2>
+  <p>The platform reminds; it does not collect. Customers pay as they do today and Finance records payments in Odoo. The Sales Manager sets each credit customer's schedule on S07.</p>
+  <table>
+    <tr><th style="width: 30%">Schedule</th><th>Example</th><th style="width: 34%">Payment day</th></tr>
+    <tr><td><b>Invoice due date</b> (default)</td><td>30 days after the invoice, from the Odoo payment terms</td><td>Each invoice's due date</td></tr>
+    <tr><td><b>Weekly</b></td><td>Every Wednesday</td><td>That weekday, every week</td></tr>
+    <tr><td><b>Monthly</b></td><td>The 25th of each month</td><td>That date, every month</td></tr>
+  </table>
+  <figure>
+    <svg viewBox="0 0 680 190" role="img" aria-label="Reminder timeline">
+      <defs><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8a847a"/></marker></defs>
+      <g font-family="Segoe UI, sans-serif" font-size="11.5" fill="#1a1612">
+        <line x1="20" y1="70" x2="660" y2="70" stroke="#8a847a" stroke-width="1.5" marker-end="url(#a4)"/>
+        <circle cx="60" cy="70" r="7" fill="#1a1612"/><text x="60" y="44" text-anchor="middle" font-weight="700">Invoice posted</text><text x="60" y="98" text-anchor="middle" fill="#57524b" font-size="10.5">in Odoo</text>
+        <circle cx="220" cy="70" r="7" fill="#a8400b"/><text x="220" y="44" text-anchor="middle" font-weight="700">Day before</text><text x="220" y="98" text-anchor="middle" fill="#57524b" font-size="10.5">first reminder</text>
+        <circle cx="350" cy="70" r="7" fill="#a8400b"/><text x="350" y="44" text-anchor="middle" font-weight="700">Payment day</text><text x="350" y="98" text-anchor="middle" fill="#57524b" font-size="10.5">second reminder</text>
+        <circle cx="480" cy="70" r="7" fill="#fff" stroke="#a8400b" stroke-width="2"/><text x="480" y="44" text-anchor="middle" font-weight="700">Every 7 days</text><text x="480" y="98" text-anchor="middle" fill="#57524b" font-size="10.5">while overdue</text>
+        <circle cx="610" cy="70" r="7" fill="#1a1612"/><text x="610" y="44" text-anchor="middle" font-weight="700">Paid in Odoo</text><text x="610" y="98" text-anchor="middle" fill="#57524b" font-size="10.5">reminders stop</text>
+        <rect x="20" y="126" width="640" height="52" rx="8" fill="#f1eee8"/>
+        <text x="340" y="148" text-anchor="middle" font-weight="700">Blocking rule: only going over the credit limit blocks new orders.</text>
+        <text x="340" y="166" text-anchor="middle" fill="#57524b" font-size="10.5">A missed payment day or an overdue invoice triggers reminders, not a block. Cash customers get no reminders.</text>
+      </g>
+    </svg>
+  </figure>
+  <p>Reminders go by email first; SMS or WhatsApp once a provider is chosen. Each one lists only that customer's own open invoices, and every reminder is logged.</p>
+  <p><b>Credit check before an order is sent:</b> available credit = credit limit − amount owed − open orders not yet invoiced. Example: limit 10,000, owed 6,000, an earlier order of 2,500 waiting for approval leaves <b>GHS 1,500</b>, not 4,000.</p>
+</section>
+
+<!-- ============================== 8. SCREENS ============================== -->
+<section class="page">
+  <div class="kicker">8 · Every screen</div>
+  <h2>Customer screens (phone)</h2>
+  <table>
+    <tr><th style="width: 17%">Screen</th><th>What is on it</th><th style="width: 30%">Rules it follows</th><th style="width: 8%">Phase</th></tr>
+    <tr><td><b>C01 Sign in</b></td><td>Phone or email and password; a one-time code on a new phone; link to register; browse without signing in.</td><td>Visitors see the catalogue without prices.</td><td>2</td></tr>
+    <tr><td><b>C02 Register</b></td><td>Company, name, phone, email, delivery address; "waiting for approval" afterwards.</td><td>Duplicate check before the Sales Manager approves it as credit or cash.</td><td>2</td></tr>
+    <tr><td><b>C03 Catalogue</b></td><td>Search, category chips, product cards with pack, price per carton, stock status, Add to request; short-expiry clearance cards.</td><td>Hidden products never appear; prices only for approved customers.</td><td>2–3</td></tr>
+    <tr><td><b>C04 Product</b></td><td>Name, price, barcode, pack, category, availability, carton stepper; shelf-life warning with an accept tick.</td><td>A customer below their minimum shelf life must accept before adding.</td><td>2–3</td></tr>
+    <tr><td><b>C05 My request</b></td><td>Lines with prices and total; available credit; delivery address; Submit.</td><td>Submit blocked when over available credit.</td><td>4–5</td></tr>
+    <tr><td><b>C06 Orders</b></td><td>Every order, from BFL or Odoo, with the Odoo number and status: received, waiting for approval, approved, dispatched, invoiced, paid.</td><td>Status read back from Odoo.</td><td>4</td></tr>
+    <tr><td><b>C07 Balance</b></td><td>Available credit, credit limit, amount owed, overdue; open invoices with their order number; payments; statement download.</td><td>Every figure from Odoo; never calculated by BFL.</td><td>5</td></tr>
+    <tr><td><b>C08 Request (cash)</b></td><td>The same cart without the credit box; "total to pay in cash"; the buyer's name, phone and address for the order note.</td><td>No credit check for cash customers.</td><td>4</td></tr>
+    <tr><td><b>C09 Account (cash)</b></td><td>The buyer's details and only their BFL orders; how to apply for a company credit account.</td><td>Never shows the shared cash account's data.</td><td>4</td></tr>
+  </table>
+  <h2 style="margin-top: 12pt">Sales rep screens (phone)</h2>
+  <table>
+    <tr><th style="width: 17%">Screen</th><th>What is on it</th><th style="width: 30%">Rules it follows</th><th style="width: 8%">Phase</th></tr>
+    <tr><td><b>R01 My visits</b></td><td>Shops with open expiry alerts, nearest expiry first; find a customer by Odoo ID or name; overdue visits highlighted.</td><td>Only the rep's own customers, as assigned in Odoo.</td><td>7</td></tr>
+    <tr><td><b>R02 Visit form</b></td><td>Per lot: cartons on the shelf, photo, outcome (sold, propose discount, return, not checked), customer contact and agreement tick.</td><td>A discount is only a proposal until the Sales Manager approves it.</td><td>7</td></tr>
+  </table>
+</section>
+
+<section class="page">
+  <div class="kicker">8 · Every screen</div>
+  <h2>Staff screens (desktop)</h2>
+  <table>
+    <tr><th style="width: 18%">Screen</th><th>What is on it</th><th style="width: 30%">Rules it follows</th><th style="width: 8%">Phase</th></tr>
+    <tr><td><b>S01 Approvals</b></td><td>New registrations with duplicate check, customer type (credit or cash), rep and price class; discounts proposed by reps.</td><td>Credit customers are created in Odoo on approval; cash customers are not.</td><td>2, 7</td></tr>
+    <tr><td><b>S02 Visibility rules</b></td><td>Hide products by brand, category or product for a customer or group; preview of what they see.</td><td>Enforced on the server everywhere; every change logged.</td><td>2</td></tr>
+    <tr><td><b>S03 Expiry list</b></td><td>Lots by band (expired, critical, warning, early); action, owner, decide-by date, status; entries to check for typing mistakes.</td><td>Moves and write-offs are done in Odoo; rows close by themselves.</td><td>7</td></tr>
+    <tr><td><b>S04 Returns to classify</b></td><td>Every new Odoo return with its reason: damaged, expired or other.</td><td>Unclassified after 3 days shows on the dashboard.</td><td>7</td></tr>
+    <tr><td><b>S05 Sync health</b></td><td>Last successful sync per data type; outbox pending, sent and failed; Retry; the kill switch note.</td><td>Alerts before staff or customers notice a problem.</td><td>1</td></tr>
+    <tr><td><b>S06 Monthly reports</b></td><td>The CEO summary (12 measures), the Sales Manager and Warehouse reports; three explanation lines; PDF and CSV.</td><td>No cost data; company-wide figures for managers only.</td><td>1 onward</td></tr>
+    <tr><td><b>S07 Payments due</b></td><td>Due this week, overdue, reminders sent; each customer's schedule and the schedule editor.</td><td>Schedules set by the Sales Manager only.</td><td>6</td></tr>
+  </table>
+
+  <h3>Anatomy of a phone screen</h3>
+  <figure>
+    <svg viewBox="0 0 680 250" role="img" aria-label="Phone screen anatomy">
+      <g font-family="Segoe UI, sans-serif" font-size="11.5" fill="#1a1612">
+        <rect x="20" y="0" width="160" height="246" rx="16" fill="#fff" stroke="#1a1612" stroke-width="1.5"/>
+        <rect x="30" y="12" width="140" height="26" rx="5" fill="#f1eee8"/>
+        <rect x="30" y="46" width="140" height="18" rx="5" fill="#e6e1d8"/>
+        <rect x="30" y="72" width="66" height="96" rx="6" fill="#f1eee8"/><rect x="104" y="72" width="66" height="96" rx="6" fill="#f1eee8"/>
+        <rect x="30" y="176" width="66" height="22" rx="5" fill="#f1eee8"/><rect x="104" y="176" width="66" height="22" rx="5" fill="#f1eee8"/>
+        <rect x="30" y="208" width="140" height="28" rx="7" fill="#1a1612"/>
+        <g fill="none" stroke="#8a847a" stroke-width="1"><path d="M172 25H230"/><path d="M172 55H230"/><path d="M172 120H230"/><path d="M172 222H230"/></g>
+        <text x="238" y="29" font-weight="700">Header</text><text x="300" y="29" fill="#57524b">brand, menu; "Signed in as [Company]" or "Ordering for [Customer]" for reps</text>
+        <text x="238" y="59" font-weight="700">Search and chips</text><text x="350" y="59" fill="#57524b">search stays put while typing</text>
+        <text x="238" y="116" font-weight="700">Content</text><text x="300" y="116" fill="#57524b">product cards, lists or forms; two cards per row</text>
+        <text x="238" y="134" fill="#57524b">touch targets at least 44 px; text at least 16 px in fields</text>
+        <text x="238" y="226" font-weight="700">Tab bar</text><text x="300" y="226" fill="#57524b">Shop · Orders · Request · Account; the request count as a badge</text>
+      </g>
+    </svg>
+  </figure>
+</section>
+
+<!-- ============================== 9. HOW BUILT ============================== -->
+<section class="page">
+  <div class="kicker">9 · How the front end is built</div>
+  <h2>Plain HTML, CSS and JavaScript, phone first, built on what already works</h2>
+  <p>The customer catalogue was rewritten in October 2026 without any framework, and every new screen follows the same approach: no build step and nothing loaded from outside, so pages are light on low-end phones and slow networks, and there is less to break or update.</p>
+
+  <h3>Building blocks shared by all screens</h3>
+  <table>
+    <tr><th style="width: 26%">Component</th><th>Used on</th></tr>
+    <tr><td>Header and phone menu</td><td>Every customer and rep screen</td></tr>
+    <tr><td>Tab bar with request badge</td><td>C03 to C09</td></tr>
+    <tr><td>Product card and carton stepper (− number +)</td><td>C03, C04, C05, C08; already built and tested</td></tr>
+    <tr><td>Status pill (waiting, approved, dispatched, invoiced, paid, overdue)</td><td>C06, C07, C09, staff lists</td></tr>
+    <tr><td>Staff sidebar, tables, filters and CSV download</td><td>S01 to S07</td></tr>
+    <tr><td>Form fields with labels and error messages</td><td>C01, C02, C05, R02, S01, S02, S07</td></tr>
+  </table>
+
+  <h3>Rules every screen follows</h3>
+  <ul>
+    <li><b>Security on the server:</b> who is signed in, which customer they belong to and what they may see is decided by the server on every request. Hiding on screen is never enough.</li>
+    <li><b>No data leaks:</b> automated tests check that no customer ever receives another customer's data, cost prices, hidden products or company figures.</li>
+    <li><b>Typing never breaks:</b> a field someone types into is built once and never redrawn, so the phone keyboard never closes mid-typing.</li>
+    <li><b>Accessible:</b> real buttons and labelled fields, readable contrast, touch targets of at least 44 px.</li>
+    <li><b>Slow networks:</b> loading placeholders instead of blank pages; an order is saved at once and sent to Odoo in the background.</li>
+    <li><b>The current look:</b> white, ink black and burnt orange, as in today's catalogue.</li>
+  </ul>
+
+  <h3>How the work is done</h3>
+  <ol>
+    <li><b>Wireframes approved</b> by the Operations &amp; Development lead and the Sales Manager (the clickable canvas).</li>
+    <li><b>Front end built against test data</b> while the back end connects to the Odoo copy, so neither waits for the other.</li>
+    <li><b>Every change reviewed</b> by the other developer, kept in the company's GitHub, with automated tests.</li>
+    <li><b>Each phase tested on staging</b> by the Sales Manager against real cases, then signed off before going live.</li>
+  </ol>
+</section>
+
+<!-- ============================== 10. BUILD ORDER ============================== -->
+<section class="page">
+  <div class="kicker">10 · Build order and the next step</div>
+  <h2>Eight phases, each released only after a sign-off</h2>
+  <figure>
+    <svg viewBox="0 0 680 300" role="img" aria-label="Eight phases with the screens each delivers">
+      <defs><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8a847a"/></marker></defs>
+      <g font-family="Segoe UI, sans-serif" font-size="11" fill="#1a1612">
+        <g fill="none" stroke="#8a847a" stroke-width="1.3">
+          <path d="M156 60H174" marker-end="url(#a5)"/><path d="M330 60H348" marker-end="url(#a5)"/><path d="M504 60H522" marker-end="url(#a5)"/>
+          <path d="M600 110V140H80V164" marker-end="url(#a5)"/>
+          <path d="M156 214H174" marker-end="url(#a5)"/><path d="M330 214H348" marker-end="url(#a5)"/><path d="M504 214H522" marker-end="url(#a5)"/>
+        </g>
+        <rect x="0" y="10" width="156" height="100" rx="8" fill="#f1eee8"/><text x="10" y="32" font-weight="700" font-size="12">0 · Foundations</text><text x="10" y="52" fill="#57524b">Odoo access, hosting,</text><text x="10" y="67" fill="#57524b">team, staging Odoo</text><text x="10" y="94" font-weight="700">No screens</text>
+        <rect x="174" y="10" width="156" height="100" rx="8" fill="#f1eee8"/><text x="184" y="32" font-weight="700" font-size="12">1 · Read from Odoo</text><text x="184" y="52" fill="#57524b">stock, customers,</text><text x="184" y="67" fill="#57524b">invoices, orders</text><text x="184" y="94" font-weight="700">S05, S06 (first parts)</text>
+        <rect x="348" y="10" width="156" height="100" rx="8" fill="#f1eee8"/><text x="358" y="32" font-weight="700" font-size="12">2 · Accounts</text><text x="358" y="52" fill="#57524b">sign-in, reps,</text><text x="358" y="67" fill="#57524b">visibility rules</text><text x="358" y="94" font-weight="700">C01–C03, S01, S02</text>
+        <rect x="522" y="10" width="156" height="100" rx="8" fill="#f1eee8"/><text x="532" y="32" font-weight="700" font-size="12">3 · Prices</text><text x="532" y="52" fill="#57524b">Odoo price classes,</text><text x="532" y="67" fill="#57524b">per carton</text><text x="532" y="94" font-weight="700">C03, C04 with prices</text>
+        <rect x="0" y="164" width="156" height="100" rx="8" fill="#1a1612"/><text x="10" y="186" font-weight="700" font-size="12" fill="#fff">4 · Orders to Odoo</text><text x="10" y="206" fill="#e6e1d8">quotations, status,</text><text x="10" y="221" fill="#e6e1d8">history, cash orders</text><text x="10" y="248" font-weight="700" fill="#fff">C05, C06, C08, C09</text>
+        <rect x="174" y="164" width="156" height="100" rx="8" fill="#f1eee8"/><text x="184" y="186" font-weight="700" font-size="12">5 · Credit, balance</text><text x="184" y="206" fill="#57524b">credit check,</text><text x="184" y="221" fill="#57524b">balance page</text><text x="184" y="248" font-weight="700">C05 check, C07</text>
+        <rect x="348" y="164" width="156" height="100" rx="8" fill="#f1eee8"/><text x="358" y="186" font-weight="700" font-size="12">6 · Notifications</text><text x="358" y="206" fill="#57524b">emails, payment</text><text x="358" y="221" fill="#57524b">reminders</text><text x="358" y="248" font-weight="700">S07</text>
+        <rect x="522" y="164" width="156" height="100" rx="8" fill="#f1eee8"/><text x="532" y="186" font-weight="700" font-size="12">7 · Expiry, reports</text><text x="532" y="206" fill="#57524b">warehouse and shelf</text><text x="532" y="221" fill="#57524b">expiry, monthly reports</text><text x="532" y="248" font-weight="700">R01, R02, S03, S04, S06</text>
+        <text x="0" y="292" fill="#57524b">Each arrow is a gate: the phase checklist is signed off on staging before it goes live. Durations are set by the team after Phase 0.</text>
+      </g>
+    </svg>
+  </figure>
+
+  <h3>What the CEO is asked to approve</h3>
+  <ul>
+    <li>The budget and the two developers (front end and back end), with code owned by Box for Less.</li>
+    <li>Lifting the hold on going online: a host, a company domain and HTTPS.</li>
+    <li>Odoo API access, a staging copy of Odoo and a user seat for the integration user.</li>
+  </ul>
+  <h3>What the sales team is asked to do</h3>
+  <ul>
+    <li><b>Clean the Odoo data:</b> merge duplicate customers, give every customer a salesperson, a price class, a credit limit (credit customers) and a phone or email.</li>
+    <li><b>Fill the Brand field</b> on every product, for brand visibility rules and sales by brand.</li>
+    <li><b>Approve the wireframes</b> and the customer-facing wording: privacy notice, order terms, clearance and shelf-life rules.</li>
+    <li><b>Enter monthly targets</b> per rep, and test each phase on staging before it goes live.</li>
+  </ul>
+  <div class="box cream small">Detailed rules, Odoo field lists and every acceptance checklist are in the technical specification; the full readiness checklist is its fourth tab.</div>
+</section>
+
+<!-- ============================== GLOSSARY ============================== -->
+<section class="page">
+  <div class="kicker">Appendix</div>
+  <h2>Words used in this document</h2>
+  <table>
+    <tr><th style="width: 24%">Word</th><th>Meaning</th></tr>
+    <tr><td>Odoo</td><td>Box for Less's ERP: sales, contacts, inventory, invoicing. The master of all data.</td></tr>
+    <tr><td>BFL platform</td><td>The customer and staff web app described here, connected to Odoo.</td></tr>
+    <tr><td>Quotation</td><td>A draft order in Odoo. Orders from BFL arrive as quotations and become orders when the Sales Manager confirms them.</td></tr>
+    <tr><td>Price class</td><td>An Odoo pricelist. Each credit customer has one; new customers get the default one.</td></tr>
+    <tr><td>Credit limit, available credit</td><td>The most a customer may owe; what is left after amounts owed and open orders.</td></tr>
+    <tr><td>Cash customer account</td><td>The one Odoo account shared by all cash buyers.</td></tr>
+    <tr><td>Lot</td><td>A batch of one product with one expiry date, recorded at receipt and on every delivery.</td></tr>
+    <tr><td>Clearance location</td><td>The warehouse place for short-dated stock sold at a discount.</td></tr>
+    <tr><td>Integration user</td><td>The one Odoo user the platform connects as, with limited rights. Disabling it stops the connection.</td></tr>
+    <tr><td>Outbox</td><td>The platform's queue for sending quotations and new customers to Odoo safely, without duplicates.</td></tr>
+    <tr><td>Staging</td><td>A copy of the system and of Odoo used for testing before anything goes live.</td></tr>
+    <tr><td>Wireframe</td><td>A simple drawing of a screen, used to agree the layout before it is built.</td></tr>
+  </table>
+</section>
+
+<script>
+// Vertical journey flows: one box per step, coloured by who acts.
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  var styles = {
+    customer: { fill: '#1a1612', text: '#ffffff', sub: '#e6e1d8', stroke: 'none', label: 'Customer' },
+    manager:  { fill: '#a8400b', text: '#ffffff', sub: '#fbe3d8', stroke: 'none', label: 'Sales Manager' },
+    bfl:      { fill: '#f1eee8', text: '#1a1612', sub: '#57524b', stroke: 'none', label: 'BFL platform' },
+    odoo:     { fill: '#ffffff', text: '#1a1612', sub: '#57524b', stroke: '#1a1612', label: 'Odoo / warehouse' }
+  };
+  function el(name, attrs, text) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text) e.textContent = text;
+    return e;
+  }
+  function flow(id, steps) {
+    var svg = document.getElementById(id);
+    var g = el('g', { 'font-family': 'Segoe UI, sans-serif', 'font-size': '12' });
+    var defs = el('defs', {});
+    var m = el('marker', { id: id + 'm', viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse' });
+    m.appendChild(el('path', { d: 'M0 0L10 5L0 10z', fill: '#8a847a' }));
+    defs.appendChild(m); svg.appendChild(defs);
+    var y = 6, h = 46, gap = 12, x = 150, w = 380;
+    steps.forEach(function (s, i) {
+      var st = styles[s.who];
+      g.appendChild(el('text', { x: x - 14, y: y + 27, 'text-anchor': 'end', fill: '#57524b', 'font-size': '11' }, (i + 1) + ' · ' + st.label));
+      g.appendChild(el('rect', { x: x, y: y, width: w, height: h, rx: 8, fill: st.fill, stroke: st.stroke }));
+      g.appendChild(el('text', { x: x + 14, y: y + 19, fill: st.text, 'font-weight': '700' }, s.t));
+      g.appendChild(el('text', { x: x + 14, y: y + 35, fill: st.sub, 'font-size': '11' }, s.d));
+      if (s.screen) g.appendChild(el('text', { x: x + w + 12, y: y + 27, fill: '#a8400b', 'font-weight': '700', 'font-size': '11' }, s.screen));
+      if (i < steps.length - 1) g.appendChild(el('path', { d: 'M' + (x + w / 2) + ' ' + (y + h) + 'V' + (y + h + gap - 2), stroke: '#8a847a', 'stroke-width': '1.3', fill: 'none', 'marker-end': 'url(#' + id + 'm)' }));
+      y += h + gap;
+    });
+    svg.setAttribute('viewBox', '0 0 680 ' + (y - gap + 8));
+    svg.appendChild(g);
+  }
+  flow('j1', [
+    { who: 'customer', t: 'Registers the company', d: 'company, contact, phone, delivery address', screen: 'C02' },
+    { who: 'manager', t: 'Approves as a credit customer', d: 'chooses rep and price class; checks duplicates', screen: 'S01' },
+    { who: 'odoo', t: 'Customer created in Odoo', d: 'credit limit and payment schedule then set', screen: 'Odoo, S07' },
+    { who: 'customer', t: 'Signs in and browses with own prices', d: 'only products visible to this customer', screen: 'C01, C03, C04' },
+    { who: 'bfl', t: 'Checks credit and stock before sending', d: 'available credit counts open orders; live from Odoo', screen: 'C05' },
+    { who: 'bfl', t: 'Sends a draft quotation to Odoo', d: 'customer sees the Odoo number, e.g. S0xxxx', screen: 'C06' },
+    { who: 'manager', t: 'Confirms the quotation in Odoo', d: 'same number; status becomes Approved', screen: 'Odoo' },
+    { who: 'odoo', t: 'Delivery validated when the truck is loaded', d: 'lot recorded; status becomes Dispatched', screen: 'Odoo' },
+    { who: 'odoo', t: 'Invoice posted', d: 'the balance goes up; reminders follow the schedule', screen: 'C07' },
+    { who: 'customer', t: 'Pays as usual; Finance records it in Odoo', d: 'balance goes down; reminders stop', screen: 'C07' }
+  ]);
+  flow('j2', [
+    { who: 'customer', t: 'Registers with name, phone and address', d: 'no company account', screen: 'C02' },
+    { who: 'manager', t: 'Approves as a cash customer', d: 'nothing is created in Odoo', screen: 'S01' },
+    { who: 'customer', t: 'Browses and fills the request', d: 'prices from the cash account price class', screen: 'C03, C08' },
+    { who: 'bfl', t: 'Sends a draft quotation on the shared cash account', d: 'buyer name, phone and address in the order note', screen: 'C08' },
+    { who: 'manager', t: 'Confirms the quotation in Odoo', d: 'no credit check for cash', screen: 'Odoo' },
+    { who: 'customer', t: 'Pays in cash, as today', d: 'sees only the orders placed on BFL', screen: 'C09' }
+  ]);
+})();
+</script>
+</body>
+</html>

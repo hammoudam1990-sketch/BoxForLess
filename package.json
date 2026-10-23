@@ -14,7 +14,8 @@
     "gen-cert": "node scripts/gen-cert.js",
     "import": "node scripts/import-cli.js",
     "data-quality": "node scripts/data-quality-report.js",
-    "test": "node --test"
+    "test": "node --test",
+    "demo": "node scripts/demo.js"
   },
   "dependencies": {
     "@zxing/library": "^0.21.3",

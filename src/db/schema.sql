@@ -277,3 +277,58 @@ CREATE TABLE IF NOT EXISTS quotations (
   created_at     TEXT,
   updated_at     TEXT
 );
+
+-- Warehouse: Expiry. The decision BFL records against a lot on the Expiry list: what will be
+-- done with it, who owns it, by when, and where it stands. The physical move, return or
+-- write-off is done in Odoo. lot_key is "<barcode>|<lot name>" until Odoo lot ids are in play.
+CREATE TABLE IF NOT EXISTS expiry_actions (
+  lot_key    TEXT PRIMARY KEY,
+  action     TEXT,
+  owner      TEXT,
+  decide_by  TEXT,
+  status     TEXT NOT NULL DEFAULT 'OPEN',
+  updated_at TEXT NOT NULL
+);
+
+-- Warehouse: Expiry, customer shelves (W2). A shop visit by a sales rep, and one line per lot
+-- counted. A discount agreed on a visit is a PROPOSAL (approval_status PENDING) until the Sales
+-- Manager approves it; the credit note is issued by Finance in Odoo and its number recorded here.
+-- record_key is "<customer>|<barcode>|<lot>|<sales order>" until Odoo ids are in play.
+CREATE TABLE IF NOT EXISTS shelf_visits (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  rep_id      TEXT NOT NULL,
+  customer_id INTEGER NOT NULL,
+  visited_on  TEXT NOT NULL,
+  created_at  TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS shelf_visit_lines (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  visit_id         INTEGER NOT NULL REFERENCES shelf_visits(id),
+  record_key       TEXT NOT NULL,
+  cartons_on_shelf INTEGER,
+  outcome          TEXT NOT NULL,
+  discount_pct     REAL,
+  contact_name     TEXT,
+  agreement        INTEGER NOT NULL DEFAULT 0,
+  approval_status  TEXT,
+  approval_reason  TEXT,
+  approved_at      TEXT,
+  credit_note_ref  TEXT,
+  created_at       TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_shelf_lines_record ON shelf_visit_lines(record_key);
+
+-- Warehouse: Expiry W3. When a customer's request holds stock with less shelf life than their
+-- minimum, they must accept it first; this is the record of that acceptance (the evidence that the
+-- lot will not be returned for expiry). One row per accepted line.
+CREATE TABLE IF NOT EXISTS request_shelf_acceptances (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id    INTEGER NOT NULL REFERENCES requests(id),
+  customer_id   INTEGER NOT NULL,
+  barcode       TEXT NOT NULL,
+  min_days      INTEGER NOT NULL,
+  expiry_date   TEXT,
+  short_cartons INTEGER NOT NULL,
+  accepted_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_shelf_accept_request ON request_shelf_acceptances(request_id);

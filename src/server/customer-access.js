@@ -1,4 +1,8 @@
-// Customer access sessions, established by an access code.
+// Customer sessions. A customer signs in with their ID and a password (server/auth.js), or — only until
+// they have chosen a password — with the access code staff sent them.
+//
+// A session made with a CODE ends when an order is sent (a salesman shares one phone between customers);
+// a session made with a PASSWORD belongs to the customer's own device and lasts until they sign out.
 //
 // Mirrors staff-auth.js in shape, but the two are deliberately SEPARATE: they use
 // different cookies and different secrets, so a customer session can never be
@@ -11,6 +15,7 @@
 import crypto from 'node:crypto';
 import config from '../config.js';
 import { resolveAccessCode, normalizeAccessCode, CODE_LENGTH } from '../domain/access-codes.js';
+import { hasPassword } from '../domain/customer-auth.js';
 
 const COOKIE_NAME = 'bfl_customer';
 const WINDOW_MS = 15 * 60 * 1000;
@@ -43,6 +48,21 @@ function cookieValue(req) {
   return '';
 }
 
+/** Start a session for this customer. `method` is 'password' or 'code'. */
+export function startCustomerSession(res, db, customerId, method = 'password') {
+  const epoch = Number(db.prepare('SELECT session_epoch FROM customers WHERE id = ?').get(customerId)?.session_epoch ?? 0);
+  setCookie(res, Buffer.from(JSON.stringify({
+    cid: Number(customerId), ep: epoch, m: method === 'password' ? 'pw' : 'code', exp: Date.now() + sessionSeconds() * 1000,
+  })).toString('base64url'));
+}
+
+/** The Set-Cookie value that removes the customer cookie. */
+export const customerCookieClear = () => `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${isSecureCookie() ? '; Secure' : ''}`;
+
+export function endCustomerCookie(res) {
+  res.setHeader('Set-Cookie', customerCookieClear());
+}
+
 function setCookie(res, payload) {
   res.setHeader('Set-Cookie',
     `${COOKIE_NAME}=${payload}.${sign(payload)}; Path=/; HttpOnly; SameSite=Strict; `
@@ -73,7 +93,7 @@ export function currentCustomer(req) {
     // if the browser still has the cookie. This is what makes "the session ends
     // with the order" a guarantee rather than a request to the browser.
     if (Number(session.ep ?? 0) !== Number(row.session_epoch ?? 0)) return null;
-    return row;
+    return { ...row, method: session.m === 'pw' ? 'password' : 'code' };
   } catch { return null; }
 }
 
@@ -106,13 +126,14 @@ export function enterAccessCode(req, res) {
   // response cannot be used to test which codes exist.
   if (!customer) return res.status(401).json({ error: 'That access code was not recognised.' });
 
+  // Once a customer has chosen a password, the code alone no longer gets them in: a code that was
+  // forwarded or leaked must not bypass it.
+  // At go-live set BFL_ALLOW_CODE_SIGNIN=0: then NOBODY can sign in with a code alone, activated or not.
+  if (process.env.BFL_ALLOW_CODE_SIGNIN === '0' || hasPassword(req.db, customer.id)) {
+    return res.status(403).json({ error: 'This account uses a password. Sign in with your customer ID and password.', code: 'USE_PASSWORD' });
+  }
   attempts.delete(ip);
-  const epoch = Number(
-    req.db.prepare('SELECT session_epoch FROM customers WHERE id = ?').get(customer.id)?.session_epoch ?? 0
-  );
-  setCookie(res, Buffer.from(JSON.stringify({
-    cid: customer.id, ep: epoch, exp: now + sessionSeconds() * 1000,
-  })).toString('base64url'));
+  startCustomerSession(res, req.db, customer.id, 'code');
   res.json({ ok: true, customer: publicCustomer(customer) });
 }
 
@@ -154,7 +175,9 @@ export function clearCustomerSession(res, db = null, customerId = null) {
 export function exitAccess(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const customer = currentCustomer(req);
-  clearCustomerSession(res, req.db, customer?.id ?? null);
+  // a password session is just this device's cookie; a code session also ends every other use of the code
+  if (customer?.method === 'password') endCustomerCookie(res);
+  else clearCustomerSession(res, req.db, customer?.id ?? null);
   res.status(204).end();
 }
 

@@ -457,7 +457,10 @@ test('access-code page links to the standalone signup page', async () => {
     assert.match(page, /name="contact"/);
     assert.match(page, /name="phone"/);
     assert.match(page, /name="address"/);
-    assert.doesNotMatch(page, /name="company"|name="note"/);
+    // company and email are optional (registration, Sales Management slice 5); there is still no free-text note
+    assert.match(page, /name="company"/);
+    assert.match(page, /name="email"/);
+    assert.doesNotMatch(page, /name="note"/);
     assert.match(page, /href="\/customer-shop"/);
   } finally { server.close(); }
   db.close();

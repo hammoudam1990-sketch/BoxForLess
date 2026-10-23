@@ -14,11 +14,20 @@ import {
   RequestValidationError, STALE_STOCK_MESSAGE,
 } from '../../domain/requests.js';
 import { getStockSource } from '../../domain/stock-source.js';
-import { requireCustomer, clearCustomerSession } from '../customer-access.js';
+import { checkRequestLines, requireAcceptance, saveAcceptances } from '../../domain/shelf-life.js';
+import { requireCustomer, clearCustomerSession, currentCustomer } from '../customer-access.js';
 import {
   createAccessRequest, toAccessRequestReceipt, listAccessRequests,
   getAccessRequest, approveAccessRequest, rejectAccessRequest, AccessRequestError,
+  findDuplicates, repChoices, CustomerType,
 } from '../../domain/access-requests.js';
+import { listPriceClasses, DEFAULT_PRICE_CLASS, CASH_PRICE_CLASS } from '../../domain/prices.js';
+import { listPending, outboxSummary } from '../../domain/outbox.js';
+import { pricesForCustomer } from '../../domain/prices.js';
+import { clearanceOffersFor, applyClearance } from '../../domain/lot-discounts.js';
+import { createOrderForRequest, listOrdersFor, accountFor, assertCredit, checkCredit, CREDIT_LIMIT_EXCEEDED } from '../../domain/orders.js';
+import { logCreditBlock } from '../../domain/order-log.js';
+import { resetCustomerPassword, setOdooCustomerId, CustomerAuthError } from '../../domain/customer-auth.js';
 import { issueAccessCode, listCustomerCodes, formatAccessCode } from '../../domain/access-codes.js';
 import { lanAddresses } from '../net.js';
 import config from '../../config.js';
@@ -73,15 +82,98 @@ customerRouter.get('/requests/stock-status', (req, res, next) => {
 
 // POST /api/catalog/requests/validate — dry run, writes nothing.
 customerRouter.post('/requests/validate', (req, res, next) => {
-  try { res.json(toCustomerVerdict(validateRequest(req.db, readLines(req.body)))); } catch (e) { next(e); }
+  try {
+    // a visitor or customer is judged as that viewer: a product hidden from them is refused like an unknown one
+    const c = currentCustomer(req);
+    res.json(toCustomerVerdict(validateRequest(req.db, readLines(req.body), { viewer: c ? { customerId: c.id } : null })));
+  } catch (e) { next(e); }
+});
+
+// POST /api/catalog/requests/shelf-check — which lines of MY request would be filled with stock
+// below my minimum shelf life? Identity is the signed session. Says nothing about quantities or
+// lots: only the message and the date the stock expires.
+// GET /api/catalog/prices?barcodes=a,b,c — the signed-in customer's own carton prices.
+//
+// The ONLY place a price leaves the server. It needs a customer session (401 otherwise, so a
+// visitor or a customer whose code has not been entered never sees one), answers for the
+// session's customer alone (nothing in the query names a customer), and returns the price class
+// name to nobody — only numbers for the barcodes asked about.
+customerRouter.get('/prices', requireCustomer, (req, res, next) => {
+  try {
+    const barcodes = String(req.query.barcodes || '').split(',').map((b) => b.trim()).filter(Boolean);
+    res.json(pricesForCustomer(req.db, req.customer.id, barcodes));
+  } catch (e) { next(e); }
+});
+
+// GET /api/catalog/offers — the discounted near-expiry offers THIS customer may use. Like a price, an offer is for
+// a signed-in, approved customer only (401 otherwise), answers for the session's customer alone, and carries no
+// internal id, no lot's real stock beyond "up to N cartons at this price", and no cost.
+customerRouter.get('/offers', requireCustomer, (req, res, next) => {
+  try {
+    const offers = [...clearanceOffersFor(req.db, req.customer.id).values()].map((o) => ({
+      barcode: o.barcode, name: o.name, bestBefore: o.expiryDate, daysLeft: o.daysLeft, discountPct: o.discountPct,
+      maxCartons: o.cartons, price: o.price, discountedPrice: o.discountedPrice,
+    }));
+    res.json({ currency: 'GHS', per: 'carton', offers });
+  } catch (e) { next(e); }
+});
+
+// GET /api/catalog/orders — MY orders: BFL's reference, Odoo's number, and where each one stands.
+// Identity is the session; there is no parameter that could name another customer.
+customerRouter.get('/orders', requireCustomer, (req, res, next) => {
+  try { res.json({ orders: listOrdersFor(req.db, req.customer.id) }); } catch (e) { next(e); }
+});
+
+// GET /api/catalog/account — MY balance as Odoo reports it (a cash customer has none).
+customerRouter.get('/account', requireCustomer, (req, res, next) => {
+  try { res.json({ source: 'SAMPLE', ...accountFor(req.db, req.customer.id) }); } catch (e) { next(e); }
+});
+
+// POST /api/catalog/requests/credit-check — would MY request go over MY available credit? A dry run
+// for the drawer; the same check is enforced again when the request is submitted. Says nothing when
+// there is nothing to check (cash customer, no limit known).
+customerRouter.post('/requests/credit-check', requireCustomer, (req, res, next) => {
+  try {
+    const r = checkCredit(req.db, req.customer.id, readLines(req.body));
+    res.json({ checked: r.checked, ok: r.ok, message: r.message || null });
+  } catch (e) { next(e); }
+});
+
+customerRouter.post('/requests/shelf-check', requireCustomer, (req, res, next) => {
+  try {
+    const { minDays, warnings } = checkRequestLines(req.db, req.customer.id, readLines(req.body));
+    res.json({ minDays, warnings: warnings.map((w) => ({ barcode: w.barcode, message: w.message, expiryDate: w.expiryDate })) });
+  } catch (e) { next(e); }
 });
 
 // POST /api/catalog/requests — validate THEN submit, one transaction.
 customerRouter.post('/requests', requireCustomer, (req, res, next) => {
   try {
     const body = req.body || {};
+    const lines = readLines(body);
+    // A customer with a minimum shelf life must accept any line that would be filled with
+    // shorter-dated stock. Re-checked HERE, never trusted from the browser.
+    const shelf = checkRequestLines(req.db, req.customer.id, lines);
+    const accepted = requireAcceptance(shelf, body.acceptedShortDated);
+    // Over the customer's available credit? Refuse and log it (the report counts blocked orders). The same check runs again
+    // inside the transaction below, so two requests at once cannot both pass.
+    const credit = checkCredit(req.db, req.customer.id, lines);
+    if (!credit.ok) {
+      logCreditBlock(req.db, req.customer.id, credit);
+      throw new RequestValidationError('Over your available credit.', { errors: [{ code: CREDIT_LIMIT_EXCEEDED, message: credit.message }] });
+    }
     const result = submitRequest(req.db, {
-      lines: readLines(body),
+      lines,
+      // saved in the same transaction as the request itself
+      // and the order for it, with its draft quotation queued for Odoo (no price on it)
+      onInsert: (requestId) => {
+        // inside the transaction, so two requests cannot both spend the same credit
+        assertCredit(req.db, req.customer.id, lines);
+        saveAcceptances(req.db, requestId, req.customer.id, shelf.minDays, accepted);
+        // which cartons are on a discounted near-expiry offer (re-read here on the server, never taken from the browser)
+        applyClearance(req.db, requestId, req.customer.id);
+        createOrderForRequest(req.db, requestId);
+      },
       // Identity comes from the SIGNED SESSION, never from the request body. The
       // browser cannot name a customer it did not prove a code for, so one company
       // can no longer submit a request in another company's name.
@@ -96,7 +188,8 @@ customerRouter.post('/requests', requireCustomer, (req, res, next) => {
     // several customers in a day, so the next person must enter their own code
     // rather than inherit whoever ordered last. Cleared server-side, so it cannot
     // be skipped by the browser.
-    clearCustomerSession(res, req.db, req.customer.id);
+    // a code session ends with the order (shared phone); a password session stays
+    if (req.customer.method !== 'password') clearCustomerSession(res, req.db, req.customer.id);
     // confirmation only — no internal request id
     res.status(201).json({ reference: result.reference, items: result.lineCount, submitted: true });
   } catch (e) {
@@ -115,10 +208,10 @@ customerRouter.post('/requests', requireCustomer, (req, res, next) => {
 customerRouter.post('/access-requests', (req, res, next) => {
   try {
     const body = req.body || {};
-    createAccessRequest(req.db, body);
-    // Always the same acknowledgement, carrying no id — so submitting this form
+    const { reference } = createAccessRequest(req.db, body);
+    // Always the same acknowledgement, carrying no database id — so submitting this form
     // reveals nothing about who is already a customer.
-    res.status(201).json(toAccessRequestReceipt());
+    res.status(201).json(toAccessRequestReceipt(reference));
   } catch (e) {
     if (e instanceof AccessRequestError) return res.status(e.status).json({ error: e.message, code: e.code });
     next(e);
@@ -164,30 +257,74 @@ staffRouter.post('/customers/:id/code', (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// A customer's Odoo ID — what they sign in with. A stand-in for the Odoo sync, which will set it.
+staffRouter.put('/customers/:id/odoo-id', (req, res, next) => {
+  try { res.json(setOdooCustomerId(req.db, req.params.id, req.body?.odooId)); } catch (e) {
+    if (e instanceof CustomerAuthError) return res.status(e.status).json({ error: e.message, code: e.code });
+    next(e);
+  }
+});
+
+// Reset a customer's password: it is cleared, their sessions end, and a NEW access code is issued so
+// they can activate again and choose a new password.
+staffRouter.post('/customers/:id/reset-password', (req, res, next) => {
+  try {
+    const code = resetCustomerPassword(req.db, req.params.id);
+    if (!code) return res.status(404).json({ error: 'Customer not found' });
+    res.json({ customerId: Number(req.params.id), code, display: formatAccessCode(code) });
+  } catch (e) { next(e); }
+});
+
 staffRouter.get('/access-requests', (req, res, next) => {
   try {
     res.json(listAccessRequests(req.db, { status: req.query.status || null, limit: req.query.limit, offset: req.query.offset }));
   } catch (e) { next(e); }
 });
 
+// What the Approvals screen offers when deciding: the price classes, the reps, and what is
+// waiting to go to Odoo. (Registered BEFORE '/:id' so 'options' is not read as an id.)
+staffRouter.get('/access-requests/options', (req, res, next) => {
+  try {
+    res.json({
+      priceClasses: listPriceClasses(),
+      defaultPriceClass: DEFAULT_PRICE_CLASS,
+      cashPriceClass: CASH_PRICE_CLASS,
+      reps: repChoices(req.db),
+      customerTypes: Object.values(CustomerType),
+      source: 'SAMPLE',
+      outbox: { summary: outboxSummary(req.db), pending: listPending(req.db, 20).map((p) => ({ id: p.id, kind: p.kind, name: p.payload?.values?.name, reference: p.payload?.values?.ref, createdAt: p.createdAt })) },
+    });
+  } catch (e) { next(e); }
+});
+
+// One registration with its duplicate check, for the decision.
 staffRouter.get('/access-requests/:id', (req, res, next) => {
   try {
     const found = getAccessRequest(req.db, req.params.id);
     if (!found) return res.status(404).json({ error: 'Access request not found' });
-    res.json(found);
+    res.json({ ...found, duplicates: findDuplicates(req.db, found), suggestedType: found.company ? CustomerType.CREDIT : CustomerType.CASH });
   } catch (e) { next(e); }
 });
 
 // Approve: creates (or reuses) the customer and issues the code, in one transaction.
 staffRouter.post('/access-requests/:id/approve', (req, res, next) => {
   try {
-    const result = approveAccessRequest(req.db, req.params.id);
+    const body = req.body || {};
+    // The decision comes from the Sales Manager's screen; `strict` is set here, never by the client.
+    const result = approveAccessRequest(req.db, req.params.id, {
+      strict: true,
+      customerType: body.customerType,
+      priceClass: body.priceClass,
+      salespersonId: body.salespersonId,
+      linkCustomerId: body.linkCustomerId,
+      createNew: body.createNew === true,
+    });
     if (!result) return res.status(404).json({ error: 'Access request not found' });
     // catalogUrl travels with the code so the staff screen can offer a complete,
     // ready-to-send message without a second request.
     res.json({ ...result, display: formatAccessCode(result.code), catalogUrl: catalogUrlFor(req) });
   } catch (e) {
-    if (e instanceof AccessRequestError) return res.status(409).json({ error: e.message, code: e.code });
+    if (e instanceof AccessRequestError) return res.status(e.status).json({ error: e.message, code: e.code, ...(e.details || {}) });
     next(e);
   }
 });

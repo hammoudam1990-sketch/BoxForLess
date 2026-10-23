@@ -1,0 +1,287 @@
+{
+  "_about": "SAMPLE data for the sales-rep visit screens (R01 My visits, R02 Visit form) before Odoo exists. Reps, the customers assigned to them, and the lots delivered to each customer. Dates are RELATIVE (days from today) so alerts are always due. In the real system the rep is whoever is signed in, the customers are those assigned to them in Odoo, and the lots come from done deliveries (stock.picking / stock.move.line).",
+  "reps": [
+    {
+      "id": "rep-1",
+      "name": "Kwame Asante"
+    },
+    {
+      "id": "rep-2",
+      "name": "Efua Owusu"
+    }
+  ],
+  "customers": [
+    {
+      "id": 4101,
+      "name": "Adom Supermarket",
+      "repId": "rep-1"
+    },
+    {
+      "id": 4102,
+      "name": "Akwaaba Mini Mart",
+      "repId": "rep-1"
+    },
+    {
+      "id": 4103,
+      "name": "Baah & Sons Provisions",
+      "repId": "rep-1"
+    },
+    {
+      "id": 4104,
+      "name": "Cantonments Fresh Market",
+      "repId": "rep-1"
+    },
+    {
+      "id": 4105,
+      "name": "Dzorwulu Grocery",
+      "repId": "rep-1"
+    },
+    {
+      "id": 4106,
+      "name": "East Legon Stores",
+      "repId": "rep-1"
+    },
+    {
+      "id": 4107,
+      "name": "Fiifi's Corner Shop",
+      "repId": "rep-2"
+    },
+    {
+      "id": 4108,
+      "name": "Golden Gate Mart",
+      "repId": "rep-2"
+    },
+    {
+      "id": 4109,
+      "name": "Haatso Wholesale",
+      "repId": "rep-2"
+    },
+    {
+      "id": 4110,
+      "name": "Ishmael Store",
+      "repId": "rep-2"
+    }
+  ],
+  "records": [
+    {
+      "customerId": 4101,
+      "salesOrder": "S00231",
+      "deliveredDaysAgo": 70,
+      "productName": "AL AMIR FETA CHEESE WITH PEPPER 10KG * 1",
+      "barcode": "ALMRFCHWTHPPR",
+      "lotName": "SAMPLE-0004",
+      "categoryPath": "FOOD / DAIRY",
+      "expiresInDays": 14,
+      "deliveredCartons": 8
+    },
+    {
+      "customerId": 4101,
+      "salesOrder": "S00231",
+      "deliveredDaysAgo": 70,
+      "productName": "AL AMIR FETA CHEESE WITH MINT 10KG * 1",
+      "barcode": "ALMRFCHMNT112",
+      "lotName": "SAMPLE-0003",
+      "categoryPath": "FOOD / DAIRY",
+      "expiresInDays": 9,
+      "deliveredCartons": 4
+    },
+    {
+      "customerId": 4101,
+      "salesOrder": "S00244",
+      "deliveredDaysAgo": 40,
+      "productName": "HAPPY CANNED SWEET CORN 340G * 24",
+      "barcode": "5283033901482",
+      "lotName": "SAMPLE-0008",
+      "categoryPath": "FOOD / CANNED FOOD",
+      "expiresInDays": 55,
+      "deliveredCartons": 10
+    },
+    {
+      "customerId": 4101,
+      "salesOrder": "S00244",
+      "deliveredDaysAgo": 40,
+      "productName": "CHTOURA GARDEN ROSE WATER 500ML * 12",
+      "barcode": "5285001401482",
+      "lotName": "SAMPLE-0011",
+      "categoryPath": "FOOD / CANNED FOOD",
+      "expiresInDays": 150,
+      "deliveredCartons": 12
+    },
+    {
+      "customerId": 4102,
+      "salesOrder": "S00250",
+      "deliveredDaysAgo": 50,
+      "productName": "CANDIA JUICE 180ML *24/PINEAPPLE",
+      "barcode": "5285001105700",
+      "lotName": "SAMPLE-0014",
+      "categoryPath": "DRINKS & BEVERAGES / JUICE",
+      "expiresInDays": 8,
+      "deliveredCartons": 6
+    },
+    {
+      "customerId": 4102,
+      "salesOrder": "S00250",
+      "deliveredDaysAgo": 50,
+      "productName": "CANDIA JUICE 180ML *24/MANGO",
+      "barcode": "5285001105731",
+      "lotName": "SAMPLE-0015",
+      "categoryPath": "DRINKS & BEVERAGES / JUICE",
+      "expiresInDays": 25,
+      "deliveredCartons": 5
+    },
+    {
+      "customerId": 4103,
+      "salesOrder": "S00198",
+      "deliveredDaysAgo": 160,
+      "productName": "UNICCA CHOCOLAT DARK 18G*24",
+      "barcode": "5281028424633",
+      "lotName": "SAMPLE-0022",
+      "categoryPath": "FOOD / BISCUITS & SNACKS",
+      "expiresInDays": -3,
+      "deliveredCartons": 3
+    },
+    {
+      "customerId": 4103,
+      "salesOrder": "S00260",
+      "deliveredDaysAgo": 30,
+      "productName": "UNICCA CHOCOLAT STRAWBERRY 18G*24",
+      "barcode": "5281028455736",
+      "lotName": "SAMPLE-0023",
+      "categoryPath": "FOOD / BISCUITS & SNACKS",
+      "expiresInDays": 47,
+      "deliveredCartons": 7
+    },
+    {
+      "customerId": 4104,
+      "salesOrder": "S00262",
+      "deliveredDaysAgo": 45,
+      "productName": "ABIDO ALL SPICE GROUND 500G * 14",
+      "barcode": "5283001117266",
+      "lotName": "SAMPLE-0018",
+      "categoryPath": "FOOD / SPICES & SEASONINGS / GROUND SPICES",
+      "expiresInDays": 28,
+      "deliveredCartons": 5
+    },
+    {
+      "customerId": 4104,
+      "salesOrder": "S00262",
+      "deliveredDaysAgo": 45,
+      "productName": "ABIDO CLOVE POWDER 50G * 10",
+      "barcode": "5283001109209",
+      "lotName": "SAMPLE-0019",
+      "categoryPath": "FOOD / SPICES & SEASONINGS / GROUND SPICES",
+      "expiresInDays": 58,
+      "deliveredCartons": 9
+    },
+    {
+      "customerId": 4105,
+      "salesOrder": "S00270",
+      "deliveredDaysAgo": 20,
+      "productName": "PLEIN SOLEIL P/SOLEIL WHOLE MUSHROOM 800G * 12",
+      "barcode": "5285000835608",
+      "lotName": "SAMPLE-0012",
+      "categoryPath": "FOOD / CANNED FOOD",
+      "expiresInDays": 200,
+      "deliveredCartons": 15
+    },
+    {
+      "customerId": 4105,
+      "salesOrder": "S00270",
+      "deliveredDaysAgo": 20,
+      "productName": "AL AMIR FETA CHEESE WITH HABBAT AL BARAKA 10KG * 1",
+      "barcode": "ALMRFCHALBRK1",
+      "lotName": "SAMPLE-0002",
+      "categoryPath": "FOOD / DAIRY",
+      "expiresInDays": 40,
+      "deliveredCartons": 4
+    },
+    {
+      "customerId": 4106,
+      "salesOrder": "S00275",
+      "deliveredDaysAgo": 100,
+      "productName": "SNIPS CORN COBS SHIPS 60G 12",
+      "barcode": "5281128101809",
+      "lotName": "SAMPLE-0010",
+      "categoryPath": "FOOD / CANNED FOOD",
+      "expiresInDays": 33,
+      "deliveredCartons": 14
+    },
+    {
+      "customerId": 4107,
+      "salesOrder": "S00281",
+      "deliveredDaysAgo": 60,
+      "productName": "PLEIN SOLEIL INSTANT FULL CREAM MILK POWDER 400G * 24",
+      "barcode": "5283013322214",
+      "lotName": "SAMPLE-0007",
+      "categoryPath": "FOOD / DAIRY",
+      "expiresInDays": 22,
+      "deliveredCartons": 6
+    },
+    {
+      "customerId": 4107,
+      "salesOrder": "S00281",
+      "deliveredDaysAgo": 60,
+      "productName": "AL AMIR FETA CHEESE WITH ZAATAR 10KG * 1",
+      "barcode": "ALMRFCHZAATR1",
+      "lotName": "SAMPLE-0006",
+      "categoryPath": "FOOD / DAIRY",
+      "expiresInDays": 12,
+      "deliveredCartons": 3
+    },
+    {
+      "customerId": 4108,
+      "salesOrder": "S00290",
+      "deliveredDaysAgo": 90,
+      "productName": "LAZIZA NON ALCOHOLIC BEER APPLE GLASS 330ML * 24",
+      "barcode": "5281012013041",
+      "lotName": "SAMPLE-0016",
+      "categoryPath": "DRINKS & BEVERAGES / SOFT DRINKS",
+      "expiresInDays": 52,
+      "deliveredCartons": 20
+    },
+    {
+      "customerId": 4108,
+      "salesOrder": "S00290",
+      "deliveredDaysAgo": 90,
+      "productName": "LAZIZA NON ALCOHOLIC BEER PLAIN GLASS 330ML * 24",
+      "barcode": "5281012013034",
+      "lotName": "SAMPLE-0017",
+      "categoryPath": "DRINKS & BEVERAGES / SOFT DRINKS",
+      "expiresInDays": 180,
+      "deliveredCartons": 30
+    },
+    {
+      "customerId": 4109,
+      "salesOrder": "S00295",
+      "deliveredDaysAgo": 140,
+      "productName": "CHTOURA GARDEN COARSE BRUN BOURGOUL 900G *10",
+      "barcode": "5285001403059",
+      "lotName": "SAMPLE-0009",
+      "categoryPath": "FOOD / CANNED FOOD",
+      "expiresInDays": 26,
+      "deliveredCartons": 25
+    },
+    {
+      "customerId": 4109,
+      "salesOrder": "S00295",
+      "deliveredDaysAgo": 140,
+      "productName": "ABIDO CORIANDER FINE 500G * 14",
+      "barcode": "5283001117303",
+      "lotName": "SAMPLE-0020",
+      "categoryPath": "FOOD / SPICES & SEASONINGS / GROUND SPICES",
+      "expiresInDays": 59,
+      "deliveredCartons": 4
+    },
+    {
+      "customerId": 4110,
+      "salesOrder": "S00301",
+      "deliveredDaysAgo": 15,
+      "productName": "EQUIA OAT CRACKERS PIZZA 50G 12",
+      "barcode": "5283021800377",
+      "lotName": "SAMPLE-0024",
+      "categoryPath": "FOOD / BISCUITS & SNACKS",
+      "expiresInDays": 250,
+      "deliveredCartons": 10
+    }
+  ]
+}

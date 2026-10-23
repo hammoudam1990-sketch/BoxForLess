@@ -9,6 +9,8 @@ import { navigate, onRouteChange, parsePath, interceptLinks } from './router.js'
 import { mountList, showEverything, listTab } from './list.js';
 import { mountDetail } from './detail.js';
 import { mountRequestUI } from './request.js';
+import { buildPriceBar, refreshSession } from './prices.js';
+import { mountAccountUI } from './account.js';
 
 const LIST_TITLE = 'Box for Less — Digital Product Catalog';
 
@@ -47,6 +49,7 @@ export function startCatalog(root) {
     item('grid', 'Categories', () => goCategories()),
     item('search', 'Search products', () => focusSearch()),
     item('request', 'My request', () => requestUI.open()),
+    item('request', 'My orders', () => window.dispatchEvent(new Event('bfl:open-orders'))),
     h('hr'),
     item('moon', themeLabel, () => window.bflTheme && window.bflTheme.toggle()),
     item('print', 'Print this page', () => window.print()),
@@ -82,7 +85,9 @@ export function startCatalog(root) {
   hideHeaderOnScroll(header);
 
   const main = h('main', { class: 'c-main', tabindex: '-1' });
-  setChildren(root, header, main);
+  setChildren(root, header, buildPriceBar(), main);
+  refreshSession();
+  mountAccountUI();
 
   const requestUI = mountRequestUI({ onHome: () => goHome(), onCategories: () => goCategories() });
   const syncTab = () => requestUI.setTab(route.name === 'list' ? listTab() : '');

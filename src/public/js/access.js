@@ -3,6 +3,7 @@
 // Everything here is behind the staff sign-in. The codes shown ARE the live codes
 // customers use, so this module must never be imported by the catalog bundle.
 import { api } from './api.js';
+import { buildDecisionPanel, buildOutboxNote } from './registrations.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
@@ -53,13 +54,16 @@ async function copyWithFeedback(button, text) {
   return ok;
 }
 
-/** The message staff paste into WhatsApp or SMS. */
-function invitation(name, code, catalogUrl) {
+/** The message staff paste into WhatsApp or SMS. `loginId` is their Odoo ID, or the phone they registered with. */
+function invitation(name, code, catalogUrl, loginId = null) {
+  const home = String(catalogUrl || '').replace(/\/catalog\/?$/, '/');
   return `Hello ${name},\n\n`
-    + 'You can now browse the Box for Less catalogue and send us your request here:\n'
-    + `${catalogUrl}\n\n`
-    + `Your access code is: ${code}\n\n`
-    + 'Enter this code when you send your request. Please keep it private — it is for your company only.';
+    + 'You can now sign in to Box for Less and send us your requests here:\n'
+    + `${home}\n\n`
+    + (loginId ? `Your customer ID: ${loginId}\n` : 'Your customer ID is your Box for Less (Odoo) customer ID, or the phone number you registered with.\n')
+    + `Your access code: ${code}\n\n`
+    + 'The first time: tap "First time? Activate your account", enter your ID and this access code, and choose your own password. '
+    + 'After that you sign in with your ID and password. Keep them private — they are for your company only.';
 }
 
 /**
@@ -68,8 +72,9 @@ function invitation(name, code, catalogUrl) {
  */
 function codeRow(c) {
   return `
-    <tr data-id="${c.id}">
-      <td>${esc(c.name)}${c.is_active ? '' : ' <span class="badge">inactive</span>'}</td>
+    <tr data-id="${c.id}" data-sid="${esc(c.odoo_customer_ref || c.phone || '')}" data-odoo-id="${esc(c.odoo_customer_ref || '')}">
+      <td>${esc(c.name)}${c.is_active ? '' : ' <span class="badge">inactive</span>'}
+        <div class="muted">${c.odoo_customer_ref ? `Odoo ID ${esc(c.odoo_customer_ref)}` : 'no Odoo ID yet'} · ${c.password_set ? 'password set' : 'not activated'}</div></td>
       <td class="code-value code">${c.access_code_display ? esc(c.access_code_display) : '<span class="muted">none</span>'}</td>
       <td class="muted">${when(c.access_code_issued_at)}</td>
       <td class="nowrap">
@@ -77,6 +82,8 @@ function codeRow(c) {
           <button class="secondary" data-copy>Copy code</button>
           <button data-copy-msg>Copy message</button>` : ''}
         <button class="ghost" data-issue>${c.access_code ? 'Reissue' : 'Issue'}</button>
+        <button class="ghost" data-odoo>Odoo ID</button>
+        ${c.password_set ? '<button class="ghost" data-reset>Reset password</button>' : ''}
       </td>
     </tr>`;
 }
@@ -156,7 +163,30 @@ function wireCodeRows(view, data) {
   }));
 
   view.querySelectorAll('[data-copy-msg]').forEach((b) => b.addEventListener('click', () => {
-    copyWithFeedback(b, invitation(nameOf(b), codeOf(b), data.catalogUrl));
+    copyWithFeedback(b, invitation(nameOf(b), codeOf(b), data.catalogUrl, b.closest('tr').dataset.sid || null));
+  }));
+
+  view.querySelectorAll('[data-odoo]').forEach((b) => b.addEventListener('click', async () => {
+    const row = b.closest('tr');
+    // The Odoo ID is what the customer signs in with. (The Odoo sync will fill this in; until then staff do.)
+    const current = row.dataset.odooId || '';
+    const value = window.prompt(`Odoo customer ID for ${nameOf(b)}.\nThis is what they sign in with. Leave empty to clear it.`, current);
+    if (value === null) return;
+    b.disabled = true;
+    try {
+      await api.setOdooId(row.dataset.id, value.trim());
+      await refreshCodeRows(view, view.querySelector('#codeSearch')?.value.trim() || '');
+    } catch (e) { b.disabled = false; window.alert(e.message); }
+  }));
+
+  view.querySelectorAll('[data-reset]').forEach((b) => b.addEventListener('click', async () => {
+    const row = b.closest('tr');
+    if (!window.confirm(`Reset the password for ${nameOf(b)}?\n\nTheir password and any open sign-in stop working. A new access code is issued so they can activate again and choose a new password.`)) return;
+    b.disabled = true;
+    try {
+      await api.resetCustomerPassword(row.dataset.id);
+      await refreshCodeRows(view, view.querySelector('#codeSearch')?.value.trim() || '');
+    } catch (e) { b.disabled = false; window.alert(e.message); }
   }));
 
   view.querySelectorAll('[data-issue]').forEach((b) => b.addEventListener('click', async () => {
@@ -176,7 +206,7 @@ function wireCodeRows(view, data) {
   }));
 }
 
-export async function renderAccessRequests(view, approved = null) {
+export async function renderAccessRequests(view, approved = null, reviewId = null) {
   const data = await api.accessRequests();
   const pending = data.items.filter((r) => r.status === 'PENDING');
   const snapshot = JSON.stringify(data.items.map((r) => [r.id, r.status, r.updated_at]));
@@ -187,6 +217,7 @@ export async function renderAccessRequests(view, approved = null) {
   const approvedPanel = approved ? `
     <div class="card" style="margin-bottom:14px">
       <div class="okbox">Approved — ${esc(approved.name)}</div>
+      <p class="muted">${esc(approved.customerType === 'CASH' ? 'Cash customer' : 'Credit customer')}${approved.priceClass ? ` · ${esc(approved.priceClass)}` : ''}${approved.salesperson ? ` · rep ${esc(approved.salesperson)}` : ''}. ${esc({ QUEUED: 'Queued for Odoo (not connected yet, so not sent).', NOT_NEEDED: 'Nothing is created in Odoo for a cash customer.', EXISTING_CUSTOMER: 'Existing customer: nothing sent to Odoo.' }[approved.odoo] || '')}</p>
       <p class="muted">Send this to the customer. You can see it again under Access Codes.</p>
       <p class="code code-large">${esc(approved.display)}</p>
       <div class="controls">
@@ -198,24 +229,25 @@ export async function renderAccessRequests(view, approved = null) {
 
   const rows = data.items.map((r) => `
     <tr data-id="${r.id}">
-      <td><b>${esc(r.company || r.contact)}</b>${r.company ? `<br><span class="muted">${esc(r.contact)}</span>` : ''}</td>
+      <td><b>${esc(r.company || r.contact)}</b>${r.company ? `<br><span class="muted">${esc(r.contact)}</span>` : ''}${r.reference ? `<br><span class="muted">${esc(r.reference)}</span>` : ''}</td>
       <td>${esc(r.phone)}</td>
       <td class="muted">${esc(r.delivery_address || '—')}</td>
       <td class="muted">${when(r.created_at)}</td>
       <td><span class="badge">${esc(r.status)}</span></td>
       <td class="nowrap">
         ${r.status === 'PENDING' ? `
-          <button data-approve>Approve</button>
+          <button data-review>Review</button>
           <button class="danger" data-reject>Reject</button>` : ''}
       </td>
     </tr>`).join('');
 
   view.innerHTML = `
     ${approvedPanel}
-    <h1>Access requests</h1>
+    <div id="reviewSlot"></div>
+    <h1>Registrations</h1>
     <div class="notice" style="margin:12px 0">
-      People who opened the catalogue without a code and asked for one.
-      Approving creates the customer and issues their code.
+      Companies and buyers who registered and are waiting for approval.
+      Review one to check for duplicates, choose credit or cash, the sales rep and the price class; approving creates the customer and issues their code.
       ${pending.length ? `<b>${pending.length} waiting for a decision.</b>` : ''}
     </div>
     <p class="muted" data-access-refresh-error role="status" aria-live="polite"></p>
@@ -238,16 +270,27 @@ export async function renderAccessRequests(view, approved = null) {
     view.querySelector('[data-dismiss-approved]')?.addEventListener('click', () => renderAccessRequests(view));
   }
 
-  view.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', async () => {
-    const row = b.closest('tr');
-    b.disabled = true;
-    try {
-      await renderAccessRequests(view, await api.approveAccessRequest(row.dataset.id));
-    } catch (e) {
-      b.disabled = false;
-      window.alert(e.message);
-    }
+  view.querySelectorAll('[data-review]').forEach((b) => b.addEventListener('click', () => {
+    renderAccessRequests(view, null, Number(b.closest('tr').dataset.id));
   }));
+
+  if (reviewId) {
+    // The decision panel is built from the server's view of this one registration. While it is
+    // open the page does not refresh itself, so a new arrival cannot wipe a half-made choice.
+    try {
+      const [request, options] = await Promise.all([api.accessRequest(reviewId), api.accessOptions()]);
+      const slot = view.querySelector('#reviewSlot');
+      slot.append(buildDecisionPanel(request, options, {
+        onApproved: (result) => renderAccessRequests(view, result),
+        onCancel: () => renderAccessRequests(view),
+      }));
+      slot.append(buildOutboxNote(options));
+      slot.scrollIntoView?.({ block: 'start' });
+    } catch (e) {
+      window.alert(e.message);
+      return renderAccessRequests(view);
+    }
+  }
 
   view.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', async () => {
     const row = b.closest('tr');
@@ -270,7 +313,7 @@ export async function renderAccessRequests(view, approved = null) {
       clearInterval(view.accessRequestPollTimer);
       return;
     }
-    if (polling) return;
+    if (polling || reviewId) return;
     polling = true;
     try {
       const latest = await api.accessRequests();

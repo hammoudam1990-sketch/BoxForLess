@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <script src="/js/theme-init.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Sign in — Box for Less</title>
+  <link rel="stylesheet" href="/css/backdrop.css" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/extras.css" />
+  <link rel="stylesheet" href="/css/dark.css" />
+  <link rel="stylesheet" href="/css/signin.css" />
+</head>
+<body>
+  <!-- The front door. Every field is written here once and only shown or hidden, so nothing a person is
+       typing into is ever rebuilt. -->
+  <main class="si-wrap" id="signin">
+    <div class="si-card">
+      <div class="si-brand">
+        <span class="logo" role="img" aria-label="Box for Less">BFL</span>
+        <div>
+          <h1>Box for Less</h1>
+          <p>Sign in to continue</p>
+        </div>
+      </div>
+
+      <div class="si-tabs" role="tablist" aria-label="Who is signing in">
+        <button type="button" id="tabCustomer" class="si-tab" role="tab" aria-selected="true" aria-controls="panelCustomer">Customer</button>
+        <button type="button" id="tabStaff" class="si-tab" role="tab" aria-selected="false" aria-controls="panelStaff">Staff</button>
+      </div>
+
+      <p id="message" class="si-msg" role="alert" aria-live="assertive"></p>
+
+      <!-- CUSTOMER: sign in -->
+      <section id="panelCustomer" class="si-panel" role="tabpanel" aria-labelledby="tabCustomer">
+        <form id="customerForm" autocomplete="on" novalidate>
+          <label for="cId">Customer ID</label>
+          <input id="cId" name="id" type="text" inputmode="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="120" required />
+          <p class="si-hint">Your Box for Less customer ID (from Odoo). If you do not have one yet, use the phone number you registered with.</p>
+          <label for="cPassword">Password</label>
+          <div class="si-pw">
+            <input id="cPassword" name="password" type="password" autocomplete="current-password" maxlength="200" required />
+            <button type="button" class="si-show" data-show="cPassword" aria-pressed="false">Show</button>
+          </div>
+          <button type="submit" class="si-primary" id="cSubmit">Sign in</button>
+        </form>
+        <button type="button" class="si-link" id="showActivate">First time? Activate your account</button>
+
+        <!-- CUSTOMER: first time -->
+        <form id="activateForm" class="si-box hidden" autocomplete="off" novalidate>
+          <h2>Activate your account</h2>
+          <p class="si-hint">Enter your customer ID and the access code Box for Less sent you, then choose your own password.</p>
+          <label for="aId">Customer ID</label>
+          <input id="aId" name="id" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="120" required />
+          <label for="aCode">Access code</label>
+          <input id="aCode" name="code" type="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="e.g. 7K2M-9XQR" maxlength="20" required />
+          <label for="aPassword">Choose a password</label>
+          <div class="si-pw">
+            <input id="aPassword" name="password" type="password" autocomplete="new-password" maxlength="200" required />
+            <button type="button" class="si-show" data-show="aPassword" aria-pressed="false">Show</button>
+          </div>
+          <p class="si-hint">At least 8 characters. Do not use your ID or phone number.</p>
+          <label for="aPassword2">Type it again</label>
+          <input id="aPassword2" name="password2" type="password" autocomplete="new-password" maxlength="200" required />
+          <button type="submit" class="si-primary" id="aSubmit">Create password and sign in</button>
+        </form>
+      </section>
+
+      <!-- STAFF -->
+      <section id="panelStaff" class="si-panel hidden" role="tabpanel" aria-labelledby="tabStaff">
+        <form id="staffForm" autocomplete="on" novalidate>
+          <label for="sId">Email or phone number</label>
+          <input id="sId" name="identifier" type="text" inputmode="email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="120" required />
+          <label for="sPassword">Password</label>
+          <div class="si-pw">
+            <input id="sPassword" name="password" type="password" autocomplete="current-password" maxlength="200" required />
+            <button type="button" class="si-show" data-show="sPassword" aria-pressed="false">Show</button>
+          </div>
+          <button type="submit" class="si-primary" id="sSubmit">Sign in</button>
+        </form>
+        <p class="si-hint">Sales Managers, sales reps and warehouse staff. Your manager gives you a one-time password the first time.</p>
+      </section>
+
+      <!-- STAFF: first sign-in with a one-time password -->
+      <section id="panelChange" class="si-panel hidden">
+        <form id="changeForm" autocomplete="off" novalidate>
+          <h2>Choose your password</h2>
+          <p class="si-hint">You signed in with a one-time password. Choose your own to continue.</p>
+          <div id="currentRow">
+            <label for="pCurrent">One-time password</label>
+            <input id="pCurrent" name="one-time" type="password" autocomplete="off" maxlength="200" />
+          </div>
+          <label for="pNew">New password</label>
+          <div class="si-pw">
+            <input id="pNew" name="next" type="password" autocomplete="new-password" maxlength="200" required />
+            <button type="button" class="si-show" data-show="pNew" aria-pressed="false">Show</button>
+          </div>
+          <p class="si-hint">At least 8 characters. Do not use your name, email or phone number.</p>
+          <label for="pNew2">Type it again</label>
+          <input id="pNew2" name="next2" type="password" autocomplete="new-password" maxlength="200" required />
+          <button type="submit" class="si-primary" id="pSubmit">Save and continue</button>
+        </form>
+      </section>
+
+      <nav class="si-foot" aria-label="Other ways in">
+        <a href="/catalog">Browse the catalogue</a>
+        <a href="/signup">Register a new customer</a>
+      </nav>
+    </div>
+  </main>
+  <script src="/js/boot-guard.js"></script>
+  <script type="module" src="/js/signin.js"></script>
+  <script type="module" src="/js/ui-extras.js"></script>
+</body>
+</html>

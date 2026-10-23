@@ -41,7 +41,7 @@ function bubbles(tops) {
 }
 
 export async function renderDashboard(view) {
-  const [stats, requests, access, reviews, stock, inStock, limited, out, imports, categories] = await Promise.all([
+  const [stats, requests, access, reviews, stock, inStock, limited, out, imports, categories, returnsAlert] = await Promise.all([
     api.stats(),
     api.requests({ limit: 8 }),
     api.accessRequests('PENDING'),
@@ -52,6 +52,7 @@ export async function renderDashboard(view) {
     api.products({ stock: 'out', limit: 1 }),
     api.imports(),
     fetch('/api/catalog/categories?view=full').then((r) => (r.ok ? r.json() : { items: [] })).catch(() => ({ items: [] })),
+    api.returnsAlert().catch(() => ({ overdue: 0 })),
   ]);
 
   const pendingReviews = reviews.counts?.total || 0;
@@ -66,7 +67,8 @@ export async function renderDashboard(view) {
   // Tasks are counted from the same data as the rest of the app. Each one links to where it is done.
   const tasks = [
     { n: pendingReviews, label: 'Changes to review', href: '#/changes', icon: ICON.check },
-    { n: waitingAccess, label: 'Access requests to approve', href: '#/access', icon: ICON.person },
+    { n: waitingAccess, label: 'Registrations to approve', href: '#/access', icon: ICON.person },
+    { n: returnsAlert.overdue || 0, label: 'Returns waiting for a reason (over 3 days)', href: '#/returns', icon: ICON.request },
     { n: toAccept, label: 'Recent requests to accept', href: '#/requests', icon: ICON.request },
     { n: stock.hasData && stock.fresh ? 0 : 1, label: 'Stock import needed', href: '#/imports', icon: ICON.upload },
   ];
@@ -104,7 +106,7 @@ export async function renderDashboard(view) {
         <span class="dstat-s">Submitted by customers</span>
       </a>
       <a class="dstat ${waitingAccess ? 'attn' : ''}" href="#/access">
-        <span class="dstat-k">Access requests</span>
+        <span class="dstat-k">Registrations</span>
         <span class="dstat-v">${num(waitingAccess)}</span>
         <span class="dstat-s">${waitingAccess ? 'Companies waiting for a code' : 'Nobody waiting'}</span>
       </a>

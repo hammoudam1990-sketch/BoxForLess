@@ -1,0 +1,43 @@
+/* The sign-in page. Phone first: 16px text so phones do not zoom, 44px touch targets. */
+.si-wrap { min-height: 100vh; display: grid; place-items: center; padding: 20px 16px 32px; }
+.si-card {
+  width: min(100%, 440px); background: #fff; color: var(--ink, #1a1612); border-radius: 28px;
+  padding: 24px 22px 18px; box-shadow: 0 18px 44px rgba(26, 22, 18, .22);
+}
+.si-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.si-brand h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; }
+.si-brand p { margin: 2px 0 0; color: #5d564c; font-size: 16px; }
+
+.si-tabs { display: flex; gap: 6px; padding: 5px; background: #f1eee8; border-radius: 16px; margin-bottom: 14px; }
+.si-tab { flex: 1; min-height: 44px; border: 0; border-radius: 12px; background: transparent; color: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.si-tab[aria-selected="true"] { background: #1a1612; color: #fff; }
+
+.si-msg { min-height: 0; margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+.si-msg.error { color: #a4261b; background: #fbe9e6; border-radius: 12px; padding: 10px 12px; }
+.si-msg.info { color: #1d5a2b; background: #e5f3e8; border-radius: 12px; padding: 10px 12px; }
+
+.si-panel label { display: block; margin: 12px 0 4px; font-size: 16px; font-weight: 700; }
+.si-panel input { display: block; width: 100%; min-height: 48px; padding: 0 14px; border: 1.5px solid #d9d3c8; border-radius: 14px; background: #fff; color: inherit; font-size: 16px; }
+.si-panel input:focus { outline: 2px solid #1a1612; outline-offset: 1px; border-color: #1a1612; }
+.si-pw { position: relative; }
+.si-pw input { padding-right: 76px; }
+.si-show { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); min-height: 38px; min-width: 60px; border: 0; border-radius: 10px; background: #f1eee8; color: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+.si-hint { margin: 6px 0 0; font-size: 15px; color: #5d564c; }
+.si-primary { display: block; width: 100%; min-height: 50px; margin-top: 18px; border: 0; border-radius: 16px; background: #1a1612; color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; }
+.si-primary:disabled { opacity: .6; cursor: wait; }
+.si-link { display: block; min-height: 44px; margin: 12px auto 0; padding: 0 8px; border: 0; background: transparent; color: #c2410c; font-size: 16px; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.si-box { margin-top: 8px; padding: 16px; border-radius: 18px; background: #f7f5f0; }
+.si-box h2, .si-panel h2 { margin: 0 0 4px; font-size: 20px; }
+.si-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; margin-top: 20px; padding-top: 12px; border-top: 1px solid #ece7de; }
+.si-foot a { display: inline-flex; align-items: center; min-height: 44px; color: #1a1612; font-size: 16px; font-weight: 700; }
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme="dark"] .si-card { background: #1f1b17; color: #f4efe7; }
+}
+html[data-theme="dark"] .si-card { background: #1f1b17; color: #f4efe7; }
+html[data-theme="dark"] .si-tabs, html[data-theme="dark"] .si-box { background: #2a2520; }
+html[data-theme="dark"] .si-panel input { background: #14110e; color: #f4efe7; border-color: #4a423a; }
+html[data-theme="dark"] .si-brand p, html[data-theme="dark"] .si-hint { color: #bdb4a6; }
+html[data-theme="dark"] .si-tab[aria-selected="true"], html[data-theme="dark"] .si-primary { background: #f4efe7; color: #1a1612; }
+html[data-theme="dark"] .si-foot a, html[data-theme="dark"] .si-show { color: #f4efe7; }
+html[data-theme="dark"] .si-show { background: #2a2520; }

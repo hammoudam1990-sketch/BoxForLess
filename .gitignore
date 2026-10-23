@@ -6,6 +6,8 @@ data/uploads/
 data/product-images/
 certs/
 *.pem
+data/demo-accounts.txt
+data/demo-launchpad.html
 data/_server.log
 data/data-quality-report.json
 *.log
@@ -17,3 +19,6 @@ data/backups/
 
 # local dev secrets (staff sign-in) — never committed
 .env.local
+demo-video/work/
+demo-video/out/
+demo-video/tools/

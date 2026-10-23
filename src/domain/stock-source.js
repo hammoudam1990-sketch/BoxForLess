@@ -55,7 +55,11 @@ export class ManualImportStockSource {
     const row = db.prepare(
       "SELECT completed_at FROM import_batches WHERE status = 'COMPLETED' AND completed_at IS NOT NULL ORDER BY completed_at DESC LIMIT 1"
     ).get();
-    return row ? row.completed_at : null;
+    // Once the Odoo stock sync runs, its last good run is the stock's age too (whichever is newer).
+    const sync = db.prepare("SELECT last_success_at FROM sync_state WHERE data_type = 'stock'").get();
+    const a = row ? row.completed_at : null;
+    const b = sync ? sync.last_success_at : null;
+    return a && b ? (a > b ? a : b) : (a || b);
   }
 
   /**

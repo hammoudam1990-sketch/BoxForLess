@@ -30,20 +30,26 @@
 <body>
   <main>
     <p class="brand">Box for Less</p>
-    <h1 id="signup-title">Sign up for customer access</h1>
-    <p class="intro">Share your contact and delivery details. Our team will review your request and send you an access code.</p>
+    <h1 id="signup-title">Register as a customer</h1>
+    <p class="intro">Tell us who you are and where to deliver. Our Sales Manager will review your registration and send you an access code. Until then you can browse the catalogue, but prices are only shown to approved customers.</p>
     <form id="signup-form">
+      <label for="company">Company name (leave empty if you buy as an individual)
+        <input id="company" name="company" type="text" autocomplete="organization" maxlength="200">
+      </label>
       <label for="contact">Your name
         <input id="contact" name="contact" type="text" autocomplete="name" maxlength="200" required>
       </label>
       <label for="phone">Phone number
         <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="60" required>
       </label>
+      <label for="email">Email (optional)
+        <input id="email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="200">
+      </label>
       <label for="address">Delivery address
         <textarea id="address" name="address" autocomplete="street-address" maxlength="500" required></textarea>
       </label>
       <p id="message" class="message" role="status" aria-live="polite"></p>
-      <button id="submit" type="submit">Request an access code</button>
+      <button id="submit" type="submit">Register</button>
     </form>
     <a class="back" href="/customer-shop">← Back to access code</a>
 
@@ -65,6 +71,8 @@
           method:"POST",
           headers:{"Content-Type":"application/json"},
           body:JSON.stringify({
+            company:fields.get("company"),
+            email:fields.get("email"),
             contact:fields.get("contact"),
             phone:fields.get("phone"),
             address:fields.get("address"),
@@ -73,9 +81,11 @@
         const result=await response.json();
         if(!response.ok)throw new Error(result.error||"Could not send your request. Please try again.");
         form.hidden=true;
-        document.querySelector("#signup-title").textContent="Request received";
+        document.querySelector("#signup-title").textContent="Waiting for approval";
+        const done=(result.message||"Thank you. Our team will review your details and contact you with an access code.")+(result.reference?" Your reference is "+result.reference+".":"");
+        document.querySelector(".intro").textContent=done;
         message.className="message success";
-        message.textContent=result.message||"Thank you. Our team will review your details and contact you with an access code.";
+        message.textContent=done;
       }catch(error){
         message.className="message error";
         message.textContent=error.message||"Could not send your request. Please try again.";

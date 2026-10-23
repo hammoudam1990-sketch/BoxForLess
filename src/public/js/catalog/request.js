@@ -9,15 +9,10 @@
 // ever rebuilt while someone might be typing in it.
 import { h, setChildren, svg, toggleHidden } from '../lib/dom.js';
 import { readCart, onCartChange, removeFromCart, clearCart, toRequestLines, pruneUnavailable } from '../cart.js';
+import { debounce } from '../lib/util.js';
 import { getJSON, postJSON } from './http.js';
 import { createQtyStepper } from './qty.js';
-
-// Mirrors domain/access-codes.js. Only used to decide when a typed code is COMPLETE enough to
-// check; the server alone decides whether it is correct.
-const ACCESS_CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
-const ACCESS_CODE_LENGTH = 8;
-const normalizeCodeInput = (v) => String(v ?? '').toUpperCase().split('')
-  .filter((c) => ACCESS_CODE_ALPHABET.includes(c)).join('');
+import { onPrices, wantPrice, formatPrice, setSession, priceSession, lineValue, refreshOffers } from './prices.js';
 
 // Plain line icons, one stroke weight, hidden from assistive tech (each tab has a text label).
 const ICONS = {
@@ -101,13 +96,14 @@ function createDrawer() {
 
   // ---- what the customer is doing ----
   let isOpen = false;
-  let asking = false;         // showing the "I don't have a code" form
-  let codeBusy = false;
-  let sendingAccess = false;
   let submitting = false;
-  let focusSubmit = false;    // set after a code is accepted, consumed once the button is live
-  let lastTried = null;       // the last complete code checked, so typing past it does not recheck
   let lineErrors = {};
+  // Shelf life (W3): a customer with a minimum shelf life is warned about any product that would
+  // be filled with shorter-dated stock, and must accept it or remove the product. The server checks
+  // again at submission; this is only so they can see and answer it.
+  let creditProblem = '';            // the message when this request would go over available credit
+  let shelfWarnings = {};            // barcode -> { message }
+  const accepted = new Set();        // barcodes ticked "I accept this shorter shelf life"
   let opener = null;
   const openListeners = new Set();
 
@@ -118,45 +114,15 @@ function createDrawer() {
   const noticeEl = h('div', { class: 'c-notice hidden' });
   const linesEl = h('div', { class: 'c-lines' });
 
-  // the access code
-  const codeInput = h('input', {
-    id: 'accessCode', type: 'text', name: 'bfl-access-code', inputmode: 'text',
-    // iOS NOTE, and do not "tidy" these attributes away:
-    //   autocomplete="one-time-code" made Safari watch for an SMS passcode and re-evaluate the
-    //     field on every keystroke, which dropped focus and shut the keyboard after each
-    //     character. It must stay "off".
-    //   enterkeyhint="go" labels the phone's return key, since Enter submits.
-    autocapitalize: 'characters', autocomplete: 'off', autocorrect: 'off', spellcheck: 'false',
-    enterkeyhint: 'go', placeholder: 'e.g. 7K2M-9XQR',
-    onInput: (e) => onCodeInput(e.target.value),
-    onKeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); enterCode(codeInput.value); } },
-  });
-  const codeError = h('div', { class: 'c-accesserr' });
-  const continueBtn = h('button', { type: 'button', class: 'c-btn', onClick: () => enterCode(codeInput.value) }, 'Continue');
-  const codeBlock = h('div', {},
-    field('accessCode', 'Your access code', codeInput,
-      h('div', { class: 'c-hint' }, 'Box for Less sent this to you with the catalogue link.'), codeError),
-    continueBtn,
-    h('button', { type: 'button', class: 'c-link', onClick: () => { asking = true; render(); } }, "I don't have a code"));
+  // Not signed in: the drawer does not ask for anything here. Signing in happens on the sign-in page
+  // (customer ID + password); the cart is kept in the browser, so it is still here when they return.
+  const signInBlock = h('div', { class: 'c-signin-prompt' },
+    h('p', { class: 'c-hint' }, 'Sign in with your customer ID and password to send your request.'),
+    h('a', { class: 'c-btn primary', href: '/', onClick: (e) => { e.preventDefault(); window.location.assign(`/?next=${encodeURIComponent(window.location.pathname)}`); } }, 'Sign in'),
+    h('a', { class: 'c-link', href: '/signup' }, 'New here? Register as a customer'));
 
-  // "I don't have a code"
-  const uContact = h('input', { id: 'uContact', type: 'text', autocomplete: 'name', placeholder: 'Full name' });
-  const uPhone = h('input', { id: 'uPhone', type: 'tel', inputmode: 'tel', autocomplete: 'tel', placeholder: 'Phone number' });
-  const uCompany = h('input', { id: 'uCompany', type: 'text', autocomplete: 'organization', placeholder: 'Company, if any' });
-  const uAddress = h('textarea', { id: 'uAddress', rows: '3', autocomplete: 'street-address', required: true, placeholder: 'Where should we deliver?' });
-  const sendAccessBtn = h('button', { type: 'button', class: 'c-btn', onClick: () => sendAccessRequest() }, 'Request an access code');
-  const askBlock = h('div', { class: 'c-accessform' },
-    h('p', { class: 'c-hint' }, 'Give us your details and Box for Less will send you an access code.'),
-    field('uContact', 'Your name', uContact),
-    field('uPhone', 'Phone', uPhone),
-    field('uCompany', 'Company name (optional)', uCompany),
-    field('uAddress', 'Delivery address', uAddress, h('div', { class: 'c-hint' }, 'We need this before we can supply you.')),
-    sendAccessBtn,
-    h('button', { type: 'button', class: 'c-link', onClick: () => { asking = false; render(); } }, '← I have a code'));
-
-  // signed in with a code. The company name is the confirmation that the RIGHT code was used,
-  // and a salesman moving between customers reads it before every submission, so it is the
-  // largest thing in the panel.
+  // Signed in. The company name is the confirmation that the right account is being used, so it is
+  // the largest thing in the panel.
   const customerName = h('div', { class: 'c-selected-name' });
   const addressInput = h('textarea', { id: 'reqAddress', rows: '3', autocomplete: 'street-address', placeholder: 'Where should we deliver?' });
   const addressHint = h('div', { class: 'c-hint' });
@@ -164,17 +130,24 @@ function createDrawer() {
     h('div', { class: 'c-selected' },
       h('div', { class: 'c-selected-label' }, 'Requesting as'),
       customerName,
-      h('button', { type: 'button', class: 'c-link', onClick: () => exitAccess() }, 'Not you? Use a different code')),
+      h('button', { type: 'button', class: 'c-link', onClick: () => signOut() }, 'Not you? Sign out')),
     field('reqAddress', 'Delivery address', addressInput, addressHint));
 
   const notesInput = h('textarea', { id: 'reqNotes', rows: '2', placeholder: 'Anything we should know' });
   const submitBtn = h('button', { type: 'button', class: 'c-btn primary', onClick: () => submit() }, 'Submit request');
+  const shelfHint = h('p', { class: 'c-shelf-hint hidden', role: 'status' });
+  // over the customer's available credit (the server checks again at submission)
+  const creditEl = h('p', { class: 'c-credit hidden', role: 'status' });
+  const totalEl = h('div', { class: 'c-total hidden', role: 'status' });
   const afterLines = h('div', { class: 'hidden' },
-    h('div', { class: 'c-customer' }, codeBlock, askBlock, customerBlock),
+    totalEl,
+    h('div', { class: 'c-customer' }, signInBlock, customerBlock),
     field('reqNotes', 'Notes (optional)', notesInput),
     h('div', { class: 'c-drawer-actions' },
       h('button', { type: 'button', class: 'c-btn', onClick: () => { clearCart(); lineErrors = {}; } }, 'Clear'),
       submitBtn),
+    shelfHint,
+    creditEl,
     h('p', { class: 'c-smallprint' },
       'Submitting a request is not an order and does not reserve stock. Our team will confirm availability with you.'));
 
@@ -191,8 +164,7 @@ function createDrawer() {
       h('h2', {}, 'Request submitted'),
       h('p', {}, 'Your reference is ', okRef, ' — ', okCount, '.'),
       h('p', { class: 'c-smallprint' }, 'This is a request, not an order. Our team will confirm availability with you.'),
-      h('p', { class: 'c-smallprint' }, h('b', {}, 'The next request needs its own access code.'),
-        " This keeps one customer's order from being sent under another's name."),
+      h('button', { type: 'button', class: 'c-btn', onClick: () => { close(); window.dispatchEvent(new Event('bfl:open-orders')); } }, 'Follow my order'),
       h('button', { type: 'button', class: 'c-btn primary', onClick: () => close() }, 'Done')));
 
   const el = h('div', { id: 'cartDrawer', class: 'c-drawer hidden' }, backdrop, mainPanel, okPanel);
@@ -210,19 +182,33 @@ function createDrawer() {
       if (!r) {
         const stepper = createQtyStepper({ barcode: line.barcode, name: line.name, pack: line.pack });
         const err = h('div', { class: 'c-line-err' });
+        const price = h('div', { class: 'c-line-price hidden' });
+        const warnText = h('span');
+        const tick = h('input', {
+          type: 'checkbox', id: `short-${line.barcode}`,
+          onChange: () => { if (tick.checked) accepted.add(line.barcode); else accepted.delete(line.barcode); render(); },
+        });
+        const warn = h('div', { class: 'c-shelf hidden' },
+          h('div', { class: 'c-shelf-msg' }, warnText),
+          h('label', { class: 'c-shelf-accept', for: `short-${line.barcode}` }, tick, 'I accept this shorter shelf life for this order'));
         const row = h('div', { class: 'c-line' },
           h('div', { class: 'c-line-main' },
             h('div', { class: 'c-line-name' }, line.name || line.barcode),
             line.pack ? h('div', { class: 'c-pack' }, line.pack) : null,
+            price,
             err),
           stepper.el,
-          h('button', { type: 'button', class: 'c-remove', 'aria-label': 'Remove', onClick: () => removeFromCart(line.barcode) }, '×'));
-        r = { row, stepper, err };
+          h('button', { type: 'button', class: 'c-remove', 'aria-label': 'Remove', onClick: () => removeFromCart(line.barcode) }, '×'),
+          warn);
+        r = { row, stepper, err, warn, warnText, tick, price };
         rows.set(line.barcode, r);
       }
       r.stepper.update(line.quantityCtn);
       r.err.textContent = lineErrors[line.barcode] || '';
+      paintWarning(line.barcode, r);
+      paintPrice(line, r);
     }
+    paintTotal(lines);
     for (const [barcode, r] of rows) if (!seen.has(barcode)) { r.row.remove(); rows.delete(barcode); }
 
     if (!lines.length) {
@@ -238,6 +224,75 @@ function createDrawer() {
     toggleHidden(afterLines, !lines.length);
   }
 
+  /** The line's carton price and what the cartons come to — signed-in customers only. */
+  function paintPrice(line, r) {
+    wantPrice(line.barcode);
+    const v = lineValue(line.barcode, line.quantityCtn);
+    if (v === null) r.price.textContent = '';
+    else if (v.offer) {
+      // the cartons on the discounted near-expiry offer, then the rest at the normal price
+      r.price.textContent = `${v.offerCartons} ctn at ${formatPrice(v.offer.discountedPrice)} (${v.offer.discountPct}% off, best before ${v.offer.bestBefore}, not returnable)${v.normalCartons ? ` + ${v.normalCartons} ctn at ${formatPrice(v.price)}` : ''} · ${formatPrice(v.total)}`;
+    } else r.price.textContent = `${formatPrice(v.price)} / carton · ${formatPrice(v.total)}`;
+    toggleHidden(r.price, v === null);
+  }
+
+  /** The request total, only when every line has a price. An estimate: Odoo works out the order's price. */
+  function paintTotal(lines) {
+    const values = lines.map((l) => lineValue(l.barcode, l.quantityCtn));
+    const known = lines.length > 0 && values.every((v) => v !== null);
+    if (known) {
+      const total = values.reduce((sum, v) => sum + v.total, 0);
+      totalEl.textContent = `Total ${formatPrice(total)}${priceSession().source === 'SAMPLE' ? ' (sample prices)' : ''} — Odoo confirms the final price on your order.`;
+    }
+    toggleHidden(totalEl, !known);
+  }
+
+  /** Show or hide one row's shelf-life warning and keep its tick in step. */
+  function paintWarning(barcode, r) {
+    const w = shelfWarnings[barcode];
+    toggleHidden(r.warn, !w);
+    if (w) r.warnText.textContent = w.message;
+    r.tick.checked = Boolean(w) && accepted.has(barcode);
+  }
+  function paintWarnings() { for (const [barcode, r] of rows) paintWarning(barcode, r); }
+
+  /** Products still waiting for the customer's tick. */
+  const unaccepted = () => Object.keys(shelfWarnings).filter((b) => !accepted.has(b));
+
+  /**
+   * Ask the server which lines would be filled with stock below this customer's minimum. Only
+   * when signed in and a request is open; a failure just means no warning is shown (the server
+   * still refuses an unaccepted line at submission).
+   */
+  async function checkShelfLife() {
+    const lines = readCart();
+    if (!isOpen || !customer || !lines.length) { shelfWarnings = {}; accepted.clear(); paintWarnings(); render(); return; }
+    let result;
+    try { result = await postJSON('/api/catalog/requests/shelf-check', { lines: toRequestLines() }); } catch { return; }
+    const next = Object.fromEntries(result.warnings.map((w) => [w.barcode, { message: w.message }]));
+    // an acceptance belongs to the exact warning it was given for; a changed warning must be accepted again
+    for (const b of [...accepted]) if (!next[b] || next[b].message !== shelfWarnings[b]?.message) accepted.delete(b);
+    shelfWarnings = next;
+    paintWarnings();
+    render();
+  }
+  const scheduleShelfCheck = debounce(checkShelfLife, 300);
+
+  /**
+   * Would this request go over the customer's available credit? Only asked when signed in with a
+   * request open. A failure just means no warning here; the server refuses an over-limit request
+   * at submission regardless.
+   */
+  async function checkCreditNow() {
+    const lines = readCart();
+    if (!isOpen || !customer || !lines.length) { if (creditProblem) { creditProblem = ''; render(); } return; }
+    let r;
+    try { r = await postJSON('/api/catalog/requests/credit-check', { lines: toRequestLines() }); } catch { return; }
+    const next = r.ok ? '' : (r.message || 'This request is over your available credit.');
+    if (next !== creditProblem) { creditProblem = next; render(); }
+  }
+  const scheduleCreditCheck = debounce(checkCreditNow, 300);
+
   // ---------------------------------------------------------------- everything else
   function setNotice(content) {
     if (content === null || content === undefined || content === '') { setChildren(noticeEl); toggleHidden(noticeEl, true); return; }
@@ -249,15 +304,16 @@ function createDrawer() {
     toggleHidden(blockedEl, canSubmit);
     blockedEl.textContent = canSubmit ? '' : (blocked || 'Requests cannot be submitted right now.');
 
-    toggleHidden(askBlock, !asking);
-    toggleHidden(customerBlock, asking || !customer);
-    toggleHidden(codeBlock, asking || Boolean(customer));
-
-    continueBtn.disabled = codeBusy;
-    continueBtn.textContent = codeBusy ? 'Checking…' : 'Continue';
-    sendAccessBtn.disabled = sendingAccess;
-    sendAccessBtn.textContent = sendingAccess ? 'Sending…' : 'Request an access code';
-    submitBtn.disabled = !(canSubmit && customer) || submitting;
+    toggleHidden(customerBlock, !customer);
+    toggleHidden(signInBlock, Boolean(customer));
+    const waiting = unaccepted().length;
+    submitBtn.disabled = !(canSubmit && customer) || submitting || waiting > 0 || Boolean(creditProblem);
+    creditEl.textContent = creditProblem;
+    toggleHidden(creditEl, !creditProblem);
+    toggleHidden(shelfHint, waiting === 0);
+    shelfHint.textContent = waiting
+      ? `Tick the shelf-life box on ${waiting === 1 ? 'the highlighted product' : `each of the ${waiting} highlighted products`}, or remove ${waiting === 1 ? 'it' : 'them'}, to send your request.`
+      : '';
     submitBtn.textContent = submitting ? 'Submitting…' : 'Submit request';
 
     if (customer) {
@@ -273,15 +329,6 @@ function createDrawer() {
       customerKey = '';
     }
 
-    // Move to the Submit button once a code has been accepted. On a phone the button sits
-    // below the keyboard, so a customer who has just typed their code cannot see it come
-    // alive. Focusing it closes the keyboard, scrolls it into view, and means the next Enter
-    // sends the request.
-    if (focusSubmit && customer && !submitBtn.disabled) {
-      focusSubmit = false;
-      submitBtn.focus();
-      submitBtn.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
   }
 
   /** Ask the server whether requests can be submitted at all, and who is signed in. */
@@ -295,63 +342,19 @@ function createDrawer() {
       const s = await getJSON('/api/catalog/access');
       customer = s.authenticated ? s.customer : null;
     } catch { customer = null; }
+    setSession(customer);
     render();
+    checkShelfLife();
+    checkCreditNow();
   }
 
-  async function enterCode(value) {
-    codeError.textContent = '';
-    codeBusy = true;
-    render();
-    try {
-      await postJSON('/api/catalog/access', { code: value });
-      asking = false;
-      setNotice(null);
-      focusSubmit = true;
-      await refresh();
-    } catch (e) {
-      codeError.textContent = e.message || 'That access code was not recognised.';
-    }
-    codeBusy = false;
-    render();
-  }
-
-  // Check the code as soon as it is complete, without waiting for Continue. A code is a fixed
-  // eight characters, so there is nothing to wait for once the eighth is typed. Continue stays
-  // for pasting and for retrying a refused code. `lastTried` stops a re-check firing on every
-  // keystroke past the eighth, which would burn the server's per-IP attempt limit.
-  function onCodeInput(value) {
-    const complete = normalizeCodeInput(value);
-    if (complete.length !== ACCESS_CODE_LENGTH || complete === lastTried) return;
-    lastTried = complete;
-    enterCode(value);
-  }
-
-  async function exitAccess() {
-    await fetch('/api/catalog/access/exit', { method: 'POST' }).catch(() => {});
-    lastTried = null;
-    codeInput.value = '';
+  async function signOut() {
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     customer = null;
-    render();
-  }
-
-  async function sendAccessRequest() {
-    sendingAccess = true;
-    render();
-    try {
-      const res = await postJSON('/api/catalog/access-requests', {
-        company: uCompany.value.trim(),
-        contact: uContact.value.trim(),
-        phone: uPhone.value.trim(),
-        address: uAddress.value.trim(),
-      });
-      asking = false;
-      setNotice([h('b', {}, 'Thank you.'), ` ${res.message || ''}`]);
-    } catch (e) {
-      // stay on the form so the details already typed are not lost behind an error
-      asking = true;
-      setNotice(h('span', { class: 'c-accesserr' }, e.message || 'Could not send your details.'));
-    }
-    sendingAccess = false;
+    setSession(null);
+    shelfWarnings = {};
+    accepted.clear();
+    paintWarnings();
     render();
   }
 
@@ -368,29 +371,28 @@ function createDrawer() {
       lines: toRequestLines(),
       notes: notesInput.value || null,
       deliveryAddress: addressInput.value.trim() || null,
+      // the products whose shorter shelf life the customer ticked (the server re-checks every one)
+      acceptedShortDated: Object.keys(shelfWarnings).filter((b) => accepted.has(b)),
     };
 
     try {
       const res = await postJSON('/api/catalog/requests', payload);
       clearCart();
-      asking = false;
       notesInput.value = '';
-      // The server ended the session with the order, so the next customer on this phone must
-      // enter their own code. Mirror that here or the drawer would still show the previous
-      // customer's name.
-      lastTried = null;
-      codeInput.value = '';
-      customer = null;
+      shelfWarnings = {};
+      accepted.clear();
       submitting = false;
       showSubmitted(res.reference, res.items);
+      refreshOffers(); // the cartons just ordered are no longer on offer
+      refresh(); // the server decides whether the session continues; read it back
       return;
     } catch (e) {
-      // The session expired or was never established — fall back to the code prompt with the
-      // cart intact, rather than showing a bare error.
+      // The session expired or was never established — ask them to sign in again with the cart
+      // intact, rather than showing a bare error.
       if (e.body?.code === 'ACCESS_CODE_REQUIRED') {
         customer = null;
-        asking = false;
-        setNotice('Please enter your access code to send this request.');
+        setSession(null);
+        setNotice('Please sign in to send this request.');
       } else {
         const errors = e.body?.errors || [];
         // drop what can never succeed, keep what the customer can still fix
@@ -468,7 +470,8 @@ function createDrawer() {
     openListeners.forEach((fn) => fn(false));
   }
 
-  onCartChange((lines) => { if (isOpen) renderLines(lines); });
+  onCartChange((lines) => { if (isOpen) { renderLines(lines); scheduleShelfCheck(); scheduleCreditCheck(); } });
+  onPrices(() => { if (isOpen) renderLines(readCart()); });
   renderLines(readCart());
   render();
 

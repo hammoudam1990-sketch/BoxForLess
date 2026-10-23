@@ -368,3 +368,113 @@ a.dash-tile:hover { border-color: var(--ink); }
 .adm-body .view input, .adm-body .view select, .adm-body .view textarea { font-size: 17px; }
 .adm-body .view .drop { padding: 40px; font-size: 18px; }
 .adm-body .view .card { padding: 22px; }
+
+/* ---------- Expiry list (S03) ---------- */
+.exp-banner { margin: 0 0 14px; }
+.exp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.exp-tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left;
+  padding: 14px 16px; border-radius: 18px; border: 2px solid transparent; background: var(--panel); color: var(--ink);
+  box-shadow: var(--shadow, none); font: inherit; cursor: pointer;
+}
+.exp-tile-n { font-size: 34px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.exp-tile-l { font-weight: 700; }
+.exp-tile-v { color: var(--muted); font-size: 14px; min-height: 1.3em; }
+.exp-tile.err { box-shadow: inset 0 4px 0 var(--err), var(--shadow, none); }
+.exp-tile.warn { box-shadow: inset 0 4px 0 var(--warn), var(--shadow, none); }
+.exp-tile.info { box-shadow: inset 0 4px 0 var(--brand, #1a5fd0), var(--shadow, none); }
+.exp-tile.ok { box-shadow: inset 0 4px 0 var(--ok), var(--shadow, none); }
+.exp-tile[aria-pressed="true"] { border-color: var(--ink); }
+.exp-summary { margin: 0 0 14px; }
+.exp-check { margin-bottom: 14px; }
+.exp-check > summary { cursor: pointer; }
+.exp-check-list { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 10px; }
+.exp-controls { flex-wrap: wrap; }
+.exp-count { margin: 0 0 8px; }
+.exp-wrap { overflow-x: auto; }
+.exp-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.exp-table th { text-align: left; color: var(--muted); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.exp-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.exp-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.exp-table select, .exp-table input { font-size: 14px; min-height: 40px; max-width: 190px; }
+.exp-table input[type="text"] { width: 150px; }
+.exp-table tr.row-expired td { background: var(--err-bg); }
+.exp-table tr.needs-action td:first-child { box-shadow: inset 4px 0 0 var(--orange); }
+.days-neg { color: var(--err); font-weight: 700; }
+.exp-foot { margin-top: 12px; }
+
+/* ---------- Approvals ---------- */
+.appr-item { display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: space-between; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--line); }
+.appr-item:first-child { border-top: 0; }
+.appr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.appr-actions input { min-width: 220px; min-height: 44px; font-size: 15px; }
+
+/* ---------- customers' minimum shelf life (W3) ---------- */
+.exp-minlife summary { cursor: pointer; font-weight: 700; }
+.exp-minlife input[type="search"] { width: 100%; max-width: 420px; margin: 8px 0; }
+.exp-min-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 0; border-top: 1px solid var(--line, #e6e0d6); }
+.exp-min-name { flex: 1 1 220px; }
+.exp-min-field input { width: 90px; }
+
+/* ---------- registration review (S01) ---------- */
+.reg-panel { margin-bottom: 14px; }
+.reg-panel h2 { margin: 0 0 10px; }
+.reg-panel h3 { margin: 18px 0 8px; font-size: 16px; }
+.reg-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px 18px; margin: 0; }
+.reg-field dt { font-size: 13px; color: var(--muted, #6b6459); }
+.reg-field dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.reg-choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; min-height: 44px; cursor: pointer; }
+.reg-choice input { margin-top: 3px; width: 20px; height: 20px; flex: none; }
+.reg-sub { display: block; font-size: 14px; }
+.reg-row { display: flex; flex-wrap: wrap; gap: 14px 22px; }
+.reg-row label { display: flex; flex-direction: column; gap: 4px; min-width: 220px; }
+.reg-problem { color: var(--warn, #7a4f00); font-weight: 600; min-height: 1.2em; }
+
+/* ---------- team ---------- */
+.team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 18px; margin: 12px 0; }
+.team-field { display: flex; flex-direction: column; gap: 4px; }
+.team-field input, .team-field select { min-height: 44px; font-size: 16px; }
+.team-hint { font-size: 14px; }
+
+/* ---------- payments due ---------- */
+.pay-reminder { border-top: 1px solid var(--line, #e6e0d6); padding: 10px 0; }
+.pay-reminder summary { cursor: pointer; }
+.pay-body { white-space: pre-wrap; font: inherit; background: var(--tile, #f6f4f0); border-radius: 12px; padding: 12px; margin: 8px 0; }
+
+/* ---------- monthly reports and returns ---------- */
+.rep-tabs { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.rep-tab { min-height: 44px; padding: 0 16px; border: 1px solid var(--line, #d9d3c8); border-radius: 12px; background: transparent; color: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.rep-tab.on { background: var(--ink, #1a1612); color: #fff; border-color: var(--ink, #1a1612); }
+.rpt-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.rpt-head h2 { margin: 0; }
+.rpt-table .num, .num { text-align: right; white-space: nowrap; }
+.rpt-hint { font-size: 13px; max-width: 46ch; }
+.rpt-extra { font-size: 14px; color: var(--warn, #7a4f00); font-weight: 600; }
+.rpt-foot { font-size: 13px; margin: 10px 0 0; }
+.rpt-mark { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 14px; font-weight: 700; }
+.rpt-mark.green { background: #dcefe0; color: #1d5a2b; }
+.rpt-mark.amber { background: #fbefd0; color: #7a4f00; }
+.rpt-mark.red { background: #f6dcd9; color: #8a1c13; }
+.rpt-section, .rpt-body .card { margin-bottom: 14px; }
+.rpt-notes textarea { width: 100%; font-size: 16px; }
+.rpt-check { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.btn-link { font-weight: 700; }
+.ret-card { border-top: 1px solid var(--line, #e6e0d6); padding: 12px 0; }
+.ret-card.overdue { background: rgba(246, 220, 217, .35); }
+.ret-top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ret-lines { margin: 6px 0; padding-left: 18px; }
+.ret-broken { color: #8a1c13; font-weight: 700; }
+.ret-card .controls select, .ret-card .controls input { min-height: 44px; font-size: 16px; }
+@media print {
+  .adm-side, .adm-top, .adm-scrim, .no-print, .adm-logout { display: none !important; }
+  .adm-body { margin: 0 !important; }
+  .rpt-body .card, .rpt-notes-print { break-inside: avoid; box-shadow: none; border: 1px solid #999; }
+  body { background: #fff !important; }
+}
+.rpt-table td:first-child { min-width: 240px; }
+.rpt-table td, .rpt-table th { vertical-align: top; }
+
+/* discounts the Sales Manager sets on near-expiry lots */
+.exp-disc { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.exp-disc-in { width: 72px; }
+.exp-disc-note { flex: 1 1 100%; font-size: 14px; }

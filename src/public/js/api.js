@@ -72,10 +72,122 @@ export const api = {
   },
   issueCustomerCode: (id) => fetch(`/api/requests/customers/${id}/code`, { method: 'POST' }).then(handle),
 
+  // Warehouse expiry list (S03) — staff only; sample data until the Odoo lot sync exists.
+  expiry: (params = {}) => fetch(`/api/expiry?${new URLSearchParams(params)}`).then(handle),
+  // The Sales Manager's discount on a lot in our warehouse, offered to customers (pct null switches it off).
+  setExpiryDiscount: (key, pct) =>
+    fetch(`/api/expiry/lots/${encodeURIComponent(key)}/discount`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pct }),
+    }).then(handle),
+  saveExpiryDecision: (key, fields) =>
+    fetch(`/api/expiry/lots/${encodeURIComponent(key)}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields),
+    }).then(handle),
+  expiryCsv: async (query = '') => {
+    const res = await fetch(`/api/expiry/export.csv?${query}`);
+    if (res.status === 401) window.location.assign('/staff/login');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.blob();
+  },
+
+  // Customers' minimum shelf life (W3) — a stand-in for the Odoo customer field.
+  shelfLifeCustomers: (q = '') => fetch(`/api/expiry/customers?${new URLSearchParams({ q })}`).then(handle),
+  setMinShelfLife: (id, days) => fetch(`/api/expiry/customers/${id}/min-shelf-life`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ days }),
+  }).then(handle),
+
+  // Which customers belong to which sales rep.
+  repCustomers: () => fetch('/api/reps').then(handle),
+  assignRepCustomer: (kind, id, repId) => fetch('/api/reps/assign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, id, repId }) }).then(handle),
+
+  // Sync health (S05): the Odoo connection, the syncs and the outbox.
+  odooHealth: () => fetch('/api/odoo/health').then(handle),
+  odooRetry: (id) => fetch(`/api/odoo/outbox/${id}/retry`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(handle),
+
+  // Monthly reports (S06).
+  reportsStart: () => fetch('/api/reports').then(handle),
+  report: (report, month) => fetch(`/api/reports/report?report=${report}&month=${month}`).then(handle),
+  saveReportNotes: (body) => fetch('/api/reports/notes', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(handle),
+  reportTargets: () => fetch('/api/reports/targets').then(handle),
+  setReportTarget: (body) => fetch('/api/reports/targets', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(handle),
+  myMonth: () => fetch('/api/reports/my').then(handle),
+  // Returns to classify (S04).
+  returns: () => fetch('/api/returns').then(handle),
+  returnsAlert: () => fetch('/api/returns/alert').then(handle),
+  classifyReturn: (id, body) => fetch(`/api/returns/${id}/classify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(handle),
+  // Sample Odoo: returns, credit notes and sample history.
+  sampleReturnOptions: () => fetch('/api/sample-odoo/return-options').then(handle),
+  sampleCreateReturn: (body) => fetch('/api/sample-odoo/returns', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(handle),
+  sampleReturnCreditNote: (id) => fetch(`/api/sample-odoo/returns/${id}/credit-note`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(handle),
+  sampleSeedHistory: () => fetch('/api/sample-odoo/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(handle),
+
+  // Payments due (S07): schedules and reminders.
+  payments: () => fetch('/api/payments').then(handle),
+  runPaymentReminders: () => fetch('/api/payments/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(handle),
+  setPaymentSchedule: (id, body) => fetch(`/api/payments/customers/${id}/schedule`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(handle),
+  markPaymentReminderSent: (id) => fetch(`/api/payments/reminders/${id}/sent`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(handle),
+
+  // Team: staff accounts (administrator and Sales Manager).
+  team: () => fetch('/api/team').then(handle),
+  createTeamUser: (body) => fetch('/api/team', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(handle),
+  resetTeamPassword: (id) => fetch(`/api/team/${id}/reset-password`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  }).then(handle),
+  setTeamActive: (id, active) => fetch(`/api/team/${id}/active`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active }),
+  }).then(handle),
+  // Customers: Odoo ID (what they sign in with) and password reset.
+  setOdooId: (id, odooId) => fetch(`/api/requests/customers/${id}/odoo-id`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ odooId }),
+  }).then(handle),
+  resetCustomerPassword: (id) => fetch(`/api/requests/customers/${id}/reset-password`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  }).then(handle),
+
+  // Sample Odoo: the stand-in for Odoo's side of an order (404 once the real Odoo is connected).
+  sampleOdoo: () => fetch('/api/sample-odoo').then(handle),
+  sampleOdooStep: (id, step) => fetch(`/api/sample-odoo/orders/${id}/${step}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  }).then(handle),
+  sampleOdooAge: (id) => fetch(`/api/sample-odoo/invoices/${id}/age`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  }).then(handle),
+  sampleOdooCreditLimit: (id, limit) => fetch(`/api/sample-odoo/customers/${id}/credit-limit`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ limit }),
+  }).then(handle),
+
+  // Customer-shelf expiry: rep visits and the Sales Manager's approvals (sample data for now).
+  shelfReps: () => fetch('/api/shelf/reps').then(handle),
+  shelfVisits: (rep, q = '') => fetch(`/api/shelf/my-visits?${new URLSearchParams({ rep, q })}`).then(handle),
+  shelfSheet: (rep, customer) => fetch(`/api/shelf/visit-sheet?${new URLSearchParams({ rep, customer })}`).then(handle),
+  saveShelfVisit: (body) => fetch('/api/shelf/visits', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(handle),
+  // The Sales Manager's discount on lots that sit on customers' shelves (the rep sees it on the visit).
+  shelfLotDiscounts: () => fetch('/api/shelf/lot-discounts').then(handle),
+  setShelfLotDiscount: (key, pct) => fetch(`/api/shelf/lot-discounts/${encodeURIComponent(key)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pct }),
+  }).then(handle),
+  shelfApprovals: () => fetch('/api/shelf/approvals').then(handle),
+  shelfDecide: (id, body) => fetch(`/api/shelf/approvals/${id}/decide`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(handle),
+  shelfCreditNote: (id, ref) => fetch(`/api/shelf/approvals/${id}/credit-note`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ref }),
+  }).then(handle),
+
   accessRequests: (status = '') =>
     fetch(`/api/requests/access-requests${status ? `?status=${encodeURIComponent(status)}` : ''}`).then(handle),
-  approveAccessRequest: (id) =>
-    fetch(`/api/requests/access-requests/${id}/approve`, { method: 'POST' }).then(handle),
+  accessRequest: (id) => fetch(`/api/requests/access-requests/${id}`).then(handle),
+  accessOptions: () => fetch('/api/requests/access-requests/options').then(handle),
+  approveAccessRequest: (id, decision = {}) =>
+    fetch(`/api/requests/access-requests/${id}/approve`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(decision),
+    }).then(handle),
   rejectAccessRequest: (id, reason = null) =>
     fetch(`/api/requests/access-requests/${id}/reject`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

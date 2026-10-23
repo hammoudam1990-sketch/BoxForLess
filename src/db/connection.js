@@ -112,6 +112,15 @@ export function applyMigrations(db) {
     // sending it. Without this, ending a session would depend on the browser
     // honouring a cleared cookie.
     session_epoch: 'INTEGER NOT NULL DEFAULT 0',
+    // Minimum shelf life in days (Warehouse: Expiry W3). In the real system this is an Odoo field
+    // read by BFL; until then staff set it. NULL = the customer accepts any lot not expired.
+    min_shelf_life_days: 'INTEGER',
+    // Registration and approval (Sales Management slice 5). CREDIT = a company with an Odoo
+    // account; CASH = a buyer on the shared cash account (nothing is created in Odoo for them).
+    // `pricelist` (above) is the Odoo price class. `salesperson` is the rep's name as Odoo has it.
+    customer_type: 'TEXT',
+    salesperson: 'TEXT',
+    registration_ref: 'TEXT',
   });
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ux_customers_odoo_ref
              ON customers(odoo_customer_ref) WHERE odoo_customer_ref IS NOT NULL`);
@@ -173,6 +182,359 @@ export function applyMigrations(db) {
       updated_at       TEXT
     )`);
   db.exec('CREATE INDEX IF NOT EXISTS ix_access_requests_status ON access_requests(status)');
+  addColumns(db, 'access_requests', {
+    reference: 'TEXT',        // BFL registration reference, e.g. REG-2026-0007; goes to Odoo in `ref`
+    customer_type: 'TEXT',     // what the Sales Manager decided: CREDIT | CASH
+  });
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_access_requests_reference ON access_requests(reference) WHERE reference IS NOT NULL');
+
+  // Orders and the customer's account (Sales Management slice 6). These are BFL's READ COPY of what
+  // Odoo says: the quotation's number and stage, the invoices, the balance. BFL never decides any of
+  // it. Until the Odoo sync exists, domain/sample-odoo.js plays Odoo's part and writes them.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS odoo_orders (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      request_id    INTEGER NOT NULL UNIQUE REFERENCES requests(id) ON DELETE RESTRICT,
+      customer_id   INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+      odoo_number   TEXT,                 -- the sale.order name, e.g. S00012, once Odoo has it
+      state         TEXT NOT NULL DEFAULT 'RECEIVED',
+      amount_total  REAL,                 -- set when Odoo invoices it
+      received_at   TEXT NOT NULL,
+      sent_at       TEXT,
+      approved_at   TEXT,
+      dispatched_at TEXT,
+      invoiced_at   TEXT,
+      paid_at       TEXT,
+      cancelled_at  TEXT,
+      updated_at    TEXT NOT NULL
+    )`);
+  // the value an order carries while it is open (not yet invoiced): Odoo's quotation total once the
+  // sync reads it, the price list's figure until then. Used only by the credit check.
+  addColumns(db, 'odoo_orders', { amount_open: 'REAL' });
+  db.exec('CREATE INDEX IF NOT EXISTS ix_odoo_orders_customer ON odoo_orders(customer_id)');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS odoo_invoices (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      number       TEXT NOT NULL UNIQUE,
+      customer_id  INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+      order_id     INTEGER REFERENCES odoo_orders(id) ON DELETE SET NULL,
+      amount       REAL NOT NULL,
+      amount_due   REAL NOT NULL,
+      invoice_date TEXT NOT NULL,
+      due_date     TEXT NOT NULL,
+      state        TEXT NOT NULL DEFAULT 'OPEN'     -- OPEN | PAID
+    )`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_odoo_invoices_customer ON odoo_invoices(customer_id)');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS odoo_payments (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+      invoice_id  INTEGER REFERENCES odoo_invoices(id) ON DELETE SET NULL,
+      amount      REAL NOT NULL,
+      paid_on     TEXT NOT NULL
+    )`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS odoo_customer_finance (
+      customer_id  INTEGER PRIMARY KEY REFERENCES customers(id) ON DELETE CASCADE,
+      credit_limit REAL,
+      amount_owed  REAL NOT NULL DEFAULT 0,
+      overdue      REAL NOT NULL DEFAULT 0,
+      updated_at   TEXT NOT NULL
+    )`);
+
+  // An imported Odoo customer is a credit account; only a registered cash buyer is CASH.
+  db.exec("UPDATE customers SET customer_type = 'CREDIT' WHERE customer_type IS NULL");
+
+  // Returns and credit notes (S04), and what the monthly reports (S06) read. BFL's READ COPY of Odoo's return
+  // deliveries, credit notes and invoice lines — plus BFL's own records: the reason for each return, the
+  // log of orders that could not be placed, monthly targets and the report owner's notes. Until the Odoo
+  // sync exists, domain/sample-odoo.js fills the Odoo-side tables.
+  addColumns(db, 'odoo_orders', { cartons_ordered: 'INTEGER', cartons_delivered: 'INTEGER' });
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS odoo_invoice_lines (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id   INTEGER NOT NULL REFERENCES odoo_invoices(id) ON DELETE CASCADE,
+      barcode      TEXT NOT NULL,
+      product_name TEXT,
+      category     TEXT,                          -- the product's Odoo category path
+      cartons      INTEGER NOT NULL,
+      amount       REAL NOT NULL,                 -- before tax, after any line discount
+      discount     REAL NOT NULL DEFAULT 0        -- GHS given on this line (clearance discount)
+    )`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_invoice_lines_invoice ON odoo_invoice_lines(invoice_id)');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS odoo_returns (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      number        TEXT NOT NULL UNIQUE,         -- e.g. RET/2026/0001
+      customer_kind TEXT NOT NULL,                -- BFL (a row in customers) | SHELF (a sample shelf customer)
+      customer_ref  TEXT NOT NULL,
+      customer_name TEXT NOT NULL,
+      rep_name      TEXT,                         -- the customer's salesperson when it came back
+      sales_order   TEXT,
+      received_on   TEXT NOT NULL,
+      created_at    TEXT NOT NULL
+    )`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS odoo_return_lines (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      return_id    INTEGER NOT NULL REFERENCES odoo_returns(id) ON DELETE CASCADE,
+      barcode      TEXT NOT NULL,
+      product_name TEXT,
+      lot_name     TEXT,
+      category     TEXT,
+      cartons      INTEGER NOT NULL                -- goes to quarantine, never back into sellable stock
+    )`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS return_classifications (
+      return_id     INTEGER PRIMARY KEY REFERENCES odoo_returns(id) ON DELETE CASCADE,
+      reason        TEXT NOT NULL,                -- DAMAGED | EXPIRED | OTHER
+      note          TEXT,
+      classified_by TEXT,
+      classified_at TEXT NOT NULL
+    )`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS odoo_credit_notes (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      number        TEXT NOT NULL UNIQUE,
+      customer_kind TEXT NOT NULL,
+      customer_ref  TEXT NOT NULL,
+      customer_name TEXT NOT NULL,
+      rep_name      TEXT,
+      invoice_number TEXT,
+      return_id     INTEGER REFERENCES odoo_returns(id) ON DELETE SET NULL,
+      kind          TEXT NOT NULL,                -- RETURN | DISCOUNT (expiry discount agreed on a shop visit) | OTHER
+      amount        REAL NOT NULL,                -- before tax
+      issued_on     TEXT NOT NULL
+    )`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_credit_notes_issued ON odoo_credit_notes(issued_on)');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS order_check_log (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id      INTEGER,
+      kind             TEXT NOT NULL,             -- LOW_STOCK | CREDIT
+      barcode          TEXT,
+      product_name     TEXT,
+      cartons_wanted   INTEGER,
+      cartons_short    INTEGER,                   -- how many it fell short by (LOW_STOCK)
+      order_value      REAL,                      -- (CREDIT)
+      available_credit REAL,
+      at               TEXT NOT NULL
+    )`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_order_check_log_at ON order_check_log(at, kind)');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS stock_snapshots (
+      snap_on  TEXT NOT NULL,
+      category TEXT NOT NULL,                     -- top-level category
+      on_hand  REAL NOT NULL,
+      free     REAL NOT NULL,
+      PRIMARY KEY (snap_on, category)
+    )`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS report_targets (
+      scope      TEXT NOT NULL,                   -- COMPANY | REP
+      scope_value TEXT NOT NULL DEFAULT '',       -- the rep's name for REP
+      measure    TEXT NOT NULL,
+      month      TEXT NOT NULL,                   -- YYYY-MM, or DEFAULT for every month
+      value      REAL NOT NULL,
+      set_by     TEXT,
+      set_at     TEXT NOT NULL,
+      PRIMARY KEY (scope, scope_value, measure, month)
+    )`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS report_notes (
+      report     TEXT NOT NULL,                   -- CEO | SALES | WAREHOUSE
+      month      TEXT NOT NULL,
+      what       TEXT,
+      why        TEXT,
+      action     TEXT,
+      written_by TEXT,
+      written_at TEXT,
+      PRIMARY KEY (report, month)
+    )`);
+
+  // Discounts the Sales Manager puts on lots close to expiry. CLEARANCE: a lot in our warehouse, offered to
+  // customers. SHELF: a lot on a customer's shelf, offered by the rep on a visit. Switched off, never deleted.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS lot_discounts (
+      kind      TEXT NOT NULL,                 -- CLEARANCE | SHELF
+      lot_key   TEXT NOT NULL,                 -- "<barcode>|<lot name>"
+      pct       REAL NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      set_by    TEXT,
+      set_at    TEXT NOT NULL,
+      ended_by  TEXT,
+      ended_at  TEXT,
+      PRIMARY KEY (kind, lot_key)
+    )`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS lot_discount_log (
+      id       INTEGER PRIMARY KEY AUTOINCREMENT,
+      kind     TEXT NOT NULL,
+      lot_key  TEXT NOT NULL,
+      action   TEXT NOT NULL,                  -- SET | CHANGE | REMOVE
+      pct      REAL,
+      by_name  TEXT,
+      at       TEXT NOT NULL
+    )`);
+  // the cartons of a request line that are clearance (the line names the lot and carries the discount)
+  addColumns(db, 'request_items', {
+    clearance_lot_key: 'TEXT',
+    clearance_lot_name: 'TEXT',
+    clearance_expiry: 'TEXT',
+    clearance_cartons: 'INTEGER',
+    clearance_pct: 'REAL',
+  });
+
+  // an invoice line for clearance cartons names its lot and carries the discount given (GHS), as Odoo's invoice line would
+  addColumns(db, 'odoo_invoice_lines', { lot_name: 'TEXT' });
+
+  // what the Sales Manager had offered on a shelf lot when the rep visited (a discount within it is approved at once)
+  addColumns(db, 'shelf_visit_lines', { offered_pct: 'REAL' });
+
+  // Which rep owns a sample shop (the Sales Manager can change the sample list). '' = nobody.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS shop_reps (
+      customer_id INTEGER PRIMARY KEY,
+      rep_id      TEXT NOT NULL,
+      set_by      TEXT,
+      set_at      TEXT NOT NULL
+    )`);
+
+  // Product visibility rules (Sales Management slice 10). Rules only HIDE; removing one switches it off
+  // and is logged. Nothing is ever deleted.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS visibility_rules (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      scope_type   TEXT NOT NULL,                 -- ALL | PRICE_CLASS | CUSTOMER
+      scope_value  TEXT,                          -- price class name, or the customer's id
+      target_type  TEXT NOT NULL,                 -- CATEGORY | PRODUCT | BRAND
+      target_value TEXT NOT NULL,                 -- category path, barcode, or brand
+      is_active    INTEGER NOT NULL DEFAULT 1,
+      created_by   TEXT,
+      created_at   TEXT NOT NULL,
+      removed_by   TEXT,
+      removed_at   TEXT
+    )`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_visibility_rules_active ON visibility_rules(is_active, scope_type, scope_value)');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS visibility_log (
+      id      INTEGER PRIMARY KEY AUTOINCREMENT,
+      rule_id INTEGER NOT NULL,
+      action  TEXT NOT NULL,                      -- ADDED | REMOVED
+      by      TEXT,
+      at      TEXT NOT NULL,
+      detail  TEXT
+    )`);
+
+  // Payment reminders (Sales Management slice 9). A schedule per credit customer, and a log of every
+  // reminder composed. Nothing here collects money or touches Odoo.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS payment_schedules (
+      customer_id  INTEGER PRIMARY KEY REFERENCES customers(id) ON DELETE CASCADE,
+      kind         TEXT NOT NULL DEFAULT 'DUE_DATE',   -- DUE_DATE | WEEKLY | MONTHLY
+      weekday      INTEGER,                            -- 0 = Sunday … 6 = Saturday (weekly)
+      day_of_month INTEGER,                            -- 1..31 (monthly)
+      updated_by   TEXT,
+      updated_at   TEXT NOT NULL
+    )`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS payment_reminders (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id   INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+      remind_on     TEXT NOT NULL,                     -- the day this reminder was for
+      kind          TEXT NOT NULL,                     -- BEFORE | DUE | OVERDUE
+      to_address    TEXT,                              -- email, else phone; null = no contact on file
+      subject       TEXT NOT NULL,
+      body          TEXT NOT NULL,
+      invoice_count INTEGER NOT NULL,
+      total_due     REAL NOT NULL,
+      status        TEXT NOT NULL,                     -- PENDING | SENT | NO_CONTACT
+      created_at    TEXT NOT NULL,
+      sent_at       TEXT,
+      sent_by       TEXT,
+      UNIQUE (customer_id, remind_on)
+    )`);
+
+  // Sign-in (Sales Management slice 7). Customers sign in with their Odoo customer ID and a password;
+  // staff with an email or phone number and a password. Only a scrypt hash is ever stored.
+  addColumns(db, 'customers', {
+    password_hash: 'TEXT',
+    password_set_at: 'TEXT',
+  });
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS staff_users (
+      id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+      name                 TEXT NOT NULL,
+      email                TEXT,                      -- lower-cased
+      phone                TEXT,                      -- as typed
+      phone_key            TEXT,                      -- last nine digits, for matching
+      role                 TEXT NOT NULL,             -- SALES_MANAGER | SALES_REP | WAREHOUSE
+      rep_id               TEXT,                      -- which sales rep this person is (reps only)
+      password_hash        TEXT NOT NULL,
+      must_change_password INTEGER NOT NULL DEFAULT 1,
+      is_active            INTEGER NOT NULL DEFAULT 1,
+      created_by           TEXT,
+      created_at           TEXT NOT NULL,
+      updated_at           TEXT NOT NULL,
+      last_login_at        TEXT
+    )`);
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_staff_users_email ON staff_users(email) WHERE email IS NOT NULL');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_staff_users_phone ON staff_users(phone_key) WHERE phone_key IS NOT NULL');
+
+  // The outbox: every write to Odoo is queued here first (see domain/outbox.js).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS odoo_outbox (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      kind       TEXT NOT NULL,                -- CREATE_PARTNER | DRAFT_QUOTATION
+      dedupe_key TEXT NOT NULL UNIQUE,         -- the same write is never queued twice
+      payload    TEXT NOT NULL,                -- JSON
+      status     TEXT NOT NULL DEFAULT 'PENDING',  -- PENDING | SENT | FAILED
+      attempts   INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      created_at TEXT NOT NULL,
+      sent_at    TEXT
+    )`);
+
+  // The Odoo connection (see src/odoo/): how the outbox worker and the scheduled sync jobs are doing.
+  addColumns(db, 'odoo_outbox', {
+    next_attempt_at: 'TEXT',      // when the worker may try again (1, 5, 15, 60 minutes, then hourly)
+    first_attempt_at: 'TEXT',     // the first try that failed: after 24 hours of failures the entry is FAILED
+    odoo_id: 'INTEGER',           // the id Odoo gave the quotation / customer
+    odoo_number: 'TEXT',          // the quotation's number, e.g. S00456
+  });
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sync_state (
+      data_type       TEXT PRIMARY KEY,                -- customers | stock | ...
+      cursor          TEXT,                            -- the newest write_date copied so far
+      last_success_at TEXT,
+      last_attempt_at TEXT,
+      last_error      TEXT,
+      records_last    INTEGER NOT NULL DEFAULT 0,
+      runs_ok         INTEGER NOT NULL DEFAULT 0,
+      runs_failed     INTEGER NOT NULL DEFAULT 0
+    )`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sync_changes (
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      run_at    TEXT NOT NULL,
+      data_type TEXT NOT NULL,
+      odoo_id   TEXT,
+      change    TEXT NOT NULL,                         -- LINKED_BY_NAME | CREATED | DEACTIVATED | DIFFERS | UNKNOWN_BARCODE ...
+      detail    TEXT
+    )`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_sync_changes_run ON sync_changes(run_at)');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS odoo_call_log (
+      id     INTEGER PRIMARY KEY AUTOINCREMENT,
+      at     TEXT NOT NULL,
+      model  TEXT NOT NULL,
+      method TEXT NOT NULL,
+      count  INTEGER,
+      ms     INTEGER,
+      ok     INTEGER NOT NULL,
+      error  TEXT                                      -- never the API key
+    )`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_odoo_call_log_at ON odoo_call_log(at)');
 }
 
 /** Add any of `columns` that the table does not already have. Idempotent. */

@@ -132,7 +132,8 @@ export function listCustomerCodes(db, { q = '', limit = 100, offset = 0 } = {}) 
   const term = `%${String(q ?? '').trim()}%`;
   const total = db.prepare('SELECT COUNT(*) n FROM customers WHERE name LIKE ?').get(term).n;
   const items = db.prepare(
-    `SELECT id, name, access_code, access_code_issued_at, is_active, phone, email
+    `SELECT id, name, access_code, access_code_issued_at, is_active, phone, email, odoo_customer_ref,
+            (password_hash IS NOT NULL) AS password_set
        FROM customers WHERE name LIKE ?
       ORDER BY name COLLATE NOCASE LIMIT ? OFFSET ?`
   ).all(term, lim, off);

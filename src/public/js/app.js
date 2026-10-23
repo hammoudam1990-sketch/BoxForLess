@@ -5,13 +5,49 @@ import { renderDashboard } from './dashboard.js';
 import { renderProducts, renderProductDetail } from './products.js';
 import { renderImports, renderImportDetail } from './imports.js';
 import { renderChanges } from './changes.js';
+import { renderExpiry } from './expiry.js';
+import { renderSampleOdoo } from './sample-odoo.js';
+import { renderApprovals } from './approvals.js';
 import { renderRequests, renderRequestDetail } from './requests.js';
 import { renderAccessCodes, renderAccessRequests } from './access.js';
+import { renderTeam } from './team.js';
+import { renderPayments } from './payments.js';
+import { renderVisibility } from './visibility.js';
+import { renderReports } from './reports.js';
+import { renderReturns } from './returns.js';
+import { renderHealth } from './health.js';
+import { renderRepCustomers } from './rep-customers.js';
 
 const view = document.getElementById('view');
 const side = document.getElementById('side');
 const scrim = document.getElementById('scrim');
 const menuToggle = document.getElementById('menuToggle');
+
+// ---- who is signed in, and what their role reaches ----
+// The server is what actually enforces this; hiding the rest here just keeps the screen to what a
+// person can use. null = everything.
+const ROLE_NAV = {
+  ADMIN: null,
+  SALES_MANAGER: ['access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health'],
+  WAREHOUSE: ['products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health'],
+};
+const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/access', WAREHOUSE: '#/products' };
+let me = { role: 'ADMIN', name: 'Staff' };
+const allowed = (name) => !ROLE_NAV[me.role] || ROLE_NAV[me.role].includes(name);
+const canSee = (name) => (ROLE_NAV[me.role] || []).includes(name) || !ROLE_NAV[me.role];
+
+async function loadMe() {
+  try {
+    const r = await (await fetch('/api/auth/me')).json();
+    if (!r.staff) { location.assign('/staff/login'); return false; }
+    if (r.staff.mustChangePassword) { location.assign('/staff/login?change=1'); return false; }
+    me = { role: r.staff.role, name: r.staff.name };
+  } catch { /* keep the default; the server still enforces everything */ }
+  document.querySelectorAll('[data-nav]').forEach((a) => { if (a.dataset.nav === 'dashboard' ? me.role !== 'ADMIN' : !canSee(a.dataset.nav)) a.classList.add('hidden'); });
+  const who = document.getElementById('staffName');
+  if (who) who.textContent = me.role === 'ADMIN' ? 'Administrator' : me.name;
+  return true;
+}
 
 function setActiveNav(name) {
   document.querySelectorAll('[data-nav]').forEach((a) => {
@@ -33,17 +69,25 @@ async function refreshBadge() {
   let reviews = 0;
   let access = 0;
   try {
+    if (!allowed('changes')) throw new Error('not for this role');
     const { counts } = await api.reviews();
     reviews = counts?.total || 0;
     setBadge('reviewBadge', reviews);
   } catch { /* ignore */ }
   // Companies waiting to be let in. Shown in the nav so a request for access is not missed.
   try {
+    if (!allowed('access')) throw new Error('not for this role');
     const { total } = await api.accessRequests('PENDING');
     access = total || 0;
     setBadge('accessBadge', access);
   } catch { /* ignore */ }
-  setBadge('bellCount', reviews + access);
+  let returnsLate = 0;
+  try {
+    if (!allowed('returns')) throw new Error('not for this role');
+    returnsLate = (await api.returnsAlert()).overdue || 0;
+    setBadge('returnsBadge', returnsLate);
+  } catch { /* ignore */ }
+  setBadge('bellCount', reviews + access + returnsLate);
 }
 
 // ---- the drawer on phones and small laptops ----
@@ -78,6 +122,9 @@ const LOADING = '<div class="card"><div class="sk-lines" role="status" aria-labe
 async function route() {
   const hash = location.hash || '#/dashboard';
   const [, path, arg] = hash.split('/'); // "#", "products", "123"
+  // a role is sent to its own start page when it asks for something it cannot use
+  const page = path || 'dashboard';
+  if (page === 'dashboard' ? me.role !== 'ADMIN' : !allowed(page)) { location.hash = ROLE_START[me.role] || '#/dashboard'; return; }
   openSide(false);
   view.innerHTML = LOADING;
   try {
@@ -89,6 +136,16 @@ async function route() {
     else if (path === 'changes') { setActiveNav('changes'); await renderChanges(view); }
     else if (path === 'requests' && arg) { setActiveNav('requests'); await renderRequestDetail(view, arg); }
     else if (path === 'requests') { setActiveNav('requests'); await renderRequests(view); }
+    else if (path === 'approvals') { setActiveNav('approvals'); await renderApprovals(view); }
+    else if (path === 'expiry') { setActiveNav('expiry'); await renderExpiry(view); }
+    else if (path === 'sample-odoo') { setActiveNav('sample-odoo'); await renderSampleOdoo(view); }
+    else if (path === 'rep-customers') { setActiveNav('rep-customers'); await renderRepCustomers(view); }
+    else if (path === 'health') { setActiveNav('health'); await renderHealth(view); }
+    else if (path === 'returns') { setActiveNav('returns'); await renderReturns(view); }
+    else if (path === 'reports') { setActiveNav('reports'); await renderReports(view); }
+    else if (path === 'visibility') { setActiveNav('visibility'); await renderVisibility(view); }
+    else if (path === 'payments') { setActiveNav('payments'); await renderPayments(view); }
+    else if (path === 'team') { setActiveNav('team'); await renderTeam(view); }
     else if (path === 'codes') { setActiveNav('codes'); await renderAccessCodes(view); }
     else if (path === 'access') { setActiveNav('access'); await renderAccessRequests(view); }
     else { location.hash = '#/dashboard'; return; }
@@ -99,11 +156,12 @@ async function route() {
 }
 
 window.addEventListener('hashchange', route);
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('staffLogout')?.addEventListener('click', async () => {
-    await fetch('/api/staff/logout', { method: 'POST' });
-    location.assign('/staff/login');
+    await fetch('/api/auth/logout', { method: 'POST' });
+    location.assign('/');
   });
+  if (!(await loadMe())) return;
   route();
   window.setInterval(refreshBadge, 15000);
 });
