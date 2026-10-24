@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="refresh" content="0;url=/login.html">
 <title>BoxForLess | Wholesale Shop</title>
 <style>
 :root{--bg:#fff;--cd:#fff;--tx:#171717;--mu:#626262;--bd:#e5e5e5;--pr:#171717;--on:#fff;--ok:#27804f;--wn:#a76b00;--er:#b33127;--r:16px;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -76,7 +77,6 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 4px;
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:9}
 .md{background:var(--cd);border-radius:18px 18px 0 0;padding:18px;width:100%;max-width:560px;max-height:90vh;overflow:auto}
 @media(min-width:640px){.ov{align-items:center;padding:16px}.md{border-radius:var(--r)}}
-.login{max-width:380px;margin:12vh auto;padding:0 16px}.login-signup{margin:12px 0 0;text-align:center;color:var(--mu)}.login-signup a{display:inline-block;min-height:44px;padding:10px 4px;color:var(--tx);font-weight:700;text-decoration:underline;text-underline-offset:3px}.code{font-family:ui-monospace,Consolas,monospace;letter-spacing:.14em;text-align:center;font-size:18px;font-weight:700}
 #t{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none;z-index:99;max-width:90%}
 #t.s{opacity:1}
 @media(prefers-reduced-motion:reduce){#t{transition:none}}
@@ -159,7 +159,7 @@ const lines=()=>Object.entries(S.cart).filter(([k])=>pr(k)).map(([sku,qty])=>({s
 const ctot=()=>lines().reduce((s,i)=>s+i.qty*i.price,0);
 const cnt=()=>Object.keys(S.cart).length;
 
-function login(){return`<div class="login"><div class="logo" style="font-size:28px">Box<span>For</span>Less</div><p class="mu" id="login-help">Enter the access code provided by your BoxForLess representative.</p><div class="card"><label class="field-label" for="cc">Access code</label><input id="cc" class="code" maxlength="16" placeholder="XXXX-XXXX" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" aria-describedby="login-help"><p><button class="btn" data-a="login" style="width:100%">Enter shop</button></p><small class="mu">Enter the code exactly as provided. Spaces and hyphens are optional.</small></div><p class="login-signup">Don't have an access code? <a href="${esc(catalogSignupUrl())}">Sign up</a></p></div>`}
+function login(){window.location.replace("/login.html");return""}
 const V={
 shop(){const f=favs(),cats=["All",...new Set(db.products.map(p=>cat(p)[0]))],q=S.q.toLowerCase();
 const stockOK=p=>S.stock==="all"||S.stock==="in"&&p.stock>=db.low||S.stock==="limited"&&p.stock>0&&p.stock<db.low||S.stock==="out"&&p.stock<1;

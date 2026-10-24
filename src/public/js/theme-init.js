@@ -4,7 +4,9 @@
 (function () {
   var saved = null;
   try { saved = localStorage.getItem('bfl.theme'); } catch (e) { /* storage blocked */ }
+  var pageDefault = document.documentElement.getAttribute('data-theme-default');
   var dark = saved ? saved === 'dark'
-    : !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    : pageDefault ? pageDefault === 'dark'
+      : !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
 }());

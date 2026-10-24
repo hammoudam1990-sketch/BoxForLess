@@ -17,7 +17,12 @@ import sampleOdooRouter from './routes/sample-odoo.js';
 import catalogRouter from './routes/catalog.js';
 import customerImportsRouter from './routes/customer-imports.js';
 import { customerRouter as requestsCustomerRouter, staffRouter as requestsStaffRouter } from './routes/requests.js';
-import { requireStaff, requireRole, privatePageFor, staffLogin, staffLogout, staffSessionStatus } from './staff-auth.js';
+import { requireStaff, requireRole, privatePageFor, staffLogin, staffLogout, staffSessionStatus, hasStaffSession } from './staff-auth.js';
+import { salesLogin, salesLogout, repLogin, repLogout, unifiedLogin } from './role-auth.js';
+import { requireSalesAccess, requireRepAccess, salesAccessStatus, repAccessStatus, hasSalesAccess, hasRepAccess } from './access.js';
+import salesRouter from './routes/sales.js';
+import repRouter from './routes/rep.js';
+import adminWorkspaceRouter from './routes/admin-workspace.js';
 import authRouter from './routes/auth.js';
 import teamRouter from './routes/team.js';
 import paymentsRouter from './routes/payments.js';
@@ -47,6 +52,18 @@ export function createApp(db) {
   app.get('/api/staff/session', staffSessionStatus);
   app.post('/api/staff/login', staffLogin);
   app.post('/api/staff/logout', staffLogout);
+  // The Sales Manager dashboard and the sales rep app: an environment account (role-auth.js) OR a person signed in
+  // through the main sign-in with a suitable role (access.js).
+  app.get('/api/sales/session', salesAccessStatus);
+  app.post('/api/sales/login', salesLogin);
+  app.post('/api/sales/logout', salesLogout);
+  app.use('/api/sales', requireSalesAccess, salesRouter);
+  app.get('/api/rep/session', repAccessStatus);
+  app.post('/api/rep/login', repLogin);
+  app.post('/api/rep/logout', repLogout);
+  app.use('/api/rep', requireRepAccess, repRouter);
+  // The environment-account sign-in (login.html): detects the team role from the username and password.
+  app.post('/api/auth/login', unifiedLogin);
   // Customer access code — public by necessity: entering a code is how a customer
   // identifies themselves. Rate-limited per IP in customer-access.js.
   app.get('/api/catalog/access', accessStatus);
@@ -54,6 +71,8 @@ export function createApp(db) {
   app.post('/api/catalog/access/exit', exitAccess);
   // Sign-in for customers (ID + password), password changes, who-am-I, sign-out.
   app.use('/api/auth', authRouter);
+  // The admin workspace summary (counts, integration status): the roles that work in the admin screens.
+  app.use('/api/admin-workspace', requireStaff, requireRole('ADMIN', 'WAREHOUSE', 'SALES_MANAGER'), adminWorkspaceRouter);
   // Internal / admin API. Each area is open to the roles that work in it; { SALES_MANAGER: 'r' } is read-only.
   app.use('/api/products', requireStaff, requireRole('ADMIN', 'WAREHOUSE', { SALES_MANAGER: 'r' }), productsRouter);
   app.use('/api/imports', requireStaff, requireRole('ADMIN', 'WAREHOUSE'), importsRouter);
@@ -115,6 +134,31 @@ export function createApp(db) {
   app.get('/index.html', privatePageFor('ADMIN', 'SALES_MANAGER', 'WAREHOUSE'), (_req, res) => res.sendFile(path.join(publicDir, 'index.html')));
   app.get('/scan.html', privatePageFor('ADMIN', 'WAREHOUSE'), (_req, res) => res.sendFile(path.join(publicDir, 'scan.html')));
   app.get('/rep.html', privatePageFor('ADMIN', 'SALES_MANAGER', 'SALES_REP'), (_req, res) => res.sendFile(path.join(publicDir, 'rep.html')));
+  // The Sales Manager dashboard and the sales rep app (the team's own work). Each accepts its environment account
+  // (/login.html) or a person who signed in at the front door with a suitable role.
+  const toSignIn = (next) => (req, res) => { res.setHeader('Cache-Control', 'no-store'); res.redirect(`/?next=${encodeURIComponent(req.query.next || next)}`); };
+  app.get('/sales.html', (_req, res) => res.redirect('/sales'));
+  app.get('/sales', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!hasSalesAccess(req)) return res.redirect('/?next=%2Fsales');
+    res.sendFile(path.join(publicDir, 'sales.html'));
+  });
+  app.get('/rep', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!hasRepAccess(req)) return res.redirect('/?next=%2Frep');
+    res.sendFile(path.join(publicDir, 'rep-app.html'));
+  });
+  app.get('/sales/login', toSignIn('/sales'));
+  app.get('/rep/login', toSignIn('/rep'));
+  app.get('/staff-login.html', toSignIn('/index.html'));
+  app.get('/sales-login.html', toSignIn('/sales'));
+  app.get('/rep-login.html', toSignIn('/rep'));
+  app.get('/approval-demo', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    if (!hasStaffSession(req) && !hasSalesAccess(req)) return res.redirect('/?next=%2Fapproval-demo');
+    return res.sendFile(path.join(__dirname, '..', '..', 'prototypes', 'approval-demo.html'));
+  });
 
   app.use(express.static(publicDir, { index: false }));
 
@@ -134,6 +178,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const app = createApp(db);
   const { host, port } = config;
 
+  if (process.env.NODE_ENV === 'production'
+      && (!process.env.BFL_CUSTOMER_SESSION_SECRET || !process.env.BFL_CUSTOMER_HANDLE_SECRET)) {
+    console.warn('WARNING: BFL_CUSTOMER_SESSION_SECRET / BFL_CUSTOMER_HANDLE_SECRET are not set; '
+      + 'built-in default secrets are in use and customer session cookies can be forged. Set both.');
+  }
   // Payment reminders: look for reminders that are due now, then once an hour. Idempotent (one per customer
   // per day), and only logs — nothing is sent until a person marks it sent. BFL_REMINDERS=off turns it off.
   // The Odoo connection: only when it is configured AND BFL_ODOO_SYNC=on. Otherwise nothing here touches a network.
@@ -147,7 +196,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     tick();
     setInterval(tick, 60 * 60 * 1000).unref();
   }
-
   // HTTP — always on. Explicit bind to config.host (default 0.0.0.0) so phones
   // on the same LAN can reach it; localhost still works via the loopback.
   http.createServer(app).listen(port, host, () => {

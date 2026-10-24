@@ -441,14 +441,14 @@ test('the acknowledgement reveals nothing about who is already a customer', asyn
   db.close();
 });
 
-test('access-code page links to the standalone signup page', async () => {
+test('legacy customer-shop entry forwards to shared sign-in and signup returns to the catalogue', async () => {
   const db = freshDb();
   const { server, base } = await startApp(db);
   try {
     const accessResponse = await fetch(`${base}/customer-shop`);
     const accessPage = await accessResponse.text();
     assert.equal(accessResponse.status, 200);
-    assert.match(accessPage, /new URL\("\/signup",location\.href\)/);
+    assert.match(accessPage, /url=\/login\.html/);
 
     const response = await fetch(`${base}/signup`);
     const page = await response.text();
@@ -461,7 +461,8 @@ test('access-code page links to the standalone signup page', async () => {
     assert.match(page, /name="company"/);
     assert.match(page, /name="email"/);
     assert.doesNotMatch(page, /name="note"/);
-    assert.match(page, /href="\/customer-shop"/);
+    assert.match(page, /href="\/catalog"/);
+    assert.match(page, /Back to catalogue/);
   } finally { server.close(); }
   db.close();
 });

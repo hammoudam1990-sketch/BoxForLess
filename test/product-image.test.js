@@ -15,6 +15,7 @@ import config from '../src/config.js';
 
 const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 7)]);
 function tmpDir() { return fs.mkdtempSync(path.join(os.tmpdir(), 'bfl-pi-')); }
+const readPublicScript = (name) => fs.readFileSync(new URL(`../src/public/js/${name}`, import.meta.url), 'utf8');
 function startApp(db) {
   const server = http.createServer(createApp(db));
   return new Promise((res) => server.listen(0, () => res({ server, base: `http://127.0.0.1:${server.address().port}` })));
@@ -75,4 +76,45 @@ test('image endpoint: serves the image (200), and fails gracefully (404, not 500
     server.close();
     db.close();
   }
+});
+
+test('admin image upload endpoint accepts a selected JPEG file and serves the saved product image', async () => {
+  const db = freshDb();
+  const storageDir = tmpDir();
+  config.productImagesDir = storageDir;
+  runImport(db, [row({ barcode: '5283013330912', name: 'PLEIN SOLEIL CHICKEN STOCK', uom: 'CTN24' })], { uploadsDir: tmpUploads() });
+  const pid = getProduct(db, '5283013330912').id;
+  const { server, base } = await startApp(db);
+
+  try {
+    const form = new FormData();
+    form.append('image', new Blob([JPEG], { type: 'image/jpeg' }), 'product.jpg');
+    const response = await fetch(`${base}/api/products/${pid}/image`, {
+      method: 'POST',
+      headers: { Origin: base },
+      body: form,
+    });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).ok, true);
+
+    const image = await fetch(`${base}/api/products/${pid}/image`);
+    assert.equal(image.status, 200);
+    assert.deepEqual(Buffer.from(await image.arrayBuffer()), JPEG);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    db.close();
+    fs.rmSync(storageDir, { recursive: true, force: true });
+  }
+});
+
+test('barcode result and Product Master detail expose image upload', () => {
+  const scanner = readPublicScript('scan.js');
+  const photo = readPublicScript('photo.js');
+  const products = readPublicScript('products.js');
+  assert.match(scanner, /mountPhoto\(host, foundProduct/);
+  assert.match(photo, /id = 'uploadProductImage'/);
+  assert.match(photo, /'image\/jpeg,image\/png'/);
+  assert.match(photo, /api\.saveProductImage\(pid, file, \{ replace: replacing \}\)/);
+  assert.match(products, /import \{ mountPhoto \} from '\.\/photo\.js'/);
+  assert.match(products, /mountPhoto\(view\.querySelector\('#productPhotoManager'\), p, \{ uploadOnly: true, title: 'Primary Image' \}\)/);
 });

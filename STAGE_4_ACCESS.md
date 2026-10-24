@@ -168,6 +168,13 @@ on every write. It **fails closed** — if `BFL_STAFF_USERNAME`,
 `BFL_STAFF_PASSWORD` (≥12 bytes) or `BFL_SESSION_SECRET` (≥32 bytes) is missing or
 too short, staff endpoints return 503 rather than opening up.
 
+`/login.html` is the shared sign-in entry point for customers, staff, Sales
+Managers, and Sales Reps. Customer demo accounts are still held in the browser;
+server-configured team credentials are checked by one role-detecting login
+endpoint. Successful team sign-in creates the matching role-specific session,
+and each dashboard/API continues to enforce its own authorization. The legacy
+role-specific login URLs forward to the shared page.
+
 Two staff screens were added: **Access Codes** (search, copy a code, copy a
 ready-to-send message, issue/reissue) and **Access Requests** (approve or reject,
 with a badge counting those waiting).
@@ -244,7 +251,7 @@ payload.
 **New:** `src/domain/access-codes.js` · `src/domain/access-requests.js` ·
 `src/server/customer-access.js` · `src/server/staff-auth.js` ·
 `src/server/routes/customer-imports.js` · `src/import/customer-service.js` ·
-`src/public/js/access.js` · `src/public/js/staff-login.js` ·
+`src/public/js/access.js` · `src/public/js/login.js` ·
 `src/public/staff-login.html` · `scripts/issue-access-codes.js` ·
 `scripts/import-customers-cli.js` · `scripts/daily-update.js` ·
 `test/access-codes.test.js` · `test/customer-import.test.js` · `test/cart.test.js`

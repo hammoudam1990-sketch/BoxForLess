@@ -19,14 +19,15 @@ This creates `data/product_master.db` with the schema.
 ## 2. Seed Demo Data
 
 ```bash
-node scripts/demo-seed.js
+node scripts/import-cli.js fixtures/sample-products.xlsx --confirm   # 50 sample products
+node scripts/demo-seed.js             # preview: what would be added
+node scripts/demo-seed.js --confirm   # add it
 ```
 
-This creates:
-- **20 demo products** (various carton quantities)
-- **5 demo customers** with access codes
-- **2 sample requests** (one approved, one pending)
-- Staff credentials (see output)
+This adds **6 fictional demo customers** (names end in "(Demo)"), each with an access code,
+and **12 requests** spread over the last ten days (pending, accepted and one withdrawn), so the
+staff dashboard has something to show. The script prints the access codes. It refuses to run
+against a database with more than 50 real customers, and running it twice adds nothing.
 
 ## 3. Start the Server
 
@@ -46,17 +47,19 @@ The server runs on `http://localhost:3000`.
 - Visit `http://localhost:3000/catalog`
 - Browse demo products by category
 - Add items to cart (CTN-only)
-- Enter a demo access code to submit a request:
-  - `DEMO001` – ABC Wholesale
-  - `DEMO002` – XYZ Foods
-  - `DEMO003` – Corner Market
-  - `DEMO004` – Supply Co
-  - `DEMO005` – Bulk Retail
+- Enter one of the access codes printed by `demo-seed.js` to submit a request
+  (codes are random, eight characters, shown as `XXXX-XXXX`).
 
 ### 🔐 **Staff View** (Requires Login)
-- Visit `http://localhost:3000`
-- Sign in with username `admin` / password `DemoPass123456`
+- All roles use the same sign-in page at `/login.html`. Enter a customer email/phone
+  or a team username; the app detects the account and opens the matching workspace.
+- Opening the staff, Sales Manager or Sales Rep app while signed out redirects to
+  that same sign-in page and returns to the requested workspace after sign-in.
+- Customer demo accounts are stored in this browser's localStorage; team credentials
+  are configured on the server as shown below.
+- **Dashboard** – orders, customers, pending approvals, order lines, system status
 - **Products** – search, filter, review stock status
+- **Barcode scanner** – scan or manually look up a product, then take a photo or upload a JPEG/PNG
 - **Imports** – preview / confirm product updates (try uploading `fixtures/sample-products.xlsx`)
 - **Requests** – view customer orders, approve, or export to Excel
 - **Changes** – review flagged import changes (barcode/UoM updates)
@@ -68,11 +71,11 @@ The server runs on `http://localhost:3000`.
 2. Search for "cases" or scroll categories
 3. Add a few products to cart
 4. Click **Request**
-5. Enter code `DEMO001` (or any from the list above)
+5. Enter one of the codes printed by `demo-seed.js`
 6. Submit
 
 ### Scenario 2: Approve Requests (Staff)
-1. Sign in at `/`
+1. Open the staff area at `/index.html` with an existing staff session
 2. Go to **Requests**
 3. See the customer request you just made
 4. Click **Approve** or **Export to Excel**
@@ -105,6 +108,8 @@ node scripts/demo-seed.js
 | `BFL_STAFF_USERNAME` | `admin` | Staff sign-in name |
 | `BFL_STAFF_PASSWORD` | `DemoPass123456` | Staff password (≥12 chars) |
 | `BFL_SESSION_SECRET` | `demo-secret-1234567890123456789012` | Session cookie secret (≥32 chars) |
+| `BFL_REP_USERNAME` / `BFL_REP_PASSWORD` / `BFL_REP_NAME` | `rep` / `RepPass1234567` / `Kwame Mensah` | Sales Rep account (password ≥12 chars). Sign in at `/login.html`; the app opens `/rep`. Demo lots: `node scripts/demo-seed-lots.js --confirm`. |
+| `BFL_SALES_USERNAME` / `BFL_SALES_PASSWORD` | `sales` / `SalesPass123456` | Sales Manager account (password ≥12 chars). Sign in at `/login.html`; the app opens `/sales`. Read-only and price-free. |
 | `NODE_ENV` | `development` | Skip HTTPS checks on LAN |
 | `BFL_PUBLIC_URL` | *(optional)* | Public catalog URL (defaults to `http://localhost:3000`) |
 

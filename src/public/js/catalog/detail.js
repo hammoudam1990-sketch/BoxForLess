@@ -1,16 +1,15 @@
 // One product: /catalog/product/:id
 //
 // Everything here comes from /api/catalog, whose payloads are customer-safe: no price, no
-// stock quantity, no internal id. The price line is added from /api/catalog/prices, signed-in only.
-import { h, setChildren, toggleHidden } from '../lib/dom.js';
+// stock quantity, no internal id.
+import { h, setChildren } from '../lib/dom.js';
 import { createScope } from '../lib/util.js';
-import { onPrices, priceOf, offerOf } from './prices.js';
 import { getJSON } from './http.js';
-import { availabilityPill, createPriceLine, createOfferLine, productImage } from './cards.js';
+import { availabilityPill, productImage, createPriceLine, createOfferLine } from './cards.js';
 import { bindRequestControl } from './qty.js';
 import { doodle, doodleFor } from './doodles.js';
 
-const backLink = () => h('a', { class: 'c-back', href: '/catalog' }, '← Back to Catalog');
+const backLink = () => h('a', { class: 'c-back', href: '/catalog?p=products' }, '← Back to Products');
 
 /** Build the product page for `id` into `container`. Returns { destroy }. */
 export function mountDetail(container, id) {
@@ -18,19 +17,29 @@ export function mountDetail(container, id) {
   let alive = true;
   scope.add(() => { alive = false; });
 
-  setChildren(container, h('div', { class: 'c-detail', role: 'status', 'aria-label': 'Loading' },
+  const loading = () => h('div', { class: 'c-detail', role: 'status', 'aria-label': 'Loading' },
     h('div', { class: 'sk-block', style: { height: '180px', marginBottom: '18px' } }),
-    h('div', { class: 'sk-lines' }, h('i'), h('i'), h('i'), h('i'))));
+    h('div', { class: 'sk-lines' }, h('i'), h('i'), h('i'), h('i')));
 
-  getJSON(`/api/catalog/products/${encodeURIComponent(id)}`).then((p) => {
-    if (!alive) return;
-    document.title = `${p.name} — Box for Less`;
-    setChildren(container, backLink(), render(p, scope));
-  }, (e) => {
-    if (!alive) return;
-    setChildren(container, backLink(), h('div', { class: 'c-error', style: { marginTop: '12px' } },
-      e.status === 404 ? 'This product is not available in the catalog.' : `Could not load this product: ${e.message}`));
-  });
+  function load() {
+    setChildren(container, loading());
+    getJSON(`/api/catalog/products/${encodeURIComponent(id)}`).then((p) => {
+      if (!alive) return;
+      document.title = `${p.name} — Box for Less`;
+      setChildren(container, backLink(), render(p, scope));
+    }, (error) => {
+      if (!alive) return;
+      const notFound = error.status === 404;
+      setChildren(container, backLink(), h('div', {
+        class: 'c-error', role: 'alert', style: { marginTop: '12px' },
+      },
+      h('p', {}, notFound
+        ? 'This product is not available in the catalog.'
+        : 'We could not load this product. Check your connection and try again.'),
+      notFound ? null : h('button', { type: 'button', class: 'c-btn primary c-empty-action', onClick: load }, 'Try again')));
+    });
+  }
+  load();
 
   return { destroy: () => scope.dispose() };
 }
@@ -40,15 +49,6 @@ function fact(label, ...value) {
 }
 
 function render(p, scope) {
-  // the whole "Your price" fact is hidden for anyone who is not signed in
-  const priceFact = fact('Your price', createPriceLine(p.id, scope));
-  const syncPrice = () => toggleHidden(priceFact, priceOf(p.id) === null);
-  scope.add(onPrices(syncPrice));
-  syncPrice();
-  const offerFact = fact('Discount offer', createOfferLine(p.id, scope));
-  const syncOffer = () => toggleHidden(offerFact, offerOf(p.id) === null);
-  scope.add(onPrices(syncOffer));
-  syncOffer();
   const actions = h('div', { class: 'c-detail-actions' });
   bindRequestControl(actions, p, scope);
 
@@ -62,16 +62,16 @@ function render(p, scope) {
       h('div', {},
         p.image ? null : h('div', { class: 'c-doodle-hero' }, doodle(doodleFor(p), { size: 'lg' })),
         h('h1', {}, p.name),
+        createPriceLine(p.id, scope),
+        createOfferLine(p.id, scope),
         h('div', { class: 'c-facts' },
           fact('Barcode', h('div', { class: 'c-fact-v' }, p.barcode)),
           p.pack ? fact('Pack / UoM', h('div', { class: 'c-fact-v' }, p.pack)) : null,
           p.category ? fact('Category',
             h('div', { class: 'c-fact-v' }, p.category.name),
             h('div', { class: 'c-pack', style: { marginTop: '2px' } }, p.category.path)) : null,
-          fact('Availability', h('div', {}, availabilityPill(p.availability))),
-          priceFact,
-          offerFact),
+          fact('Availability', h('div', {}, availabilityPill(p.availability)))),
         actions,
-        h('a', { class: 'c-btn', href: '/catalog', style: { display: 'inline-block', textDecoration: 'none', marginTop: '14px' } },
-          'Back to Catalog'))));
+        h('a', { class: 'c-btn', href: '/catalog?p=products', style: { display: 'inline-block', textDecoration: 'none', marginTop: '14px' } },
+          'Back to Products'))));
 }

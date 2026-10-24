@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme-default="light" data-theme-toggle="false">
 <head>
   <meta charset="utf-8" />
   <script src="/js/theme-init.js"></script>
@@ -7,23 +7,44 @@
   <title>Box for Less — Staff</title>
   <link rel="stylesheet" href="/css/backdrop.css" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="/css/admin.css" />
   <link rel="stylesheet" href="/css/extras.css" />
   <link rel="stylesheet" href="/css/dark.css" />
+  <link rel="stylesheet" href="/css/admin.css" />
   <link rel="stylesheet" href="/css/print.css" media="print" />
 </head>
 <body class="adm">
   <aside class="adm-side" id="side" aria-label="Staff navigation">
     <a class="adm-brand" href="#/dashboard">
-      <span class="logo" role="img" aria-label="Box for Less">BFL</span>
-      <span><b>Box for Less</b><small>Staff</small></span>
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="m24 3 19 10.5v21L24 45 5 34.5v-21L24 3Z" fill="#fff"/>
+        <path d="m5.5 13.5 18.5 10 18.5-10M24 24v20.5M15 8l19 11M33 8 14 19" fill="none" stroke="#0b2341" stroke-width="2.6" stroke-linejoin="round"/>
+      </svg>
+      <span><b>Box for Less</b><small>Bigger boxes. Better value.</small></span>
     </a>
+
     <nav class="adm-nav" aria-label="Main">
-      <p class="adm-label">Menu</p>
       <a href="#/dashboard" data-nav="dashboard">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg>Dashboard</a>
+
+      <p class="adm-label">Sales &amp; Orders</p>
+      <a href="#/requests" data-nav="requests">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 17h6"/></svg>Orders</a>
+      <a href="#/workspace/quotations" data-nav="workspace-quotations">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Quotations</a>
+      <a href="#/codes" data-nav="codes">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg>Customers</a>
+      <a href="#/access" data-nav="access">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="8" r="3.5"/><path d="M3.5 20a6.5 6.5 0 0 1 10.6-5M18 15v6M15 18h6"/></svg>Access Requests <span id="accessBadge" class="badge hidden">0</span></a>
+      <a href="#/workspace/visibility" data-nav="workspace-visibility">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>Product Visibility</a>
+
+      <p class="adm-label">Products &amp; Inventory</p>
       <a href="#/products" data-nav="products">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4-8-4zM4 7v10l8 4 8-4V7M12 11v10"/></svg>Product Master</a>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4-8-4zM4 7v10l8 4 8-4V7M12 11v10"/></svg>Products</a>
+      <a href="#/categories" data-nav="categories">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>Categories</a>
+      <a href="#/workspace/stock" data-nav="workspace-stock">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l9-5 9 5v12H3z"/><path d="M7 20v-8h10v8M7 15h10"/></svg>Stock &amp; Expiry</a>
       <a href="#/imports" data-nav="imports">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Imports</a>
       <a href="#/changes" data-nav="changes">
@@ -60,8 +81,28 @@
       <p class="adm-label">Others</p>
       <a href="scan.html" data-nav="scan">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M4 12h16"/></svg>Scan</a>
+
+      <p class="adm-label">Financials</p>
+      <a href="#/workspace/invoices" data-nav="workspace-invoices">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Invoices</a>
+      <a href="#/workspace/payments" data-nav="workspace-payments">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></svg>Payments</a>
+      <a href="#/workspace/credit" data-nav="workspace-credit">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.5 0-2.5.8-2.5 2s1 1.6 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1.1 0-2-.4-2.5-1.2M12 6.5V8M12 16v1.5"/></svg>Credit &amp; Balances</a>
+
+      <p class="adm-label">System</p>
+      <a href="#/workspace/users" data-nav="workspace-users">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>Users &amp; Roles</a>
+      <a href="#/workspace/settings" data-nav="workspace-settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</a>
+      <a href="#/workspace/sync" data-nav="workspace-sync">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18.5 3v4.2h-4.2M5.5 21v-4.2h4.2"/></svg>Sync Logs</a>
     </nav>
-    <button id="staffLogout" class="adm-logout" type="button">Sign out</button>
+
+    <div class="adm-conn" id="connStatus" role="status">
+      <span class="conn-dot" aria-hidden="true"></span>
+      <span><b>Checking stock data…</b><small>&nbsp;</small></span>
+    </div>
   </aside>
   <div class="adm-scrim" id="scrim" hidden></div>
 
@@ -76,15 +117,28 @@
         <kbd aria-hidden="true">/</kbd>
       </form>
       <div class="adm-top-right">
-        <a class="adm-icon-btn" href="#/changes" aria-label="Items waiting for review">
+        <a class="adm-icon-btn" href="#/changes" aria-label="Notifications: items waiting for you">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9zM10 21h4"/></svg>
           <span id="bellCount" class="badge hidden">0</span>
         </a>
-        <div class="adm-user"><span class="adm-avatar" aria-hidden="true">BFL</span><span id="staffName">Staff</span></div>
+        <div class="adm-user">
+          <button id="userBtn" class="adm-user-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="userMenu">
+            <span class="adm-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21a8.5 8.5 0 0 1 17 0z"/></svg></span>
+            <span><b id="staffName">Staff</b><small>Staff account</small></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div id="userMenu" class="adm-user-menu" role="menu" hidden>
+            <a href="/catalog" role="menuitem">Open customer catalogue</a>
+            <button id="themeToggle" type="button" role="menuitem">Dark mode</button>
+            <hr />
+            <button id="staffLogout" type="button" role="menuitem">Sign out</button>
+          </div>
+        </div>
       </div>
     </header>
 
     <main id="view" class="view"></main>
+    <footer class="adm-foot"><span>Box for Less Admin Panel</span><span id="footYear">© Box for Less. All rights reserved.</span></footer>
   </div>
 
   <div id="toast" class="toast hidden"></div>

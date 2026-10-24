@@ -18,6 +18,7 @@ import { changeStaffPassword, StaffAccountError, ROLE_HOME, ROLE_LABEL } from '.
 import { MAX_PASSWORD_LENGTH } from '../../domain/passwords.js';
 import { startCustomerSession, currentCustomer, customerCookieClear } from '../customer-access.js';
 import { staffIdentity, clearStaffCookie } from '../staff-auth.js';
+import { clearRoleCookies } from '../role-auth.js';
 
 const router = express.Router();
 
@@ -116,7 +117,7 @@ router.post('/logout', (req, res) => {
   const c = currentCustomer(req);
   // a code session also ends every other use of that code; a password session is just this device
   if (c && c.method !== 'password') req.db.prepare('UPDATE customers SET session_epoch = COALESCE(session_epoch, 0) + 1 WHERE id = ?').run(c.id);
-  res.setHeader('Set-Cookie', [clearStaffCookie(), customerCookieClear()]);
+  res.setHeader('Set-Cookie', [clearStaffCookie(), customerCookieClear(), ...clearRoleCookies()]);
   res.status(204).end();
 });
 

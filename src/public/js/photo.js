@@ -41,8 +41,8 @@ function downscaleCanvas(src, maxDim) {
 /**
  * @param {HTMLElement} host - element to render the photo section into
  * @param {object} product - must include id and primary_image_id
- * @param {{onBeforeCamera?:Function}} hooks - called before opening the camera
- *        (scan.js uses it to release the barcode camera so only one is active)
+ * @param {{onBeforeCamera?:Function, uploadOnly?:boolean, title?:string}} hooks
+ *        onBeforeCamera releases another camera before capture; uploadOnly hides capture controls.
  */
 export function mountPhoto(host, product, hooks = {}) {
   const pid = product.id;
@@ -55,11 +55,12 @@ export function mountPhoto(host, product, hooks = {}) {
   let baseCanvas = null;  // oriented + downscaled pixels, kept pre-compression so
                           // a manual rotate never re-compresses an already-JPEG image
   let manualRotation = 0; // user's extra quarter turns from the preview control
+  const uploadOnly = hooks.uploadOnly === true;
 
   host.innerHTML = '';
   const title = document.createElement('div');
   title.className = 'section-title';
-  title.textContent = 'Product photo';
+  title.textContent = hooks.title || 'Product photo';
   const area = document.createElement('div');
   area.id = 'photoArea';
   host.append(title, area);
@@ -76,9 +77,72 @@ export function mountPhoto(host, product, hooks = {}) {
       : '<div class="img-ph">No photo yet</div>';
     area.innerHTML = `${imgTag}
       <div class="scan-actions">
-        <button id="takePhoto" class="secondary">${replacing ? 'Replace photo' : 'Take product photo'}</button>
+        ${uploadOnly ? '' : `<button id="takePhoto" class="secondary">${replacing ? 'Replace photo' : 'Take product photo'}</button>`}
+        <button id="uploadPhotoButton" type="button" class="secondary">${replacing ? 'Upload replacement' : 'Upload image'}</button>
       </div>`;
-    area.querySelector('#takePhoto').addEventListener('click', startPhotoCamera);
+    addUploadInput();
+    if (!uploadOnly) area.querySelector('#takePhoto').addEventListener('click', startPhotoCamera);
+  }
+
+  function addUploadInput() {
+    const input = document.createElement('input');
+    input.id = 'uploadProductImage';
+    input.className = 'photo-file-input';
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png';
+    input.tabIndex = -1;
+    input.setAttribute('aria-label', 'Choose a product image to upload');
+    input.addEventListener('change', () => {
+      const [file] = input.files || [];
+      input.value = '';
+      if (file) uploadFile(file);
+    });
+    area.append(input);
+    const hint = document.createElement('p');
+    hint.id = 'uploadProductImageHint';
+    hint.className = 'photo-upload-hint muted';
+    hint.textContent = 'JPEG or PNG · maximum 5 MB';
+    area.append(hint);
+    const button = area.querySelector('#uploadPhotoButton');
+    button.setAttribute('aria-describedby', hint.id);
+    button.addEventListener('click', () => input.click());
+  }
+
+  async function uploadFile(file) {
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      toast('Choose a JPEG or PNG image to upload.', 'err');
+      return;
+    }
+    if (replacing && !window.confirm('Replace the existing product photo?')) return;
+
+    const uploadInput = area.querySelector('#uploadProductImage');
+    if (uploadInput) uploadInput.disabled = true;
+    area.querySelectorAll('button').forEach((button) => { button.disabled = true; });
+    const message = document.createElement('div');
+    message.className = 'scan-status';
+    message.setAttribute('role', 'status');
+    message.textContent = 'Uploading product image…';
+    area.append(message);
+
+    try {
+      try {
+        await api.saveProductImage(pid, file, { replace: replacing });
+      } catch (error) {
+        if (error.code !== 'REPLACE_CONFIRM_REQUIRED') throw error;
+        if (!window.confirm('A product photo was added after this screen opened. Replace it?')) {
+          throw new Error('Upload cancelled. The existing photo was kept.');
+        }
+        await api.saveProductImage(pid, file, { replace: true });
+      }
+      replacing = true;
+      toast('Product image uploaded.', 'ok');
+      renderSaved();
+    } catch (error) {
+      message.textContent = `Upload failed: ${error.message}`;
+      message.classList.add('errbox');
+      if (uploadInput) uploadInput.disabled = false;
+      area.querySelectorAll('button').forEach((button) => { button.disabled = false; });
+    }
   }
 
   async function startPhotoCamera() {
@@ -240,9 +304,11 @@ export function mountPhoto(host, product, hooks = {}) {
       <div class="okbox">✓ Photo saved to the Product Master.</div>
       <img class="saved-photo" src="${api.productImageUrl(pid)}?t=${Date.now()}" alt="Saved product photo" />
       <div class="scan-actions">
-        <button id="takePhoto" class="secondary">Replace photo</button>
+        ${uploadOnly ? '' : '<button id="takePhoto" class="secondary">Replace photo</button>'}
+        <button id="uploadPhotoButton" type="button" class="secondary">Upload replacement</button>
       </div>`;
-    area.querySelector('#takePhoto').addEventListener('click', startPhotoCamera);
+    addUploadInput();
+    if (!uploadOnly) area.querySelector('#takePhoto').addEventListener('click', startPhotoCamera);
   }
 
   // teardown when leaving

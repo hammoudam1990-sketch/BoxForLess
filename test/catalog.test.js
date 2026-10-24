@@ -97,7 +97,8 @@ test('3. a product WITH an image exposes an image URL (no filename, no internal 
 
   const p = getCatalogProduct(db, CHICKEN.barcode);
   assert.ok(p.image, 'image present');
-  assert.equal(p.image.url, `/api/catalog/products/${CHICKEN.barcode}/image`);
+  assert.ok(p.image.url.startsWith(`/api/catalog/products/${CHICKEN.barcode}/image`));
+  assert.ok(p.image.url.includes('?v='));
   assert.ok(!/\.jpg|\.png/.test(JSON.stringify(p)), 'storage filename never disclosed');
   assert.ok(!p.image.url.includes('/api/products/'), 'does not use the internal-id image route');
   db.close();
@@ -458,6 +459,14 @@ test('the catalog pages are served at /catalog and /catalog/product/:id', async 
       const html = await res.text();
       assert.ok(html.includes('Digital Product Catalog'), `${url} returns the catalog page`);
       assert.ok(html.includes('/js/catalog.js'), `${url} loads assets by absolute path`);
+      assert.ok(html.includes('/css/shop-redesign.css'), `${url} loads the customer shop redesign`);
+    }
+    const pages = await fetch(`${base}/js/catalog/pages.js`);
+    assert.equal(pages.status, 200, 'the customer page module is served');
+    for (const image of ['/img/shop-slide-warehouse.webp', '/img/shop-slide-sugar.webp', '/img/shop-slide-biscuits.webp']) {
+      const response = await fetch(`${base}${image}`);
+      assert.equal(response.status, 200, `${image} is served for the customer shop slideshow`);
+      assert.match(response.headers.get('content-type'), /image\/webp/);
     }
   } finally { server.close(); }
   db.close();

@@ -125,6 +125,13 @@ export function validateRequest(db, lines = [], opts = {}) {
   }
   const availability = source.getCtnAvailability(db, [...found.values()]);
 
+  // The same product may appear on more than one line; stock is judged on the total.
+  const totals = new Map();
+  for (const line of lines) {
+    const pid = found.get(String(line.barcode ?? '').trim());
+    if (pid && isValidQuantity(line.quantityCtn)) totals.set(pid, (totals.get(pid) || 0) + Number(line.quantityCtn));
+  }
+
   // 3) Judge every line. All lines are judged even after the first failure, so the
   //    customer can fix everything in one pass instead of one error at a time.
   const results = [];
@@ -139,7 +146,7 @@ export function validateRequest(db, lines = [], opts = {}) {
     if (!productId || !info) code = RejectionCode.PRODUCT_UNAVAILABLE;
     else if (!isValidQuantity(qty)) code = RejectionCode.QUANTITY_INVALID;
     else if (info.availableCtn < 1) code = RejectionCode.NOT_REQUESTABLE;
-    else if (Number(qty) > info.availableCtn) code = RejectionCode.INSUFFICIENT_STOCK;
+    else if (totals.get(productId) > info.availableCtn) code = RejectionCode.INSUFFICIENT_STOCK;
 
     results.push({
       barcode,
@@ -164,8 +171,8 @@ export function nextReference(db, now = new Date()) {
   const year = now.getUTCFullYear();
   const prefix = `REQ-${year}-`;
   const row = db.prepare(
-    'SELECT reference FROM requests WHERE reference LIKE ? ORDER BY reference DESC LIMIT 1'
-  ).get(`${prefix}%`);
+    'SELECT reference FROM requests WHERE reference LIKE ? ORDER BY CAST(SUBSTR(reference, ?) AS INTEGER) DESC LIMIT 1'
+  ).get(`${prefix}%`, prefix.length + 1);
   const last = row ? Number(String(row.reference).slice(prefix.length)) : 0;
   return `${prefix}${String((Number.isFinite(last) ? last : 0) + 1).padStart(4, '0')}`;
 }
@@ -356,7 +363,8 @@ export function listRequests(db, { limit = 50, offset = 0, deleted = false } = {
   const total = db.prepare(`SELECT COUNT(*) AS n FROM requests ${countWhere}`).get(DELETED_STATUS).n;
   const items = db.prepare(
     `SELECT r.*, c.name AS customer_name,
-            (SELECT COUNT(*) FROM request_items i WHERE i.request_id = r.id) AS item_count
+         (SELECT COUNT(*) FROM request_items i WHERE i.request_id = r.id) AS item_count,
+         (SELECT COALESCE(SUM(i.quantity_ctn), 0) FROM request_items i WHERE i.request_id = r.id) AS cartons
        FROM requests r
        LEFT JOIN customers c ON c.id = r.customer_id
        ${where}

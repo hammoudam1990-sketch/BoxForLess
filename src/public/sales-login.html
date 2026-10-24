@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#092d50" />
+  <title>Sales Manager sign in — Box for Less</title>
+  <link rel="stylesheet" href="/css/login.css" />
+</head>
+<body class="general-login-page staff-login-page">
+  <!-- Sales Manager sign-in. Separate from the admin sign-in: its own account and session,
+       posting to /api/sales/login. It reuses js/staff-login.js, configured by data-* below. -->
+  <main class="login-layout">
+    <section class="brand-panel" aria-labelledby="brand-heading">
+      <div class="brand-panel-content">
+        <a class="hero-brand" href="/" aria-label="Box for Less home">
+          <svg class="hero-brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="m24 3 19 10.5v21L24 45 5 34.5v-21L24 3Z" fill="currentColor"/>
+            <path d="m5.5 13.5 18.5 10 18.5-10M24 24v20.5M15 8l19 11M33 8 14 19" fill="none" stroke="var(--mark-seam, #092d50)" stroke-width="2.5" stroke-linejoin="round"/>
+          </svg>
+          <span class="hero-brand-copy">
+            <strong>Box for Less</strong>
+            <span>Bigger boxes. Better value.</span>
+          </span>
+        </a>
+
+        <div class="brand-message">
+          <p class="eyebrow">SALES MANAGER</p>
+          <h1 id="brand-heading">Sales Manager <span>dashboard</span></h1>
+          <p class="brand-description">Requests, customers and products at a glance, and what needs your attention today.</p>
+        </div>
+      </div>
+
+      <p class="brand-footer"><span>Box for Less</span><span aria-hidden="true">|</span><span>B2B Sales Platform</span></p>
+    </section>
+
+    <section class="login-panel" aria-labelledby="login-heading">
+      <div class="login-topbar">
+        <span>Admin?</span>
+        <a class="contact-sales" href="/staff/login">
+          Admin sign in
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <div class="login-content">
+        <div class="login-brand">
+          <svg class="login-brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="m24 3 19 10.5v21L24 45 5 34.5v-21L24 3Z" fill="currentColor"/>
+            <path d="m5.5 13.5 18.5 10 18.5-10M24 24v20.5M15 8l19 11M33 8 14 19" fill="none" stroke="var(--mark-seam, #f4f7fb)" stroke-width="2.8" stroke-linejoin="round"/>
+          </svg>
+          <span class="login-brand-copy">
+            <strong>Box for Less</strong>
+            <span>Sales Manager</span>
+          </span>
+        </div>
+
+        <div class="form-intro">
+          <h2 id="login-heading">Sign in to the sales dashboard</h2>
+          <p>Use the sales manager username and password set on this server.</p>
+        </div>
+
+        <form id="staffLoginForm" class="login-form" novalidate
+              data-login="/api/sales/login" data-session="/api/sales/session" data-home="/sales">
+          <div class="form-field">
+            <label for="username">Username</label>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+              <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Enter your username" aria-required="true" />
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>
+              <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-required="true" />
+              <button id="togglePassword" class="password-toggle" type="button" aria-label="Show password" aria-pressed="false">
+                <svg class="eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <p id="loginMessage" class="login-message" role="alert" aria-live="assertive" hidden></p>
+
+          <button id="loginButton" class="sign-in-button" type="submit">
+            <span class="submit-label">Sign In</span>
+            <svg class="submit-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+        </form>
+
+        <p class="security-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 3v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+          Sessions last 8 hours. Ten wrong attempts lock sign-in for 15 minutes.
+        </p>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/js/staff-login.js"></script>
+</body>
+</html>

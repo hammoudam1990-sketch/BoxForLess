@@ -101,9 +101,14 @@ export function mountList(container, { onChange = () => {} } = {}) {
   const availableTab = viewButton('available', 'Available Now');
   const fullTab = viewButton('full', 'Full Catalogue');
   const viewsEl = h('div', { class: 'c-views', role: 'tablist' }, availableTab, fullTab);
+  const productsTitle = h('h2', { class: 'c-products-title' }, 'Featured Products');
+  const viewAllButton = h('button', {
+    type: 'button', class: 'c-view-all', onClick: () => change({ view: 'full', offset: 0 }),
+  }, 'View all', h('span', { 'aria-hidden': 'true' }, '→'));
+  const productsHeading = h('div', { class: 'c-products-heading' }, productsTitle, viewAllButton);
 
   const searchInput = h('input', {
-    type: 'search', inputmode: 'search', autocomplete: 'off', placeholder: 'Find a product', 'aria-label': 'Search products',
+    type: 'search', inputmode: 'search', autocomplete: 'off', placeholder: 'Find a product or scan a barcode', 'aria-label': 'Search products',
     onInput: (e) => change({ search: e.target.value, offset: 0 }),
   });
   const clearSearch = h('button', {
@@ -128,7 +133,7 @@ export function mountList(container, { onChange = () => {} } = {}) {
 
   // the discounted near-expiry offers (a signed-in customer only; empty for anyone else)
   const offersEl = createOffersSection(scope);
-  setChildren(container, statEl, offersEl, viewsEl, searchEl, controlsEl, resultsEl);
+  setChildren(container, productsHeading, offersEl, viewsEl, statEl, searchEl, controlsEl, resultsEl);
 
   // ---- state changes ----
   const loadLater = debounce(() => loadProducts(), SEARCH_DELAY);
@@ -200,14 +205,14 @@ export function mountList(container, { onChange = () => {} } = {}) {
         h('span', { class: 'c-tile-name' }, c.name),
         h('span', { class: 'c-tile-count' }, `${c.count} products`))))));
     } else {
-      setChildren(topRegion, h('div', { class: 'c-chips' },
+      setChildren(topRegion, h('div', { class: 'c-chips c-category-chips' },
         chip('All Categories', state.topLevel === '', null, () => change({ topLevel: '', categoryPath: '', offset: 0 })),
         tops().map((c) => chip(c.name, state.topLevel === c.path, c.count,
           () => change({ topLevel: c.path, categoryPath: '', offset: 0 })))));
     }
     const subs = state.topLevel
       ? cats.filter((c) => c.level === 2 && c.path.startsWith(`${state.topLevel} / `)) : [];
-    setChildren(subRegion, subs.length ? h('div', { class: 'c-chips' },
+    setChildren(subRegion, subs.length ? h('div', { class: 'c-chips c-subcategory-chips' },
       chip('All', state.categoryPath === '', null, () => change({ categoryPath: '', offset: 0 })),
       subs.map((c) => chip(c.name, state.categoryPath === c.path, c.count, () => change({ categoryPath: c.path, offset: 0 })))) : null);
   }
@@ -227,6 +232,8 @@ export function mountList(container, { onChange = () => {} } = {}) {
   }
 
   function renderAll() {
+    productsTitle.textContent = state.view === 'available' ? 'Products Available Now' : 'Full Catalogue';
+    toggleHidden(viewAllButton, state.view === 'full');
     availableTab.setAttribute('aria-selected', String(state.view === 'available'));
     fullTab.setAttribute('aria-selected', String(state.view === 'full'));
     if (searchInput.value !== state.search) searchInput.value = state.search;
@@ -247,10 +254,22 @@ export function mountList(container, { onChange = () => {} } = {}) {
     cardsScope.dispose();
     cardsScope = createScope();
     if (!data.items.length) {
+      const emptyAction = filtersActive()
+        ? h('button', { type: 'button', class: 'c-btn primary c-empty-action', onClick: clearFilters }, 'Clear filters')
+        : state.view === 'available'
+          ? h('button', {
+            type: 'button', class: 'c-btn primary c-empty-action',
+            onClick: () => change({ view: 'full', offset: 0 }),
+          }, 'View full catalogue')
+          : h('button', { type: 'button', class: 'c-btn primary c-empty-action', onClick: loadProducts }, 'Refresh catalogue');
       setChildren(resultsEl, h('div', { class: 'c-empty' },
         h('h2', {}, 'No products found'),
-        h('p', {}, state.search ? `Nothing matches “${state.search}”. Try a different name or barcode.` : 'No products match these filters.'),
-        filtersActive() ? h('button', { type: 'button', class: 'c-btn primary c-empty-action', onClick: clearFilters }, 'Clear filters') : null));
+        h('p', {}, state.search
+          ? `Nothing matches “${state.search}”. Try another product name or barcode.`
+          : state.view === 'available'
+            ? 'No products are available right now. You can check the full catalogue.'
+            : 'There are no products in the catalogue right now.'),
+        emptyAction));
       return;
     }
     const pages = Math.ceil(data.total / data.limit);
@@ -278,11 +297,14 @@ export function mountList(container, { onChange = () => {} } = {}) {
       data = result;
       renderSortRow();
       renderResults();
-    } catch (e) {
+    } catch {
       if (!latestProducts.is(mine)) return;
       data = null;
       renderSortRow();
-      setChildren(resultsEl, h('div', { class: 'c-error' }, `Could not load products: ${e.message}`));
+      setChildren(resultsEl, h('div', { class: 'c-error', role: 'alert' },
+        h('h2', {}, 'We could not load the catalogue'),
+        h('p', {}, 'Check your connection and try again.'),
+        h('button', { type: 'button', class: 'c-btn primary c-empty-action', onClick: loadProducts }, 'Try again')));
     }
   }
 

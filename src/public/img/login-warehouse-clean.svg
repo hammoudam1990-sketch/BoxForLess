@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" fill="none">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0.9" y2="1">
+      <stop stop-color="#244a6b"/>
+      <stop offset=".55" stop-color="#123653"/>
+      <stop offset="1" stop-color="#09243e"/>
+    </linearGradient>
+    <linearGradient id="floor" x1=".5" y1="0" x2=".5" y2="1">
+      <stop stop-color="#496377"/>
+      <stop offset="1" stop-color="#172c3d"/>
+    </linearGradient>
+    <linearGradient id="carton" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#e8bf87"/>
+      <stop offset="1" stop-color="#b77f4d"/>
+    </linearGradient>
+    <linearGradient id="cartonSide" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#bd8958"/>
+      <stop offset="1" stop-color="#895c3e"/>
+    </linearGradient>
+    <linearGradient id="shelf" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#173b59"/>
+      <stop offset="1" stop-color="#0c2942"/>
+    </linearGradient>
+    <linearGradient id="light" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#d3e5f1" stop-opacity=".52"/>
+      <stop offset="1" stop-color="#d3e5f1" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="13"/>
+      <feOffset dy="15"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope=".28"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <pattern id="floorLines" width="180" height="120" patternUnits="userSpaceOnUse">
+      <path d="M0 119.5h180M90 0 0 120m180-120L90 120" stroke="#8da3b3" stroke-opacity=".13"/>
+    </pattern>
+  </defs>
+
+  <path fill="url(#wall)" d="M0 0h1600v690H0z"/>
+  <path fill="#87a8bc" fill-opacity=".12" d="M0 0h570L900 690H0z"/>
+  <path fill="url(#light)" d="M80 0h310l355 690H0z"/>
+  <path stroke="#91a9b8" stroke-opacity=".22" stroke-width="14" d="M0 144h1600M0 288h1600"/>
+  <path stroke="#071d31" stroke-opacity=".45" stroke-width="20" d="m140 0 275 690M580 0l230 690M1050 0 940 690"/>
+
+  <path fill="url(#floor)" d="M0 610h1600v390H0z"/>
+  <path fill="url(#floorLines)" d="M0 610h1600v390H0z"/>
+  <path fill="#b2c0c9" fill-opacity=".11" d="M0 610h1600v25H0z"/>
+  <path stroke="#9aadb9" stroke-opacity=".16" stroke-width="5" d="M0 734h1600M0 856h1600"/>
+  <path stroke="#9aadb9" stroke-opacity=".12" stroke-width="4" d="m800 610-460 390m460-390 240 390m-240-390 650 390"/>
+
+  <g opacity=".92">
+    <path fill="url(#shelf)" d="M778 72h822v558H778z"/>
+    <path fill="#e18447" d="M785 92h815v22H785zM785 295h815v23H785zM785 495h815v23H785z"/>
+    <path fill="#8e5539" d="M785 114h815v9H785zM785 318h815v9H785zM785 518h815v9H785z"/>
+    <path fill="#e18447" d="M806 72h22v558h-22zM1048 72h20v558h-20zM1304 72h21v558h-21zM1577 72h23v558h-23z"/>
+    <path fill="#b96238" d="M811 72h8v558h-8zM1053 72h8v558h-8zM1309 72h8v558h-8zM1582 72h8v558h-8z"/>
+    <path fill="#8da6b8" fill-opacity=".22" d="M838 133h202v149H838zM1077 133h211v149h-211zM1335 133h225v149h-225zM838 333h202v151H838zM1077 333h211v151h-211zM1335 333h225v151h-225z"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <path fill="url(#carton)" d="m958 372 179-84 187 79v176l-180 91-186-84z"/>
+    <path fill="#e6bd85" d="m958 372 179-84 187 79-180 88z"/>
+    <path fill="url(#cartonSide)" d="m1144 455 180-88v176l-180 91z"/>
+    <path stroke="#8d603f" stroke-opacity=".65" stroke-width="5" d="m1080 315 184 80m-164-88 183 79m-139 120v111m-179-245 1 172"/>
+    <path fill="#d5a46e" d="m938 555 155-75 163 70v157l-157 82-161-72z"/>
+    <path fill="#e5bd88" d="m938 555 155-75 163 70-158 78z"/>
+    <path fill="url(#cartonSide)" d="m1098 628 158-78v157l-157 82z"/>
+    <path stroke="#8d603f" stroke-opacity=".62" stroke-width="5" d="m1021 515 160 69m-141-78 160 68m-118 109v137"/>
+    <path fill="url(#carton)" d="m1254 572 143-68 145 62v144l-144 72-144-64z"/>
+    <path fill="#edc895" d="m1254 572 143-68 145 62-144 69z"/>
+    <path fill="url(#cartonSide)" d="m1398 635 144-69v144l-144 72z"/>
+    <path stroke="#8d603f" stroke-opacity=".62" stroke-width="4" d="m1340 529 144 62m-124-70 144 62m-106 104v134"/>
+  </g>
+
+  <g opacity=".72">
+    <path fill="#8a6448" d="M844 629h694v28H844z"/>
+    <path fill="#c18d5b" d="M844 656h694v20H844z"/>
+    <path fill="#a9784f" d="M872 676h54v48h-54zm208 0h54v48h-54zm207 0h54v48h-54z"/>
+    <path stroke="#e2bd8e" stroke-opacity=".5" stroke-width="4" d="M846 642h690m-657 42v32m209-32v32m207-32v32"/>
+  </g>
+
+  <path fill="#071c2c" fill-opacity=".15" d="M0 0h1600v1000H0z"/>
+</svg>
