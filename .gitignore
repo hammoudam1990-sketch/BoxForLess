@@ -9,6 +9,7 @@ certs/
 data/demo-accounts.txt
 data/demo-launchpad.html
 data/_server.log
+data/_server.err
 data/data-quality-report.json
 *.log
 .DS_Store

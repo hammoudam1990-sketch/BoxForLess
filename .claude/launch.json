@@ -9,6 +9,20 @@
         "start"
       ],
       "port": 3000
+    },
+    {
+      "name": "dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3002,
+      "env": {
+        "PORT": "3002",
+        "BFL_HTTPS_PORT": "3445",
+        "BFL_DB_PATH": "data/dev.db"
+      }
     }
   ]
 }
