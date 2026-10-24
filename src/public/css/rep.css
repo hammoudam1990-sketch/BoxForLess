@@ -65,3 +65,25 @@
 .rep-dormant { margin: 4px 0 8px; padding-left: 18px; font-size: 16px; }
 
 .rep-offer { margin: 8px 0; padding: 10px 12px; border-radius: 12px; background: #fbefd0; color: #5c3b00; font-size: 16px; }
+
+/* New order: the tabs, a product, the order so far, and the review. */
+.rep-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 12px; padding: 4px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); }
+.rep-tab { min-height: 46px; border: 0; border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.rep-tab.active { background: var(--ink); color: var(--panel); }
+.rep-tab:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.rep-product { margin: 0 0 12px; padding: 16px; border-radius: 20px; }
+.rep-price { font-weight: 700; margin: 0 0 6px; }
+.rep-offer { margin: 6px 0 8px; padding: 10px 12px; border-radius: 12px; background: var(--bg); font-size: 15px; }
+.rep-qty { display: flex; align-items: flex-end; gap: 10px; margin-top: 8px; }
+.rep-qty label { display: grid; gap: 4px; flex: 1; font-weight: 700; font-size: 15px; }
+.rep-qty input { width: 100%; min-height: 48px; font-size: 16px; }
+.rep-add { min-height: 48px; padding: 0 22px; border-radius: 999px; font-size: 16px; font-weight: 700; }
+.rep-more, .rep-link { display: block; width: 100%; min-height: 48px; margin: 4px 0 12px; border: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.rep-cart { margin: 6px 0 12px; padding: 16px; border-radius: 20px; }
+.rep-cart-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.rep-cart-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rep-remove { min-height: 44px; padding: 0 12px; border: 0; background: none; color: var(--err); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.rep-review-extra { display: grid; gap: 12px; margin: 12px 0; padding: 16px; border-radius: 20px; }
+.rep-review-extra label { display: grid; gap: 4px; font-weight: 700; font-size: 15px; }
+.rep-review-extra input, .rep-review-extra textarea { width: 100%; min-height: 48px; font-size: 16px; }
+.rep-save:disabled { opacity: .5; cursor: not-allowed; }

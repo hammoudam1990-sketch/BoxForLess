@@ -148,6 +148,10 @@ export function applyMigrations(db) {
     // row and its item snapshots are kept, so a deleted request can still be read
     // and restored. See deleteRequest().
     deleted_at: 'TEXT',
+    // Set when a sales rep placed the request for one of their customers (the rep's name as Odoo has it,
+    // and their staff account). The customer is still the request's customer_id.
+    placed_by_rep: 'TEXT',
+    placed_by_staff_id: 'INTEGER',
   });
   // UNIQUE on an added column needs its own index (ALTER cannot add the constraint).
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ux_requests_reference

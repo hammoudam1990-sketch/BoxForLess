@@ -10,11 +10,12 @@
 import express from 'express';
 import xlsx from 'xlsx';
 import {
-  validateRequest, submitRequest, listRequests, getRequest, acceptRequest, deleteRequest, restoreRequest,
+  validateRequest, listRequests, getRequest, acceptRequest, deleteRequest, restoreRequest,
   RequestValidationError, STALE_STOCK_MESSAGE,
 } from '../../domain/requests.js';
 import { getStockSource } from '../../domain/stock-source.js';
-import { checkRequestLines, requireAcceptance, saveAcceptances } from '../../domain/shelf-life.js';
+import { checkRequestLines } from '../../domain/shelf-life.js';
+import { placeRequest, readLines } from '../../domain/place-request.js';
 import { requireCustomer, clearCustomerSession, currentCustomer } from '../customer-access.js';
 import {
   createAccessRequest, toAccessRequestReceipt, listAccessRequests,
@@ -24,9 +25,8 @@ import {
 import { listPriceClasses, DEFAULT_PRICE_CLASS, CASH_PRICE_CLASS } from '../../domain/prices.js';
 import { listPending, outboxSummary } from '../../domain/outbox.js';
 import { pricesForCustomer } from '../../domain/prices.js';
-import { clearanceOffersFor, applyClearance } from '../../domain/lot-discounts.js';
-import { createOrderForRequest, listOrdersFor, accountFor, assertCredit, checkCredit, CREDIT_LIMIT_EXCEEDED } from '../../domain/orders.js';
-import { logCreditBlock } from '../../domain/order-log.js';
+import { clearanceOffersFor } from '../../domain/lot-discounts.js';
+import { listOrdersFor, accountFor, checkCredit } from '../../domain/orders.js';
 import { resetCustomerPassword, setOdooCustomerId, CustomerAuthError } from '../../domain/customer-auth.js';
 import { issueAccessCode, listCustomerCodes, formatAccessCode } from '../../domain/access-codes.js';
 import { lanAddresses } from '../net.js';
@@ -43,15 +43,6 @@ function toCustomerVerdict(verdict) {
     canSubmit: verdict.stock.hasData && verdict.stock.fresh,
     errors: verdict.errors.map((e) => ({ barcode: e.barcode, code: e.code, message: e.message })),
   };
-}
-
-/** Lines from a request body, normalised to { barcode, quantityCtn }. */
-function readLines(body) {
-  const raw = Array.isArray(body?.lines) ? body.lines : [];
-  return raw.slice(0, 200).map((l) => ({
-    barcode: String(l?.barcode ?? '').trim(),
-    quantityCtn: l?.quantityCtn,
-  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -149,41 +140,10 @@ customerRouter.post('/requests/shelf-check', requireCustomer, (req, res, next) =
 // POST /api/catalog/requests — validate THEN submit, one transaction.
 customerRouter.post('/requests', requireCustomer, (req, res, next) => {
   try {
-    const body = req.body || {};
-    const lines = readLines(body);
-    // A customer with a minimum shelf life must accept any line that would be filled with
-    // shorter-dated stock. Re-checked HERE, never trusted from the browser.
-    const shelf = checkRequestLines(req.db, req.customer.id, lines);
-    const accepted = requireAcceptance(shelf, body.acceptedShortDated);
-    // Over the customer's available credit? Refuse and log it (the report counts blocked orders). The same check runs again
-    // inside the transaction below, so two requests at once cannot both pass.
-    const credit = checkCredit(req.db, req.customer.id, lines);
-    if (!credit.ok) {
-      logCreditBlock(req.db, req.customer.id, credit);
-      throw new RequestValidationError('Over your available credit.', { errors: [{ code: CREDIT_LIMIT_EXCEEDED, message: credit.message }] });
-    }
-    const result = submitRequest(req.db, {
-      lines,
-      // saved in the same transaction as the request itself
-      // and the order for it, with its draft quotation queued for Odoo (no price on it)
-      onInsert: (requestId) => {
-        // inside the transaction, so two requests cannot both spend the same credit
-        assertCredit(req.db, req.customer.id, lines);
-        saveAcceptances(req.db, requestId, req.customer.id, shelf.minDays, accepted);
-        // which cartons are on a discounted near-expiry offer (re-read here on the server, never taken from the browser)
-        applyClearance(req.db, requestId, req.customer.id);
-        createOrderForRequest(req.db, requestId);
-      },
-      // Identity comes from the SIGNED SESSION, never from the request body. The
-      // browser cannot name a customer it did not prove a code for, so one company
-      // can no longer submit a request in another company's name.
-      customerId: req.customer.id,
-      unlisted: null,
-      // An address typed for THIS order. Empty falls back to the one stored on
-      // the customer; see submitRequest.
-      deliveryAddress: body.deliveryAddress ? String(body.deliveryAddress).slice(0, 500) : null,
-      notes: body.notes ? String(body.notes).slice(0, 2000) : null,
-    });
+    // The checks (shelf life, credit, discounted offers) and the draft quotation for Odoo live in placeRequest, which a
+    // sales rep's order uses too. Identity comes from the SIGNED SESSION, never from the request body: the browser
+    // cannot name a customer it did not prove a code for, so one company cannot submit a request in another's name.
+    const result = placeRequest(req.db, { customerId: req.customer.id, body: req.body || {} });
     // The session ends with the order. A salesman carries one phone between
     // several customers in a day, so the next person must enter their own code
     // rather than inherit whoever ordered last. Cleared server-side, so it cannot

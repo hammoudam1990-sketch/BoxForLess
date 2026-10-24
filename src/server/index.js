@@ -13,6 +13,7 @@ import importsRouter from './routes/imports.js';
 import changesRouter from './routes/changes.js';
 import expiryRouter from './routes/expiry.js';
 import shelfRouter from './routes/shelf.js';
+import repOrdersRouter from './routes/rep-orders.js';
 import sampleOdooRouter from './routes/sample-odoo.js';
 import catalogRouter from './routes/catalog.js';
 import customerImportsRouter from './routes/customer-imports.js';
@@ -82,6 +83,8 @@ export function createApp(db) {
   // Customer-shelf alerts: rep visits and discount approvals (staff only; sample data for now).
   // (the rep screens and the approvals have their own role checks inside the router)
   app.use('/api/shelf', requireStaff, shelfRouter);
+  // A sales rep places orders for their own customers (the customer is checked against the rep's list on the server).
+  app.use('/api/rep-orders', requireStaff, requireRole('SALES_REP'), repOrdersRouter);
   // The stand-in for Odoo's side of an order (staff only; off once the real Odoo is connected).
   app.use('/api/sample-odoo', requireStaff, requireRole('ADMIN', 'SALES_MANAGER'), sampleOdooRouter);
   // Customer-list import — staff only, and a separate audit from product imports.

@@ -139,6 +139,7 @@ export async function renderRequestDetail(view, id) {
         ${c.contact ? `<div class="k">Contact name</div><div>${esc(c.contact)}</div>` : ''}
         ${c.phone ? `<div class="k">Phone</div><div>${esc(c.phone)}</div>` : ''}
         ${request.delivery_address ? `<div class="k">Delivery address</div><div>${esc(request.delivery_address)}</div>` : ''}
+        ${request.placed_by_rep ? `<div class="k">Placed by</div><div>Sales rep ${esc(request.placed_by_rep)}, for the customer</div>` : ''}
         ${request.notes ? `<div class="k">Notes</div><div>${esc(request.notes)}</div>` : ''}
       </div>
       ${c.type === 'NEW_CUSTOMER'

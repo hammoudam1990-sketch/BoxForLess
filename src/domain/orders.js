@@ -66,7 +66,7 @@ const STEPS = [OrderState.RECEIVED, OrderState.WAITING_FOR_APPROVAL, OrderState.
  */
 export function createOrderForRequest(db, requestId, now = new Date()) {
   const ts = now.toISOString();
-  const request = db.prepare('SELECT id, reference, customer_id, delivery_address, notes FROM requests WHERE id = ?').get(Number(requestId));
+  const request = db.prepare('SELECT id, reference, customer_id, delivery_address, notes, placed_by_rep FROM requests WHERE id = ?').get(Number(requestId));
   const customer = db.prepare('SELECT id, name, phone, email, odoo_customer_ref, customer_type FROM customers WHERE id = ?').get(request.customer_id);
   const lines = db.prepare(`SELECT barcode_at_request AS barcode, product_name_at_request AS name, quantity_ctn AS cartons,
                                     clearance_lot_name AS lot, clearance_expiry AS lotExpiry, clearance_cartons AS clearanceCartons, clearance_pct AS clearancePct
@@ -95,6 +95,9 @@ export function createOrderForRequest(db, requestId, now = new Date()) {
   } else {
     values.partner = { odoo_ref: customer.odoo_customer_ref || null, name: customer.name };
   }
+
+  // an order a sales rep placed for the customer says so, so the person who approves it in Odoo knows
+  if (request.placed_by_rep) values.note = [`Placed by sales rep ${request.placed_by_rep}.`, values.note].filter(Boolean).join('\n');
 
   db.prepare(`INSERT INTO odoo_orders (request_id, customer_id, state, amount_open, received_at, updated_at) VALUES (?,?,?,?,?,?)`)
     .run(request.id, customer.id, OrderState.RECEIVED, estimateValue(db, customer.id, lines.map((l) => ({ barcode: l.barcode, quantityCtn: l.cartons, clearanceCartons: l.clearanceCartons || 0, clearancePct: l.clearancePct || 0 }))), ts, ts);

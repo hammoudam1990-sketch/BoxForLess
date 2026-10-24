@@ -9,6 +9,7 @@ window.__bflBooted = true; // tells boot-guard.js the page started
 import { api, toast } from './api.js';
 import { h, setChildren } from './lib/dom.js';
 import { debounce, createLatest } from './lib/util.js';
+import { createOrderView } from './rep-order.js';
 
 const app = document.getElementById('app');
 const latest = createLatest();
@@ -54,7 +55,19 @@ const listView = h('section', { 'aria-label': 'My visits' },
   search, totals, listBox);
 const sheetView = h('section', { 'aria-label': 'Visit form', class: 'hidden' });
 
-setChildren(app, listView, sheetView);
+// A sales rep can also place an order for one of their customers (the tabs show for a rep only; the server checks too).
+const orders = createOrderView({ onBack: () => showTab('visits') });
+const visitsTab = h('button', { type: 'button', role: 'tab', class: 'rep-tab active', 'aria-selected': 'true', onClick: () => showTab('visits') }, 'Visits');
+const orderTab = h('button', { type: 'button', role: 'tab', class: 'rep-tab', 'aria-selected': 'false', onClick: () => showTab('order') }, 'New order');
+const tabs = h('div', { class: 'rep-tabs hidden', role: 'tablist', 'aria-label': 'What do you want to do?' }, visitsTab, orderTab);
+function showTab(which) {
+  const order = which === 'order';
+  visitsTab.classList.toggle('active', !order); visitsTab.setAttribute('aria-selected', String(!order));
+  orderTab.classList.toggle('active', order); orderTab.setAttribute('aria-selected', String(order));
+  if (order) { listView.classList.add('hidden'); sheetView.classList.add('hidden'); orders.open(); } else { orders.close(); showList(); }
+}
+
+setChildren(app, tabs, listView, sheetView, orders.el);
 
 // ---- R01 ------------------------------------------------------------------------------------
 function showList() {
@@ -220,6 +233,7 @@ function done(shop, res) {
         const out = h('button', { type: 'button', class: 'rep-signout', onClick: async () => { await fetch('/api/auth/logout', { method: 'POST' }); location.assign('/'); } }, 'Sign out');
         nav.append(out);
       }
+      tabs.classList.remove('hidden');
       // my month
       api.myMonth().then((m) => {
         const money = (n) => `GHS ${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
