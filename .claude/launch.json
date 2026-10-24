@@ -15,6 +15,8 @@
       "runtimeExecutable": "node",
       "runtimeArgs": [
         "--env-file=.env.local",
+        "--import",
+        "./scripts/dev-env.js",
         "--watch",
         "src/server/index.js"
       ],
