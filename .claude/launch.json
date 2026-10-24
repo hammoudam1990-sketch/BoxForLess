@@ -12,10 +12,11 @@
     },
     {
       "name": "dev",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "node",
       "runtimeArgs": [
-        "run",
-        "dev"
+        "--env-file=.env.local",
+        "--watch",
+        "src/server/index.js"
       ],
       "port": 3002,
       "env": {
