@@ -5,7 +5,7 @@
   "description": "Box for Less Digital Product Catalog & Sales Request Application - Phase 1 Product Master",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "start": "node src/server/index.js",

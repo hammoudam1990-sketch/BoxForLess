@@ -28,6 +28,9 @@ export function openDatabase(dbPath = config.dbPath) {
   rebuildIncompatibleTables(db);
   applySchema(db);
   applyMigrations(db);
+  if (dbPath !== ':memory:' && process.env.NODE_ENV !== 'test') {
+    ensureInitialStaffUsers(db);
+  }
   return db;
 }
 
@@ -553,7 +556,6 @@ export function applyMigrations(db) {
       updated_by TEXT
     )`);
 
-  ensureInitialStaffUsers(db);
 }
 
 /** Seed default administrators if absent so any cloned repo works out of the box */
