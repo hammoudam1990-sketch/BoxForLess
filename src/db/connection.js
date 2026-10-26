@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import config from '../config.js';
+import { hashPassword } from '../domain/passwords.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
@@ -551,6 +552,34 @@ export function applyMigrations(db) {
       updated_at TEXT NOT NULL,
       updated_by TEXT
     )`);
+
+  ensureInitialStaffUsers(db);
+}
+
+/** Seed default administrators if absent so any cloned repo works out of the box */
+function ensureInitialStaffUsers(db) {
+  try {
+    const existing = new Set(
+      db.prepare("SELECT email FROM staff_users WHERE email IS NOT NULL").all().map((r) => r.email?.toLowerCase())
+    );
+    const hash = hashPassword('Admin123456!');
+    const insert = db.prepare(`
+      INSERT INTO staff_users (name, email, role, rep_id, password_hash, must_change_password, is_active, created_by, created_at, updated_at)
+      VALUES (?, ?, 'ADMIN', null, ?, 0, 1, 'system', datetime('now'), datetime('now'))
+    `);
+    const admins = [
+      { name: 'Brain Amponsah', email: 'amponsahbrain2007@gmail.com' },
+      { name: 'Hammoud', email: 'hammoudam1990@gmail.com' },
+      { name: 'Manfred Sunu', email: 'sunumanfred14@gmail.com' },
+    ];
+    for (const a of admins) {
+      if (!existing.has(a.email.toLowerCase())) {
+        insert.run(a.name, a.email.toLowerCase(), hash);
+      }
+    }
+  } catch {
+    // Non-fatal if staff_users table not created yet or during isolated mock tests
+  }
 }
 
 /** Add any of `columns` that the table does not already have. Idempotent. */
