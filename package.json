@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node src/server/index.js",
-    "dev": "node --watch src/server/index.js",
+    "dev": "node --watch --watch-path=src src/server/index.js",
     "build": "node scripts/build-vercel.js",
     "migrate": "node src/db/migrate.js",
     "gen-cert": "node scripts/gen-cert.js",
