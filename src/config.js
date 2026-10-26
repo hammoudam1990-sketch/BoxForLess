@@ -23,6 +23,19 @@ if (!process.env.NODE_TEST_CONTEXT && process.env.NODE_ENV !== 'test' && fs.exis
   } catch { /* ignore read failure */ }
 }
 
+// Ensure development servers have valid session & admin signing keys even if .env.local was omitted
+if (process.env.NODE_ENV !== 'production' && !process.env.NODE_TEST_CONTEXT && process.env.NODE_ENV !== 'test') {
+  if (!process.env.BFL_SESSION_SECRET) {
+    process.env.BFL_SESSION_SECRET = 'dev-session-secret-boxforless-local-development-fallback-key-32b';
+  }
+  if (!process.env.BFL_STAFF_USERNAME) {
+    process.env.BFL_STAFF_USERNAME = 'admin';
+  }
+  if (!process.env.BFL_STAFF_PASSWORD) {
+    process.env.BFL_STAFF_PASSWORD = 'admin-dev-secure-password-1234';
+  }
+}
+
 export const config = {
   root: ROOT,
   // Database file. Tests override this with an in-memory / temp path.
