@@ -391,6 +391,7 @@ function createDrawer() {
       deliveryAddress: addressInput.value.trim() || null,
       // the products whose shorter shelf life the customer ticked (the server re-checks every one)
       acceptedShortDated: Object.keys(shelfWarnings).filter((b) => accepted.has(b)),
+      idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `req-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     };
 
     try {

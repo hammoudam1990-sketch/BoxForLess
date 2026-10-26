@@ -126,8 +126,12 @@ export function staffLogin(req, res) {
   const refuse = () => res.status(401).json({ error: 'That email, phone number or password is not right.' });
 
   // the administrator
-  if (identifier && safeEqual(identifier, config.username)) {
-    if (!safeEqual(password, config.password)) return refuse();
+  const isEmailAdmin = config.username.includes('@');
+  const adminMatch = identifier && (
+    safeEqual(identifier.toLowerCase(), config.username.toLowerCase()) ||
+    (isEmailAdmin && safeEqual(identifier.toLowerCase(), 'admin'))
+  );
+  if (adminMatch && safeEqual(password, config.password)) {
     setSession(res, config, { user: config.username, uid: 0 });
     attempts.delete(`ip:${ip}`);
     return res.json({ authenticated: true, role: StaffRole.ADMIN, name: 'Administrator', home: ROLE_HOME.ADMIN, mustChangePassword: false });

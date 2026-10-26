@@ -1,7 +1,4 @@
-// One sign-in form detects customer accounts in the browser and team roles on the server.
-import { accounts, DEMO_LOGINS } from './lib/local-accounts.js';
-
-const store = accounts();
+// One sign-in form detects customer accounts and team roles on the server.
 const form = document.getElementById('generalLoginForm');
 const identifier = document.getElementById('identifier');
 const password = document.getElementById('password');
@@ -11,7 +8,6 @@ const forgotPassword = document.getElementById('forgotPassword');
 const googleSignIn = document.getElementById('googleSignIn');
 const loginButton = document.getElementById('loginButton');
 const message = document.getElementById('loginMessage');
-const demoList = document.getElementById('demoAccounts');
 const brandPanel = document.querySelector('.brand-panel');
 
 function showMessage(text, state = 'info') {
@@ -92,35 +88,51 @@ form.addEventListener('submit', async (event) => {
   const submitLabel = loginButton.querySelector('.submit-label');
   submitLabel.textContent = 'Signing in…';
   let navigating = false;
+
   try {
-    const customer = store.signIn(identifier.value, password.value, rememberMe.checked);
-    if (customer.ok) {
-      const logout = await fetch('/api/auth/logout', { method: 'POST' });
-      if (!logout.ok) throw new Error('Could not clear another signed-in team account. Please try again.');
-      showMessage(`Signed in as ${customer.account.company}. Opening your catalogue…`, 'success');
-      const destination = nextPath('customer');
+    const creds = { id: identifier.value.trim(), username: identifier.value.trim(), password: password.value };
+
+    // 1. Check customer authentication against the database
+    const customerRes = await fetch('/api/auth/customer/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: creds.id, password: creds.password }),
+    });
+
+    if (customerRes.ok) {
+      const data = await customerRes.json();
+      showMessage(`Signed in as ${data.customer?.name || 'Customer'}. Opening your catalogue…`, 'success');
       navigating = true;
-      location.assign(destination);
-      return;
-    }
-    if (customer.pending) {
-      showMessage(customer.error, 'info');
+      location.assign(nextPath('customer'));
       return;
     }
 
-    const response = await fetch('/api/auth/login', {
+    if (customerRes.status === 429) {
+      throw new Error('Too many sign-in attempts. Please wait 15 minutes and try again.');
+    }
+
+    // 2. Check team role authentication on the server (Admin, Sales Manager, Sales Rep)
+    const staffRes = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: identifier.value.trim(), password: password.value }),
+      body: JSON.stringify({ username: creds.username, password: creds.password }),
     });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || `Sign in failed (${response.status}).`);
-    const roleNames = { admin: 'staff dashboard', sales: 'Sales Manager dashboard', rep: 'Sales Rep app' };
-    showMessage(`Signed in. Opening your ${roleNames[result.role] || 'workspace'}…`, 'success');
-    const destination = nextPath(result.role);
-    store.signOut();
-    navigating = true;
-    location.assign(destination);
+
+    if (staffRes.ok) {
+      const result = await staffRes.json();
+      const roleNames = { admin: 'staff dashboard', sales: 'Sales Manager dashboard', rep: 'Sales Rep app' };
+      showMessage(`Signed in. Opening your ${roleNames[result.role] || 'workspace'}…`, 'success');
+      navigating = true;
+      location.assign(nextPath(result.role));
+      return;
+    }
+
+    if (staffRes.status === 429) {
+      throw new Error('Too many sign-in attempts. Please wait 15 minutes and try again.');
+    }
+
+    const staffData = await staffRes.json().catch(() => ({}));
+    throw new Error(staffData.error || 'The email, phone number, customer ID or password is not correct.');
   } catch (error) {
     showMessage(error instanceof TypeError
       ? 'Could not reach the sign-in service. Check your connection and try again.'
@@ -135,35 +147,25 @@ form.addEventListener('submit', async (event) => {
   }
 });
 
-// Demo accounts: tapping one fills the form, so the screens can be tried quickly.
-if (demoList) {
-  const labels = { credit: 'Credit customer', cash: 'Cash customer' };
-  for (const demo of DEMO_LOGINS) {
-    const li = document.createElement('li');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'demo-account';
-    const role = demo.status === 'pending' ? 'Waiting for approval' : labels[demo.type];
-    button.innerHTML = '<strong></strong><span></span>';
-    button.querySelector('strong').textContent = role;
-    button.querySelector('span').textContent = `${demo.email} · ${demo.password}`;
-    button.addEventListener('click', () => {
-      identifier.value = demo.email;
-      password.value = demo.password;
-      clearMessage();
-      loginButton.focus();
-    });
-    li.append(button);
-    demoList.append(li);
+// Check whether already signed in on the server
+async function checkCurrentSession() {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) return;
+    const me = await res.json();
+    if (me.customer) {
+      showMessage(`You are currently signed in as ${me.customer.name}. Sign in again to switch account, or go to the catalogue.`);
+    } else if (me.staff) {
+      showMessage(`You are currently signed in as ${me.staff.name} (${me.staff.roleLabel}). Sign in again to switch account, or go to your dashboard.`);
+    }
+  } catch {
+    // Offline or connection failed
   }
 }
-
-// Already signed in: say so, and offer the way on.
-const signedIn = store.currentAccount();
-if (signedIn) showMessage(`You are signed in as ${signedIn.company}. Sign in again to switch account, or go to the catalogue.`);
+checkCurrentSession();
 
 const registered = new URLSearchParams(location.search).get('registered');
-if (registered && !signedIn) {
+if (registered) {
   showMessage('Your registration was received. You can sign in once the Sales Manager has approved it.');
   identifier.value = registered;
 }

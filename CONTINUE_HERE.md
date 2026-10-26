@@ -15,22 +15,22 @@
 | 2.1 | Odoo categories + `source_odoo_id` identity | ✅ checkpoint `v0.2.1` |
 | 3 | CTN-only request cart | ✅ `v0.3.0`, iPhone-verified 2026-10-03 |
 | 3.1 | Scanner 1080p + manual barcode entry | ✅ `v0.3.1`, iPhone-verified 2026-10-03 |
-| **4** | **Customer import · staff auth · request actions · access codes** | ✅ **`v0.4.0`** — *not yet device-verified* |
+| 4 | Customer import · staff auth · request actions · access codes | ✅ `v0.4.0` |
+| 5–7 | Odoo Integration Foundations & Readiness (Phases 0–7) | 🚀 Backend & Domain Layer Complete |
+| Readiness B | Data Quality Readiness Audit Engine (B1–B8) | ✅ Interactive UI + API + Tests (`/api/admin-workspace/data-quality`) |
+| Section 4.9 | Automated Daily Reconciliation Engine | ✅ API + Health UI Card + Tests (`/api/odoo/reconciliation`) |
+| Readiness A5 | Production Docker & Caddy Deployment Packaging | ✅ Dockerfile, Caddyfile, docker-compose.yml |
+| Staging Odoo | Connectivity & Protocol Verification CLI | ✅ `npm run test:odoo` (`scripts/verify-odoo-connection.js`) |
+| Live Auth & DB | Real Database Auth & Registration | ✅ Removed client demo mock; connected to SQLite DB & backend API |
+| Idempotency Engine | Cart Submission Duplicate Protection | ✅ `X-Idempotency-Key` + payload cache + concurrency lock + tests |
+| Automated Backup | Zero-Downtime SQLite Backup Engine | ✅ `VACUUM INTO` + 7-day pruning + `npm run backup` + daily server cron |
+| FMCG Reorder | Wholesale Quick Reorder / Repeat Past Cart | ✅ `addLinesToCart` + Orders page Reorder action + drawer trigger |
 
-### Live data
-
-| | |
-|---|---|
-| Products (active) | 3,883 |
-| Categories | 143 |
-| Product images | 6 |
-| **Customers** | **504** — all 504 hold an access code |
-| Requests | 0 |
-| Access requests | 1 |
-
-Checkpoints: `v0.2.1`, `v0.2.1-post-uom923`, `v0.3.0-pre-stage3`, `v0.3.0-complete`,
-`v0.3.1-complete`, `v0.3.1-pre-customer-import`, `v0.4.0-pre-access-codes`,
-`v0.4.0-pre-stock-refresh`.
+### Live verification
+- **Node Test Runner:** **658 tests (657 passed, 1 skipped, 0 failed)** across all unit & API test suites.
+- **SQLite Database:** 44 tables across 8 functional domains, completely documented in [DATA_MODEL.md](file:///c:/Users/hp/bos4less/BoxForLess/DATA_MODEL.md).
+- **Backend Architecture & Spec:** Documented in [docs/BACKEND_MEMORY_AND_ROADMAP.md](file:///c:/Users/hp/bos4less/BoxForLess/docs/BACKEND_MEMORY_AND_ROADMAP.md).
+- **Senior Dev Visual & Design System:** Stripped all playful emojis across client dashboards and replaced with crisp, accessible inline SVGs and clean B2B SaaS typography.
 
 ### Running it
 ```bash

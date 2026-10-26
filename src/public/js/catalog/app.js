@@ -44,9 +44,9 @@ const brandMark = () => svg(`<svg viewBox="0 0 48 48" aria-hidden="true" focusab
   <path d="m24 3 19 10.5v21L24 45 5 34.5v-21L24 3Z" fill="currentColor"/>
   <path d="m5.5 13.5 18.5 10 18.5-10M24 24v20.5M15 8l19 11M33 8 14 19" fill="none" stroke="#0b2a55" stroke-width="2.6" stroke-linejoin="round"/>
 </svg>`);
-const brand = (cls) => h('a', { class: cls, href: '/catalog' },
+const brand = (cls, name = 'Box for Less', tagline = 'Bigger boxes. Better value.') => h('a', { class: cls, href: '/catalog' },
   h('span', { class: 'p-logo' }, brandMark()),
-  h('span', {}, h('b', {}, 'Box for Less'), h('small', {}, 'Bigger boxes. Better value.')));
+  h('span', {}, h('b', {}, name), h('small', {}, tagline)));
 
 const PAGE_MOUNTS = {
   orders: mountOrders, balance: mountBalance, invoices: mountInvoices,
@@ -55,7 +55,17 @@ const PAGE_MOUNTS = {
 
 /** Start the catalogue in `root`. */
 export async function startCatalog(root) {
-  await loadCustomerData();   // who is signed in, and their account and orders
+  const [_, siteConfig] = await Promise.all([
+    loadCustomerData(),
+    fetch('/api/site-settings').then((r) => r.json()).catch(() => null),
+  ]);
+  window.__bflSiteSettings = siteConfig;
+  const storeName = siteConfig?.storefront?.storeName || 'Box for Less';
+  const tagline = siteConfig?.storefront?.tagline || 'Bigger boxes. Better value.';
+  const announceStrip = siteConfig?.storefront?.announcement?.enabled && siteConfig?.storefront?.announcement?.text
+    ? h('div', { class: `p-announcement-strip tone-${siteConfig.storefront.announcement.tone || 'brand'}` }, siteConfig.storefront.announcement.text)
+    : null;
+
   let current = null;        // the page on screen: { destroy }
   let route = parsePath();
   const account = currentCustomer();
@@ -114,7 +124,7 @@ export async function startCatalog(root) {
   const header = h('header', { class: 'p-header' },
     h('div', { class: 'p-header-inner' },
       menuBtn,
-      brand('p-brand'),
+      brand('p-brand', storeName, tagline),
       searchForm,
       h('div', { class: 'p-header-actions' }, bell, h('div', { class: 'p-user-wrap' }, userBtn, userMenu))));
 
@@ -168,13 +178,14 @@ export async function startCatalog(root) {
   const footLink = (href, text) => h('a', { href }, text);
   const footer = h('footer', { class: 'p-footer' },
     h('div', { class: 'p-footer-inner' },
-      brand('p-brand p-brand-foot'),
+      brand('p-brand p-brand-foot', storeName, tagline),
       h('nav', { class: 'p-footer-links', 'aria-label': 'Footer' },
         footLink(pageUrl('help'), 'About Us'), footLink(pageUrl('help'), 'Contact'),
         footLink(pageUrl('help'), 'Terms & Conditions'), footLink(pageUrl('help'), 'Privacy Policy')),
-      h('span', { class: 'p-copy' }, `© ${new Date().getFullYear()} Box for Less. All rights reserved.`)));
+      h('span', { class: 'p-copy' }, `© ${new Date().getFullYear()} ${storeName}. All rights reserved.`)));
 
   setChildren(root, h('div', { class: 'p-shell' },
+    announceStrip,
     header,
     h('div', { class: 'p-body' }, side, h('div', { class: 'p-content' }, networkNotice, main)),
     footer,

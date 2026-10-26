@@ -17,7 +17,7 @@ globalThis.localStorage = {
   removeItem: (k) => { delete store[k]; },
 };
 
-const { setQuantity, readCart, addToCart, removeFromCart, clearCart } = await import('../src/public/js/cart.js');
+const { setQuantity, readCart, addToCart, addLinesToCart, removeFromCart, clearCart } = await import('../src/public/js/cart.js');
 
 const PENNE = { barcode: '5283035600031', name: 'PASTA NONNA PENNE REGATE 20 * 400 G', pack: 'CTN20' };
 const LINGUINE = { barcode: '5283035600024', name: 'PASTA NONNA LINGUINE 24 * 400 G', pack: 'CTN24' };
@@ -83,3 +83,22 @@ test('addToCart increments in place rather than re-ordering', () => {
   assert.deepEqual(names(), before);
   assert.equal(readCart()[0].quantityCtn, 8);
 });
+
+test('addLinesToCart adds multiple items and increments existing lines (Wholesale Quick Reorder)', () => {
+  clearCart();
+  const pastOrderItems = [
+    { barcode: PENNE.barcode, name: PENNE.name, cartons: 3 },
+    { barcode: BUGLES.barcode, name: BUGLES.name, cartons: 5 },
+  ];
+
+  addLinesToCart(pastOrderItems);
+  assert.equal(readCart().length, 2);
+  assert.equal(readCart()[0].quantityCtn, 3);
+  assert.equal(readCart()[1].quantityCtn, 5);
+
+  // Reordering again adds/increments quantities
+  addLinesToCart([{ barcode: PENNE.barcode, name: PENNE.name, cartons: 2 }]);
+  assert.equal(readCart().length, 2);
+  assert.equal(readCart()[0].quantityCtn, 5);
+});
+

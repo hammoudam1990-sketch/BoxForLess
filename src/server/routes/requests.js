@@ -137,8 +137,38 @@ customerRouter.post('/requests/shelf-check', requireCustomer, (req, res, next) =
   } catch (e) { next(e); }
 });
 
-// POST /api/catalog/requests — validate THEN submit, one transaction.
+const IDEMPOTENCY_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const idempotencyStore = new Map();
+
+export const resetIdempotencyStore = () => idempotencyStore.clear();
+
+function cleanIdempotencyStore(now = Date.now()) {
+  if (idempotencyStore.size > 500) {
+    for (const [k, v] of idempotencyStore.entries()) {
+      if (now - v.timestamp > IDEMPOTENCY_TTL_MS) idempotencyStore.delete(k);
+    }
+  }
+}
+
+// POST /api/catalog/requests — validate THEN submit, one transaction. Supports X-Idempotency-Key.
 customerRouter.post('/requests', requireCustomer, (req, res, next) => {
+  const idempotencyKey = String(req.headers['x-idempotency-key'] || req.body?.idempotencyKey || '').trim();
+  const cacheKey = idempotencyKey ? `${req.customer.id}:${idempotencyKey.slice(0, 120)}` : null;
+  const now = Date.now();
+  cleanIdempotencyStore(now);
+
+  if (cacheKey && idempotencyStore.has(cacheKey)) {
+    const entry = idempotencyStore.get(cacheKey);
+    if (entry.inFlight) {
+      return res.status(409).json({ error: 'A request with this idempotency key is currently processing. Please wait.', code: 'CONCURRENT_REQUEST' });
+    }
+    return res.status(200).json({ ...entry.result, duplicate: true });
+  }
+
+  if (cacheKey) {
+    idempotencyStore.set(cacheKey, { inFlight: true, timestamp: now });
+  }
+
   try {
     // The checks (shelf life, credit, discounted offers) and the draft quotation for Odoo live in placeRequest, which a
     // sales rep's order uses too. Identity comes from the SIGNED SESSION, never from the request body: the browser
@@ -151,8 +181,13 @@ customerRouter.post('/requests', requireCustomer, (req, res, next) => {
     // a code session ends with the order (shared phone); a password session stays
     if (req.customer.method !== 'password') clearCustomerSession(res, req.db, req.customer.id);
     // confirmation only — no internal request id
-    res.status(201).json({ reference: result.reference, items: result.lineCount, submitted: true });
+    const receipt = { reference: result.reference, items: result.lineCount, submitted: true };
+    if (cacheKey) {
+      idempotencyStore.set(cacheKey, { inFlight: false, result: receipt, timestamp: Date.now() });
+    }
+    res.status(201).json(receipt);
   } catch (e) {
+    if (cacheKey) idempotencyStore.delete(cacheKey);
     if (e instanceof RequestValidationError) {
       return res.status(e.status).json({ error: e.message, code: e.code, ...e.details });
     }

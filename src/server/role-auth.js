@@ -137,8 +137,13 @@ export function unifiedLogin(req, res) {
   }
 
   const body = req.body || {};
-  const matches = configured.filter(([, config]) =>
-    safeEqual(body.username || '', config.username) && safeEqual(body.password || '', config.password));
+  const reqUser = String(body.username || '').trim().toLowerCase();
+  const matches = configured.filter(([role, config]) => {
+    const configUser = String(config.username || '').trim().toLowerCase();
+    const isEmailAdmin = role === 'admin' && configUser.includes('@');
+    const userMatch = safeEqual(reqUser, configUser) || (isEmailAdmin && safeEqual(reqUser, 'admin'));
+    return userMatch && safeEqual(body.password || '', config.password);
+  });
   if (matches.length > 1) {
     return res.status(409).json({ error: 'These credentials match more than one team role. Ask an administrator to give each role a unique username or password.' });
   }

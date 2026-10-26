@@ -36,7 +36,9 @@ import { startOdooJobs } from '../odoo/jobs.js';
 import { takeStockSnapshot } from '../domain/reports.js';
 import { runReminders } from '../domain/payments.js';
 import { todayString } from '../domain/expiry-list.js';
+import { getSiteSettings } from '../domain/site-settings.js';
 import { enterAccessCode, accessStatus, exitAccess } from './customer-access.js';
+import { backupDatabase } from '../db/backup.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -72,6 +74,12 @@ export function createApp(db) {
   app.post('/api/catalog/access/exit', exitAccess);
   // Sign-in for customers (ID + password), password changes, who-am-I, sign-out.
   app.use('/api/auth', authRouter);
+  // Site settings for storefront and sales rep hubs (public read).
+  app.get('/api/site-settings', (req, res, next) => {
+    try {
+      res.json(getSiteSettings(req.db));
+    } catch (error) { next(error); }
+  });
   // The admin workspace summary (counts, integration status): the roles that work in the admin screens.
   app.use('/api/admin-workspace', requireStaff, requireRole('ADMIN', 'WAREHOUSE', 'SALES_MANAGER'), adminWorkspaceRouter);
   // Internal / admin API. Each area is open to the roles that work in it; { SALES_MANAGER: 'r' } is read-only.
@@ -198,6 +206,22 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     };
     tick();
     setInterval(tick, 60 * 60 * 1000).unref();
+  }
+
+  // Daily zero-downtime backup with 7-day retention pruning (disabled if :memory: or BFL_AUTO_BACKUP=off)
+  if (process.env.BFL_AUTO_BACKUP !== 'off' && config.dbPath !== ':memory:') {
+    const backupDir = process.env.BACKUP_DIR || path.join(path.dirname(config.dbPath), 'backups');
+    const takeBackup = () => {
+      try {
+        const b = backupDatabase(db, backupDir, { maxKeep: 7 });
+        console.log(`[backup] Daily snapshot saved: ${b.filename} (${(b.sizeBytes / 1024).toFixed(1)} KB)`);
+        if (b.pruned > 0) console.log(`[backup] Pruned ${b.pruned} old backup(s)`);
+      } catch (e) {
+        console.error('[backup] Daily snapshot failed:', e.message);
+      }
+    };
+    takeBackup();
+    setInterval(takeBackup, 24 * 60 * 60 * 1000).unref();
   }
   // HTTP — always on. Explicit bind to config.host (default 0.0.0.0) so phones
   // on the same LAN can reach it; localhost still works via the loopback.

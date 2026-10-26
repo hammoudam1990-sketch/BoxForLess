@@ -90,10 +90,27 @@ test('workspace APIs require an admin session', async () => {
     '/api/admin-workspace/quotations',
     '/api/admin-workspace/visibility',
     '/api/admin-workspace/stock-expiry',
+    '/api/admin-workspace/data-quality',
   ]) {
     assert.equal((await get(path)).status, 401, path);
   }
   cookie = previous;
+});
+
+test('workspace data quality endpoint returns Group B readiness audit', async () => {
+  const response = await get('/api/admin-workspace/data-quality');
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.ok(data.auditedAt);
+  assert.ok(['READY_FOR_SYNC', 'ACTION_REQUIRED_IN_ODOO'].includes(data.status));
+  assert.ok(data.summary.B1);
+  assert.ok(data.summary.B2);
+  assert.ok(data.summary.B3);
+  assert.ok(data.summary.B4);
+  assert.ok(data.summary.B5);
+  assert.ok(data.summary.B6);
+  assert.ok(data.summary.B7);
+  assert.ok(data.summary.B8);
 });
 
 test('workspace status exposes operational counts and role readiness, never credentials', async () => {

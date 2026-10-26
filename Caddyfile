@@ -1,0 +1,22 @@
+# Box for Less — Caddy Reverse Proxy & Automatic HTTPS Configuration
+# Replace {$DOMAIN:catalog.boxforless.com} with your production domain
+
+{$DOMAIN:catalog.boxforless.com} {
+    # Automatic TLS with Let's Encrypt / ZeroSSL via Caddy
+    encode gzip zstd
+
+    # Security Headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(self)"
+    }
+
+    # Reverse proxy to Node.js application container
+    reverse_proxy app:3000 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote_host}
+    }
+}

@@ -23,6 +23,40 @@ export const api = {
   workspaceVisibility: () => fetch('/api/admin-workspace/visibility').then(handle),
   workspaceStockExpiry: (band = 'all') =>
     fetch(`/api/admin-workspace/stock-expiry?band=${encodeURIComponent(band)}`).then(handle),
+  workspaceDataQuality: () => fetch('/api/admin-workspace/data-quality').then(handle),
+  siteSettings: () => fetch('/api/site-settings').then(handle),
+  workspaceSiteSettings: () => fetch('/api/admin-workspace/site-settings').then(handle),
+  workspaceUpdateSiteSettings: (settings) => fetch('/api/admin-workspace/site-settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  }).then(handle),
+  team: () => fetch('/api/team').then(handle),
+  createTeamMember: (data) => fetch('/api/team', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).then(handle),
+  resetTeamPassword: (id) => fetch(`/api/team/${encodeURIComponent(id)}/reset-password`, {
+    method: 'POST',
+  }).then(handle),
+  setTeamActive: (id, active) => fetch(`/api/team/${encodeURIComponent(id)}/active`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ active }),
+  }).then(handle),
+  odooHealth: () => fetch('/api/odoo/health').then(handle),
+  odooReconciliation: () => fetch('/api/odoo/reconciliation').then(handle),
+  odooSystemStats: () => fetch('/api/odoo/system-stats').then(handle),
+  odooBackups: () => fetch('/api/odoo/backups').then(handle),
+  odooCreateBackup: () => fetch('/api/odoo/backups/create', { method: 'POST' }).then(handle),
+  odooRetry: (id) => fetch(`/api/odoo/outbox/${encodeURIComponent(id)}/retry`, { method: 'POST' }).then(handle),
+  odooRetryAll: () => fetch('/api/odoo/outbox/retry-all', { method: 'POST' }).then(handle),
+  odooRunSync: (type, full = false) => fetch(`/api/odoo/sync/${encodeURIComponent(type)}/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ full }),
+  }).then(handle),
 
   imports: () => fetch('/api/imports').then(handle),
   importBatch: (id) => fetch(`/api/imports/${id}`).then(handle),

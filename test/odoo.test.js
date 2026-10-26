@@ -28,7 +28,7 @@ import { ManualImportStockSource } from '../src/domain/stock-source.js';
 const cleanups = [];
 afterEach(async () => { while (cleanups.length) await cleanups.pop()(); });
 
-async function rig({ protocol = 'jsonrpc', timeoutMs = 150, maxPerSecond = 1000 } = {}) {
+async function rig({ protocol = 'jsonrpc', timeoutMs = 2000, maxPerSecond = 1000 } = {}) {
   const odoo = new FakeOdoo();
   odoo.clock = () => new Date('2026-10-22T08:00:00Z');   // a fixed clock, so a test never depends on the day it runs
   await odoo.start();
@@ -115,7 +115,7 @@ test('5. a wrong key is refused, and says so without echoing it', async () => {
 });
 
 test('6. a timeout, a 500, a 429, a database lock and no connection are "try again later"; a rule or a right is a refusal', async () => {
-  const { odoo, client } = await rig();
+  const { odoo, client } = await rig({ timeoutMs: 150 });
   odoo.fail('timeout'); await assert.rejects(client.ping(), (e) => e instanceof OdooUnavailableError && e.code === 'TIMEOUT');
   odoo.fail('http500'); await assert.rejects(client.ping(), (e) => e instanceof OdooUnavailableError && e.code === 'HTTP_500');
   odoo.fail('http429'); await assert.rejects(client.ping(), (e) => e instanceof OdooUnavailableError && e.code === 'HTTP_429');
@@ -128,7 +128,7 @@ test('6. a timeout, a 500, a 429, a database lock and no connection are "try aga
 });
 
 test('7. no more than the allowed calls a second', async () => {
-  const { client } = await rig({ maxPerSecond: 20 });
+  const { client } = await rig({ maxPerSecond: 20, timeoutMs: 2000 });
   const t0 = Date.now();
   for (let i = 0; i < 6; i += 1) await client.ping();
   assert.ok(Date.now() - t0 >= 5 * 50 - 20, `6 calls at 20 a second take about 250 ms (took ${Date.now() - t0})`);

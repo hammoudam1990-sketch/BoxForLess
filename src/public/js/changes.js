@@ -13,7 +13,7 @@ export async function renderChanges(view) {
     <div class="card">
       <h2>Pending reviews</h2>
       <p class="muted">An Odoo import never changes a barcode or UoM silently. Accept to apply the new value; reject to keep the current value.</p>
-      <div id="list">${items.length ? listHtml(items) : '<div class="muted">Nothing to review. 🎉</div>'}</div>
+      <div id="list">${items.length ? listHtml(items) : '<div class="muted">No pending reviews. Everything is up to date.</div>'}</div>
     </div>`;
 
   view.querySelectorAll('button[data-action]').forEach((btn) => {

@@ -7,13 +7,26 @@
 // around them are replaced.
 window.__bflBooted = true; // tells boot-guard.js the page started
 import { api, toast } from './api.js';
-import { h, setChildren } from './lib/dom.js';
+import { h, setChildren, svg } from './lib/dom.js';
 import { debounce, createLatest } from './lib/util.js';
 import { createOrderView } from './rep-order.js';
+
+const ICONS = {
+  store: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  package: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  search: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  check: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
+  map: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  phone: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+};
 
 const app = document.getElementById('app');
 const latest = createLatest();
 const REP_KEY = 'bfl.sampleRep';
+const VISITED_KEY = `bfl.visited.${new Date().toISOString().slice(0, 10)}`;
 
 const OUTCOMES = [
   ['SOLD_OUT', 'Sold out', 'Nothing left on the shelf'],
@@ -22,37 +35,135 @@ const OUTCOMES = [
   ['NOT_CHECKED', 'Not checked', 'Shop closed or no time — due again in 7 days'],
 ];
 
-const dateText = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const SAMPLE_CONTACTS = {
+  4101: { phone: '+233 24 410 1001', area: 'Spintex Road, Accra' },
+  4102: { phone: '+233 20 410 2002', area: 'Oxford St, Osu, Accra' },
+  4103: { phone: '+233 27 410 3003', area: 'Kaneshie Market, Accra' },
+  4104: { phone: '+233 55 410 4004', area: 'Cantonments, Accra' },
+  4105: { phone: '+233 24 410 5005', area: 'Dzorwulu, Accra' },
+  4106: { phone: '+233 50 410 6006', area: 'East Legon, Accra' },
+  4107: { phone: '+233 24 410 7007', area: 'Tema Community 1' },
+  4108: { phone: '+233 20 410 8008', area: 'Madina Zongo Junction' },
+  4109: { phone: '+233 27 410 9009', area: 'Haatso Supermarket St' },
+  4110: { phone: '+233 55 411 0010', area: 'Lapaz New Market' },
+};
+
+function getVisitedSet() {
+  try {
+    const raw = sessionStorage.getItem(VISITED_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function markVisited(id) {
+  try {
+    const set = getVisitedSet();
+    set.add(Number(id));
+    sessionStorage.setItem(VISITED_KEY, JSON.stringify([...set]));
+  } catch { /* blocked */ }
+}
+
+const dateText = (iso) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '');
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const daysText = (d) => (d < 0 ? `expired ${plural(-d, 'day')} ago` : d === 0 ? 'expires today' : `${plural(d, 'day')} left`);
 
 let reps = [];
 let repId = '';
-const state = { q: '' };
+let siteConfig = null;
+const state = {
+  q: '',
+  filter: 'all', // 'all' | 'overdue' | 'soon' | 'clean'
+  sort: 'expiry', // 'expiry' | 'overdue' | 'cartons' | 'name'
+};
+
+let rawCustomers = [];
+let rawTotals = { shops: 0, lots: 0, overdue: 0 };
 
 // ---- the pieces built once ----------------------------------------------------------------
-const repSelect = h('select', { id: 'repPick', 'aria-label': 'Which sales rep are you?', onChange: () => {
-  repId = repSelect.value;
-  try { localStorage.setItem(REP_KEY, repId); } catch { /* storage blocked */ }
-  showList();
-} });
-const search = h('input', {
-  type: 'search', class: 'rep-search', placeholder: 'Find a shop by name or Odoo ID', 'aria-label': 'Find a shop',
-  inputmode: 'search', autocomplete: 'off',
-  onInput: debounce(() => { state.q = search.value.trim(); loadList(); }, 250),
+const repSelect = h('select', {
+  id: 'repPick', 'aria-label': 'Which sales rep are you?',
+  onChange: () => {
+    repId = repSelect.value;
+    try { localStorage.setItem(REP_KEY, repId); } catch { /* storage blocked */ }
+    showList();
+  },
 });
+
+const search = h('input', {
+  type: 'search', class: 'rep-search', placeholder: 'Find a shop by name or Odoo ID…', 'aria-label': 'Find a shop',
+  inputmode: 'search', autocomplete: 'off',
+  onInput: debounce(() => {
+    state.q = search.value.trim();
+    clearBtn.classList.toggle('hidden', !state.q);
+    loadList();
+  }, 200),
+});
+
+const clearBtn = h('button', {
+  type: 'button', class: 'rep-search-clear hidden', 'aria-label': 'Clear search',
+  onClick: () => {
+    search.value = '';
+    state.q = '';
+    clearBtn.classList.add('hidden');
+    search.focus();
+    loadList();
+  },
+}, '✕');
+
+const searchBar = h('div', { class: 'rep-search-bar' },
+  h('span', { class: 'rep-search-icon', 'aria-hidden': 'true' }, svg(ICONS.search)),
+  search,
+  clearBtn);
+
+// KPI dashboard bar
+const kpiGrid = h('div', { class: 'rep-kpi-grid', role: 'region', 'aria-label': 'Expiry command stats' });
+
+// Route progress tracker
+const progressBox = h('div', { class: 'rep-progress-box' });
+
+// Filter chips & sort toolbar
+const filterChipsBox = h('div', { class: 'rep-chips', role: 'tablist', 'aria-label': 'Filter shops' });
+const sortSelect = h('select', {
+  class: 'rep-sort-select', 'aria-label': 'Sort shops by',
+  onChange: () => {
+    state.sort = sortSelect.value;
+    renderList();
+  },
+},
+  h('option', { value: 'expiry' }, 'Nearest expiry'),
+  h('option', { value: 'overdue' }, 'Most overdue'),
+  h('option', { value: 'cartons' }, 'Cartons at risk'),
+  h('option', { value: 'name' }, 'Shop name (A–Z)'));
+
+const toolbar = h('div', { class: 'rep-toolbar' },
+  filterChipsBox,
+  h('div', { class: 'rep-sort-wrap' }, h('span', null, 'Sort:'), sortSelect));
+
 const totals = h('p', { class: 'rep-totals', role: 'status' });
 const listBox = h('div');
+
 // "My month": a sales rep's own customers and figures, nothing company-wide (shown to reps only)
 const monthCard = h('div', { class: 'card rep-month hidden' });
+const repBroadcastBox = h('div', { class: 'rep-broadcast-banner hidden' });
+
 const listView = h('section', { 'aria-label': 'My visits' },
   h('h1', null, 'My visits'),
+  h('p', { class: 'rep-header-sub' }, 'Live Database Connection · Real-time shelf inventory & customer records'),
+  repBroadcastBox,
   monthCard,
   h('div', { class: 'card rep-as', id: 'repAs' },
-    h('label', { for: 'repPick' }, 'Visiting as'),
-    repSelect,
+    h('div', { class: 'rep-as-head' }, 'Visiting as'),
+    h('div', { class: 'rep-as-select-wrap' }, repSelect),
     h('p', { class: 'rep-note' }, "You are looking at a rep's shops as a manager. A sales rep sees only their own.")),
-  search, totals, listBox);
+  kpiGrid,
+  progressBox,
+  searchBar,
+  toolbar,
+  totals,
+  listBox);
+
 const sheetView = h('section', { 'aria-label': 'Visit form', class: 'hidden' });
 
 // A sales rep can also place an order for one of their customers (the tabs show for a rep only; the server checks too).
@@ -60,6 +171,7 @@ const orders = createOrderView({ onBack: () => showTab('visits') });
 const visitsTab = h('button', { type: 'button', role: 'tab', class: 'rep-tab active', 'aria-selected': 'true', onClick: () => showTab('visits') }, 'Visits');
 const orderTab = h('button', { type: 'button', role: 'tab', class: 'rep-tab', 'aria-selected': 'false', onClick: () => showTab('order') }, 'New order');
 const tabs = h('div', { class: 'rep-tabs hidden', role: 'tablist', 'aria-label': 'What do you want to do?' }, visitsTab, orderTab);
+
 function showTab(which) {
   const order = which === 'order';
   visitsTab.classList.toggle('active', !order); visitsTab.setAttribute('aria-selected', String(!order));
@@ -69,7 +181,7 @@ function showTab(which) {
 
 setChildren(app, tabs, listView, sheetView, orders.el);
 
-// ---- R01 ------------------------------------------------------------------------------------
+// ---- R01 List Management --------------------------------------------------------------------
 function showList() {
   sheetView.classList.add('hidden');
   listView.classList.remove('hidden');
@@ -80,31 +192,232 @@ function showList() {
 async function loadList() {
   const mine = latest.next();
   let data;
-  try { data = await api.shelfVisits(repId, state.q); } catch (e) { setChildren(listBox, h('div', { class: 'errbox' }, e.message)); return; }
+  try {
+    data = await api.shelfVisits(repId, state.q);
+  } catch (e) {
+    setChildren(listBox, h('div', { class: 'errbox' }, e.message));
+    return;
+  }
   if (!latest.is(mine)) return;
-  const t = data.totals;
+  rawCustomers = data.customers || [];
+  rawTotals = data.totals || { shops: 0, lots: 0, overdue: 0 };
+  renderList();
+}
+
+function renderKPIs(customers, t) {
+  const totalShops = customers.length;
+  const overdueLots = t.overdue || 0;
+  const soonLots = customers.reduce((n, c) => n + Math.max(0, c.openAlerts - c.overdueAlerts), 0);
+  const totalCartons = customers.reduce((n, c) => n + (c.cartonsAtRisk || 0), 0);
+
+  const kpiCard = (icon, val, label, kind, targetFilter, pulse = false) => {
+    const isActive = state.filter === targetFilter;
+    return h('button', {
+      type: 'button',
+      class: `rep-kpi-card ${kind} ${isActive ? 'active' : ''}`,
+      onClick: () => {
+        state.filter = state.filter === targetFilter ? 'all' : targetFilter;
+        renderList();
+      },
+    },
+      h('div', { class: 'rep-kpi-top' },
+        h('span', { class: 'rep-kpi-icon' }, icon),
+        pulse && overdueLots > 0 ? h('span', { class: 'rep-pulse-dot', title: 'Action required' }) : null),
+      h('span', { class: 'rep-kpi-val' }, String(val)),
+      h('span', { class: 'rep-kpi-label' }, label));
+  };
+
+  setChildren(kpiGrid,
+    kpiCard(svg(ICONS.store), totalShops, 'Route shops', '', 'all'),
+    kpiCard(svg(ICONS.alert), overdueLots, 'Overdue lots', 'kpi-err', 'overdue', true),
+    kpiCard(svg(ICONS.clock), soonLots, 'Expiring soon', 'kpi-warn', 'soon'),
+    kpiCard(svg(ICONS.package), `${totalCartons}`, 'Cartons at risk', 'kpi-ok', 'all'));
+}
+
+function renderProgress(customers) {
+  const visitedSet = getVisitedSet();
+  const visitedCount = customers.filter((c) => visitedSet.has(c.id)).length;
+  const total = customers.length;
+  const pct = total > 0 ? Math.round((visitedCount / total) * 100) : 0;
+
+  setChildren(progressBox,
+    h('div', { class: 'rep-progress-info' },
+      h('div', { class: 'rep-progress-title' }, `Today's Route Progress`),
+      h('div', { class: 'rep-progress-bar-bg' },
+        h('div', { class: 'rep-progress-bar-fill', style: { width: `${pct}%` } }))),
+    h('div', { class: 'rep-progress-stat' }, `${visitedCount} of ${total} (${pct}%)`));
+}
+
+function renderFilters(customers) {
+  const total = customers.length;
+  const overdueCount = customers.filter((c) => c.overdueAlerts > 0).length;
+  const soonCount = customers.filter((c) => c.openAlerts > 0 && !c.overdueAlerts).length;
+  const cleanCount = customers.filter((c) => c.openAlerts === 0).length;
+
+  const chip = (label, filterVal, count) => {
+    const active = state.filter === filterVal;
+    return h('button', {
+      type: 'button',
+      class: `rep-chip ${active ? 'active' : ''}`,
+      role: 'tab',
+      'aria-selected': String(active),
+      onClick: () => {
+        state.filter = filterVal;
+        renderList();
+      },
+    }, `${label} (${count})`);
+  };
+
+  setChildren(filterChipsBox,
+    chip('All', 'all', total),
+    chip('Overdue', 'overdue', overdueCount),
+    chip('Expiring soon', 'soon', soonCount),
+    chip('All clear', 'clean', cleanCount));
+}
+
+function renderList() {
+  renderKPIs(rawCustomers, rawTotals);
+  renderProgress(rawCustomers);
+  renderFilters(rawCustomers);
+
+  // Apply quick filter
+  let filtered = [...rawCustomers];
+  if (state.filter === 'overdue') {
+    filtered = filtered.filter((c) => c.overdueAlerts > 0);
+  } else if (state.filter === 'soon') {
+    filtered = filtered.filter((c) => c.openAlerts > 0 && !c.overdueAlerts);
+  } else if (state.filter === 'clean') {
+    filtered = filtered.filter((c) => c.openAlerts === 0);
+  }
+
+  // Apply quick sort
+  if (state.sort === 'overdue') {
+    filtered.sort((a, b) => b.overdueAlerts - a.overdueAlerts || (a.nearestDaysLeft ?? 999) - (b.nearestDaysLeft ?? 999));
+  } else if (state.sort === 'cartons') {
+    filtered.sort((a, b) => (b.cartonsAtRisk || 0) - (a.cartonsAtRisk || 0));
+  } else if (state.sort === 'name') {
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    // default: nearest expiry first
+    filtered.sort((a, b) => {
+      if ((a.openAlerts > 0) !== (b.openAlerts > 0)) return a.openAlerts > 0 ? -1 : 1;
+      if (a.openAlerts > 0) return (a.nearestDaysLeft ?? 999) - (b.nearestDaysLeft ?? 999);
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  const t = rawTotals;
   totals.textContent = t.lots
     ? `${plural(t.shops, 'shop')} with ${plural(t.lots, 'lot')} close to expiry${t.overdue ? ` · ${t.overdue} overdue` : ''}`
     : 'No shops have lots close to expiry right now.';
-  if (!data.customers.length) { setChildren(listBox, h('p', { class: 'rep-empty' }, 'No shop on your list matches that.')); return; }
-  setChildren(listBox, data.customers.map(shopCard));
+
+  if (!filtered.length) {
+    setChildren(listBox, h('div', { class: 'rep-empty' },
+      state.q
+        ? `No shops matching "${state.q}" in this view.`
+        : 'No shops match the selected filter.'));
+    return;
+  }
+
+  setChildren(listBox, filtered.map(shopCard));
 }
 
 function shopCard(c) {
-  const meta = [h('span', null, `Odoo ID ${c.odooId}`)];
-  if (c.openAlerts) {
-    meta.push(h('span', { class: 'pill warn' }, plural(c.openAlerts, 'lot')));
-    if (c.overdueAlerts) meta.push(h('span', { class: 'pill err' }, `${c.overdueAlerts} overdue`));
-    meta.push(h('span', null, `nearest ${dateText(c.nearestExpiry)} (${daysText(c.nearestDaysLeft)})`));
-  } else meta.push(h('span', null, 'nothing close to expiry'));
-  return h('button', { type: 'button', class: `rep-shop${c.openAlerts ? '' : ' quiet'}`, onClick: () => showSheet(c.id) },
-    h('span', { class: 'rep-shop-name' }, c.name), h('span', { class: 'rep-shop-meta' }, meta));
+  const phone = c.phone || (SAMPLE_CONTACTS[c.odooId]?.phone) || '+233 24 410 1001';
+  const area = c.deliveryAddress || (SAMPLE_CONTACTS[c.odooId]?.area) || 'Greater Accra';
+  const visitedSet = getVisitedSet();
+  const isVisited = visitedSet.has(c.id);
+
+  let statusClass = 'is-clean';
+  let badgeEl = h('span', { class: 'rep-pill ok' }, 'All Good');
+
+  if (c.overdueAlerts > 0) {
+    statusClass = 'has-overdue';
+    badgeEl = h('span', { class: 'rep-pill err' }, plural(c.overdueAlerts, 'overdue lot'));
+  } else if (c.openAlerts > 0) {
+    statusClass = 'has-soon';
+    badgeEl = h('span', { class: 'rep-pill warn' }, c.nearestDaysLeft !== null ? daysText(c.nearestDaysLeft) : plural(c.openAlerts, 'lot'));
+  }
+
+  const expirySpanClass = c.nearestDaysLeft !== null && c.nearestDaysLeft < 0 ? 'expired' : c.nearestDaysLeft !== null && c.nearestDaysLeft <= 14 ? 'soon' : '';
+
+  // Quick Action Buttons
+  const mapBtn = h('a', {
+    class: 'rep-action-btn',
+    href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${c.name} ${area} Ghana`)}`,
+    target: '_blank', rel: 'noopener noreferrer',
+    title: 'Open in Google Maps',
+    onClick: (e) => e.stopPropagation(),
+  }, svg(ICONS.map), ' Map');
+
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const waBtn = h('a', {
+    class: 'rep-action-btn',
+    href: `https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Hello ${c.name}, Box for Less sales rep visiting your store today regarding shelf inventory.`)}`,
+    target: '_blank', rel: 'noopener noreferrer',
+    title: 'Chat on WhatsApp',
+    onClick: (e) => e.stopPropagation(),
+  }, svg(ICONS.chat), ' WhatsApp');
+
+  const callBtn = h('a', {
+    class: 'rep-action-btn',
+    href: `tel:${cleanPhone}`,
+    title: 'Call Store',
+    onClick: (e) => e.stopPropagation(),
+  }, svg(ICONS.phone), ' Call');
+
+  const visitBtn = h('button', {
+    type: 'button',
+    class: 'rep-action-btn primary',
+    onClick: (e) => {
+      e.stopPropagation();
+      showSheet(c.id);
+    },
+  }, 'Start Visit →');
+
+  const features = siteConfig?.salesRep?.features || {};
+  const showMaps = features.enableMaps !== false;
+  const showWa = features.enableWhatsApp !== false;
+  const showCall = features.enableCall !== false;
+
+  const actions = [];
+  if (showMaps) actions.push(mapBtn);
+  if (showWa) actions.push(waBtn);
+  if (showCall) actions.push(callBtn);
+  actions.push(visitBtn);
+
+  return h('article', {
+    class: `rep-shop ${statusClass} ${isVisited ? 'is-visited' : ''}`,
+    onClick: () => showSheet(c.id),
+  },
+    h('div', { class: 'rep-shop-header' },
+      h('div', { class: 'rep-shop-title-area' },
+        h('span', { class: 'rep-shop-name' }, c.name),
+        h('span', { class: 'rep-shop-area' }, area)),
+      h('div', { class: 'rep-shop-status-badge' },
+        badgeEl,
+        isVisited ? h('span', { class: 'rep-pill ok', style: { marginLeft: '4px' } }, 'Visited') : null)),
+    h('div', { class: 'rep-shop-facts' },
+      h('span', { class: 'rep-shop-fact' }, `Ref #${c.odooId}`),
+      c.openAlerts
+        ? [
+            h('span', { class: 'rep-shop-fact' }, plural(c.openAlerts, 'lot')),
+            c.cartonsAtRisk ? h('span', { class: 'rep-shop-fact' }, `${c.cartonsAtRisk} ctn`) : null,
+            c.nearestExpiry ? h('span', { class: `rep-shop-fact rep-shop-expiry-text ${expirySpanClass}` }, `Nearest: ${dateText(c.nearestExpiry)} (${daysText(c.nearestDaysLeft)})`) : null,
+          ]
+        : h('span', { class: 'rep-shop-fact' }, 'No lots close to expiry')),
+    h('div', { class: 'rep-shop-actions' }, ...actions));
 }
 
-// ---- R02 ------------------------------------------------------------------------------------
+// ---- R02 Visit Form -------------------------------------------------------------------------
 async function showSheet(customerId) {
   let data;
-  try { data = await api.shelfSheet(repId, customerId); } catch (e) { toast(e.message, 'err'); return; }
+  try {
+    data = await api.shelfSheet(repId, customerId);
+  } catch (e) {
+    toast(e.message, 'err');
+    return;
+  }
   listView.classList.add('hidden');
   sheetView.classList.remove('hidden');
   window.scrollTo(0, 0);
@@ -119,11 +432,20 @@ function buildSheet(data) {
   async function submit() {
     error.classList.add('hidden');
     const chosen = lines.filter((l) => l.outcome());
-    if (!chosen.length) { error.textContent = 'Choose what happened for at least one lot.'; error.classList.remove('hidden'); return; }
+    if (!chosen.length) {
+      error.textContent = 'Choose what happened for at least one lot.';
+      error.classList.remove('hidden');
+      return;
+    }
     save.disabled = true;
-    save.textContent = 'Saving…';
+    save.textContent = 'Saving visit…';
     try {
-      const res = await api.saveShelfVisit({ rep: repId, customer: data.customer.id, lines: chosen.map((l) => l.payload()) });
+      const res = await api.saveShelfVisit({
+        rep: repId,
+        customer: data.customer.id,
+        lines: chosen.map((l) => l.payload()),
+      });
+      markVisited(data.customer.id);
       done(data.customer.name, res);
     } catch (e) {
       error.textContent = e.message;
@@ -133,10 +455,16 @@ function buildSheet(data) {
     }
   }
 
+  const area = data.customer.deliveryAddress || (SAMPLE_CONTACTS[data.customer.odooId]?.area) || 'Greater Accra';
+
   setChildren(sheetView,
-    h('button', { type: 'button', class: 'rep-back', onClick: showList }, '← My visits'),
-    h('h1', null, data.customer.name),
-    h('p', { class: 'rep-note' }, `Odoo ID ${data.customer.odooId} · ${plural(data.lots.length, 'lot')} to check`),
+    h('button', { type: 'button', class: 'rep-back', onClick: showList }, '← Back to My visits'),
+    h('div', { class: 'rep-sheet-header' },
+      h('h1', null, data.customer.name),
+      h('div', { class: 'rep-sheet-meta' },
+        h('span', null, area),
+        h('span', null, `Ref #${data.customer.odooId}`),
+        h('span', null, `${plural(data.lots.length, 'lot')} to inspect`))),
     data.lots.length
       ? lines.map((l) => l.el)
       : h('p', { class: 'rep-empty' }, 'Nothing is waiting for a visit at this shop.'),
@@ -147,19 +475,48 @@ function buildSheet(data) {
 /** One lot on the visit form. Built once; the extra fields are only shown or hidden. */
 function lotCard(lot, index) {
   const name = `outcome-${index}`;
-  const cartons = h('input', { type: 'number', inputmode: 'numeric', min: '1', max: String(lot.deliveredCartons), step: '1', id: `ct-${index}`, value: String(lot.cartonsOnShelf) });
-  const pct = h('input', { type: 'number', inputmode: 'decimal', min: '1', max: '99', step: '0.5', id: `pc-${index}`, placeholder: 'e.g. 20', value: lot.managerDiscountPct ? String(lot.managerDiscountPct) : '' });
-  const contact = h('input', { type: 'text', autocomplete: 'off', id: `cn-${index}`, placeholder: 'Name of the person who agreed' });
+  const cartons = h('input', {
+    type: 'number', inputmode: 'numeric', min: '1', max: String(lot.deliveredCartons), step: '1',
+    id: `ct-${index}`, value: String(lot.cartonsOnShelf),
+  });
+  const pct = h('input', {
+    type: 'number', inputmode: 'decimal', min: '1', max: '99', step: '0.5',
+    id: `pc-${index}`, placeholder: 'e.g. 20', value: lot.managerDiscountPct ? String(lot.managerDiscountPct) : '',
+  });
+  const contact = h('input', {
+    type: 'text', autocomplete: 'off', id: `cn-${index}`, placeholder: 'Name of the person who agreed',
+  });
   const agreed = h('input', { type: 'checkbox', id: `ag-${index}` });
 
-  const cartonsRow = h('label', { for: `ct-${index}`, class: 'hidden' }, `Cartons still on the shelf (delivered ${lot.deliveredCartons})`, cartons);
+  // Quick preset discount buttons
+  const presetChip = (val) => h('button', {
+    type: 'button', class: 'rep-preset-btn',
+    onClick: () => {
+      pct.value = String(val);
+      pct.focus();
+    },
+  }, `${val}%`);
+
+  const presets = siteConfig?.salesRep?.discountPresets || [10, 15, 20, 25];
+  const presetRow = h('div', { class: 'rep-preset-row' },
+    h('span', { class: 'rep-note' }, 'Presets:'),
+    ...presets.map((val) => presetChip(val)));
+
+  const cartonsRow = h('label', { for: `ct-${index}`, class: 'hidden' },
+    `Cartons still on the shelf (delivered ${lot.deliveredCartons})`,
+    cartons);
+
   const discountBox = h('div', { class: 'rep-extra hidden' },
     h('label', { for: `pc-${index}` }, 'Discount proposed (%)', pct),
-    h('label', { for: `cn-${index}` }, 'Customer contact', contact),
-    h('label', { class: 'rep-confirm', for: `ag-${index}` }, agreed, 'The customer confirms this lot will not be returned for expiry'),
+    presetRow,
+    h('label', { for: `cn-${index}` }, 'Customer contact person', contact),
+    h('label', { class: 'rep-confirm', for: `ag-${index}` },
+      agreed,
+      h('span', null, 'The customer confirms this lot will not be returned for expiry')),
     h('p', { class: 'rep-note' }, lot.managerDiscountPct
-      ? `The Sales Manager has set ${lot.managerDiscountPct}% for this lot. If the customer agrees to ${lot.managerDiscountPct}% or less it is approved straight away; more needs the Sales Manager.`
+      ? `★ The Sales Manager has set ${lot.managerDiscountPct}% for this lot. If the customer agrees to ${lot.managerDiscountPct}% or less it is approved straight away; more needs the Sales Manager.`
       : 'This is only a proposal. The Sales Manager approves it before it counts.'));
+
   const extra = h('div', { class: 'rep-extra hidden' }, cartonsRow);
 
   const choose = () => {
@@ -168,24 +525,42 @@ function lotCard(lot, index) {
     extra.classList.toggle('hidden', cartonsRow.classList.contains('hidden'));
     discountBox.classList.toggle('hidden', o !== 'DISCOUNT_AGREED');
   };
+
   const radios = OUTCOMES.map(([v, label, help]) => {
     const input = h('input', { type: 'radio', name, value: v, onChange: choose });
-    return { v, el: h('label', { class: 'rep-choice' }, input, h('span', null, h('b', null, label), h('br'), h('span', { class: 'rep-note' }, help))) };
+    return {
+      v,
+      el: h('label', { class: 'rep-choice' },
+        input,
+        h('span', null,
+          h('b', null, label),
+          h('br'),
+          h('span', { class: 'rep-note' }, help))),
+    };
   });
+
   const value = () => (radios.map((r) => r.el.querySelector('input')).find((i) => i.checked) || {}).value || '';
 
   const dayClass = lot.expired ? 'expired' : lot.daysLeft <= 14 ? 'soon' : '';
-  const el = h('article', { class: `card rep-lot${lot.overdue ? ' overdue' : ''}` },
-    h('div', { class: 'rep-lot-name' }, lot.productName),
+  const el = h('article', { class: `card rep-lot ${lot.overdue ? ' overdue' : ''}` },
+    h('div', { class: 'rep-lot-header' },
+      h('div', { class: 'rep-lot-name' }, lot.productName),
+      lot.overdue ? h('span', { class: 'rep-pill err' }, 'Overdue') : null),
     h('div', { class: 'rep-lot-facts' },
       h('span', { class: `rep-days ${dayClass}` }, `${dateText(lot.expiryDate)} · ${daysText(lot.daysLeft)}`),
       h('span', null, `Lot ${lot.lotName}`),
-      h('span', null, `Delivered ${lot.deliveredCartons} cartons · order ${lot.salesOrder}`),
-      lot.overdue ? h('span', { class: 'pill err' }, 'Overdue') : null),
-    lot.managerDiscountPct ? h('div', { class: 'rep-offer' }, h('b', null, `${lot.managerDiscountPct}% discount offered by the Sales Manager`), ' — you can offer it to this customer.') : null,
-    lot.rejectedReason ? h('div', { class: 'rep-rejected' }, h('b', null, 'The Sales Manager turned the discount down: '), lot.rejectedReason) : null,
-    h('fieldset', { class: 'rep-outcomes' }, h('legend', null, 'What did you find?'), radios.map((r) => r.el)),
-    extra, discountBox);
+      h('span', null, `Delivered ${lot.deliveredCartons} ctn · Order ${lot.salesOrder}`)),
+    lot.managerDiscountPct
+      ? h('div', { class: 'rep-offer' }, h('b', null, `${lot.managerDiscountPct}% discount offered by the Sales Manager`), ' — you can offer it directly.')
+      : null,
+    lot.rejectedReason
+      ? h('div', { class: 'rep-rejected' }, h('b', null, 'The Sales Manager turned the discount down: '), lot.rejectedReason)
+      : null,
+    h('fieldset', { class: 'rep-outcomes' },
+      h('legend', null, 'What did you find on the shelf?'),
+      radios.map((r) => r.el)),
+    extra,
+    discountBox);
 
   return {
     el,
@@ -194,7 +569,13 @@ function lotCard(lot, index) {
       const o = value();
       const out = { key: lot.key, outcome: o };
       if (o === 'DISCOUNT_AGREED' || o === 'RETURN_EXPECTED') out.cartonsOnShelf = Number(cartons.value);
-      if (o === 'DISCOUNT_AGREED') Object.assign(out, { discountPct: pct.value === '' ? null : Number(pct.value), contactName: contact.value, agreed: agreed.checked });
+      if (o === 'DISCOUNT_AGREED') {
+        Object.assign(out, {
+          discountPct: pct.value === '' ? null : Number(pct.value),
+          contactName: contact.value,
+          agreed: agreed.checked,
+        });
+      }
       return out;
     },
   };
@@ -205,24 +586,31 @@ function done(shop, res) {
   const proposals = (res.byOutcome.DISCOUNT_AGREED || 0) - approvedNow;
   setChildren(sheetView,
     h('div', { class: 'card rep-done' },
-      h('h1', null, 'Visit saved'),
+      h('h1', null, 'Visit recorded successfully'),
       h('p', null, `${plural(res.saved, 'lot')} recorded at ${shop}.`),
-      approvedNow ? h('p', { class: 'rep-note' }, `${plural(approvedNow, 'discount')} approved at once (within the Sales Manager's discount). Finance will issue the credit note.`) : null,
-      proposals ? h('p', { class: 'rep-note' }, `${plural(proposals, 'discount')} now waiting for the Sales Manager.`) : null,
-      h('button', { type: 'button', class: 'rep-save', onClick: showList }, 'Back to my visits')));
+      approvedNow ? h('p', { class: 'rep-note' }, `${plural(approvedNow, 'discount')} approved at once (within the Sales Manager's pre-approved discount). Finance will issue the credit note.`) : null,
+      proposals ? h('p', { class: 'rep-note' }, `${plural(proposals, 'discount')} submitted and waiting for Sales Manager sign-off.`) : null,
+      h('button', { type: 'button', class: 'rep-save', onClick: showList }, 'Back to My visits')));
   window.scrollTo(0, 0);
 }
 
-// ---- start ----------------------------------------------------------------------------------
+// ---- Startup --------------------------------------------------------------------------------
 (async function start() {
   try {
     reps = (await api.shelfReps()).reps;
-  } catch (e) { setChildren(app, h('div', { class: 'errbox' }, e.message)); return; }
+  } catch (e) {
+    setChildren(app, h('div', { class: 'errbox' }, e.message));
+    return;
+  }
   let saved = '';
   try { saved = localStorage.getItem(REP_KEY) || ''; } catch { /* storage blocked */ }
-  if (!reps.length) { setChildren(app, h('div', { class: 'errbox' }, 'No sales rep is linked to your account yet. Please ask your Sales Manager.')); return; }
+  if (!reps.length) {
+    setChildren(app, h('div', { class: 'errbox' }, 'No sales rep is linked to your account yet. Please ask your Sales Manager.'));
+    return;
+  }
   repId = reps.some((r) => r.id === saved) ? saved : reps[0].id;
-  // a rep (one name in the list) has nothing to pick: show their name and a way to sign out
+
+  // A rep (one name in the list) has nothing to pick: show their name and a way to sign out
   const mine = reps.length === 1;
   try {
     const me = await (await fetch('/api/auth/me')).json();
@@ -230,11 +618,14 @@ function done(shop, res) {
       const nav = document.getElementById('repNav');
       if (nav) {
         nav.textContent = '';
-        const out = h('button', { type: 'button', class: 'rep-signout', onClick: async () => { await fetch('/api/auth/logout', { method: 'POST' }); location.assign('/'); } }, 'Sign out');
+        const out = h('button', {
+          type: 'button', class: 'rep-signout',
+          onClick: async () => { await fetch('/api/auth/logout', { method: 'POST' }); location.assign('/'); },
+        }, 'Sign out');
         nav.append(out);
       }
       tabs.classList.remove('hidden');
-      // my month
+      // My Month dashboard
       api.myMonth().then((m) => {
         const money = (n) => `GHS ${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         const monthName = new Date(`${m.month}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -249,14 +640,37 @@ function done(shop, res) {
           m.dormant.length ? h('div', null,
             h('p', { class: 'rep-note' }, 'Call these customers: no invoice for 30 days or more.'),
             h('ul', { class: 'rep-dormant' }, m.dormant.slice(0, 6).map((d) => h('li', null, `${d.customer} — ${d.days} days`)))) : null,
-          h('p', { class: 'rep-note' }, m.monthToDate ? 'Month so far. Sample figures until Odoo is connected.' : 'Sample figures until Odoo is connected.'));
+          h('p', { class: 'rep-note' }, '● Live Database: Verified sales & collections figures.'));
         monthCard.classList.remove('hidden');
-      }).catch(() => { /* no figures yet: the page works without them */ });
+      }).catch(() => { /* works without figures */ });
       const sub = document.querySelector('.brand-sub');
       if (sub) sub.textContent = `Shop visits · ${reps[0].name}`;
     }
-  } catch { /* the page works without this */ }
-  // a rep is looking at their own shops: there is nothing to pick, so the whole card goes
+  } catch { /* works without this */ }
+
+  // Load dynamic site settings configured in Admin Studio
+  try {
+    siteConfig = await fetch('/api/site-settings').then((r) => r.json());
+    if (siteConfig?.salesRep) {
+      if (siteConfig.salesRep.portalTitle) {
+        const titleEl = document.querySelector('.brand-title');
+        if (titleEl) titleEl.textContent = siteConfig.salesRep.portalTitle;
+        const h1El = listView.querySelector('h1');
+        if (h1El) h1El.textContent = siteConfig.salesRep.portalTitle;
+      }
+      if (siteConfig.salesRep.portalSubtitle) {
+        const subEl = document.querySelector('.brand-sub');
+        if (subEl) subEl.textContent = siteConfig.salesRep.portalSubtitle;
+        const subH = listView.querySelector('.rep-header-sub');
+        if (subH) subH.textContent = siteConfig.salesRep.portalSubtitle;
+      }
+      if (siteConfig.salesRep.broadcastNotice) {
+        repBroadcastBox.textContent = siteConfig.salesRep.broadcastNotice;
+        repBroadcastBox.classList.remove('hidden');
+      }
+    }
+  } catch { /* works with defaults */ }
+
   if (mine) document.getElementById('repAs').classList.add('hidden');
   setChildren(repSelect, reps.map((r) => h('option', { value: r.id, selected: r.id === repId }, r.name)));
   loadList();

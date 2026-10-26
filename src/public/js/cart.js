@@ -86,6 +86,22 @@ export function setQuantity(product, quantityCtn) {
 export function addToCart(product, quantityCtn = 1) {
   return setQuantity(product, quantityOf(product.barcode) + Math.max(1, Math.floor(Number(quantityCtn) || 1)));
 }
+
+/**
+ * Add multiple lines to the cart (Wholesale Quick Reorder).
+ * Merges items with existing cart items or adds them if not present.
+ * @param {Array<{ barcode: string, name?: string, pack?: string, quantityCtn?: number, cartons?: number }>} items
+ * @returns {Array} Updated cart lines
+ */
+export function addLinesToCart(items = []) {
+  for (const item of items) {
+    if (!item || !item.barcode) continue;
+    const qty = Math.max(1, Math.floor(Number(item.quantityCtn ?? item.cartons) || 1));
+    addToCart(item, qty);
+  }
+  return readCart();
+}
+
 export function removeFromCart(barcode) {
   return writeCart(readCart().filter((l) => l.barcode !== barcode));
 }
@@ -109,4 +125,4 @@ export function pruneUnavailable(errors = []) {
   return writeCart(readCart().filter((l) => !drop.has(l.barcode)));
 }
 
-export default { readCart, setQuantity, addToCart, removeFromCart, clearCart, cartCount, toRequestLines };
+export default { readCart, setQuantity, addToCart, addLinesToCart, removeFromCart, clearCart, cartCount, toRequestLines };

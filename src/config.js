@@ -1,9 +1,27 @@
 // Central configuration. Override via environment variables.
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(__dirname, '..');
+
+// Load .env.local if present, not running automated tests, and not already set in process.env
+const envLocal = path.join(ROOT, '.env.local');
+if (!process.env.NODE_TEST_CONTEXT && process.env.NODE_ENV !== 'test' && fs.existsSync(envLocal)) {
+  try {
+    for (const raw of fs.readFileSync(envLocal, 'utf8').split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith('#')) continue;
+      const idx = line.indexOf('=');
+      if (idx > 0) {
+        const k = line.slice(0, idx).trim();
+        const v = line.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+        if (process.env[k] === undefined) process.env[k] = v;
+      }
+    }
+  } catch { /* ignore read failure */ }
+}
 
 export const config = {
   root: ROOT,

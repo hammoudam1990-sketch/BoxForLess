@@ -29,8 +29,8 @@ const menuToggle = document.getElementById('menuToggle');
 // person can use. null = everything.
 const ROLE_NAV = {
   ADMIN: null,
-  SALES_MANAGER: ['access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health'],
-  WAREHOUSE: ['products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health'],
+  SALES_MANAGER: ['access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health', 'workspace', 'workspace-data-quality'],
+  WAREHOUSE: ['products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-data-quality'],
 };
 const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/access', WAREHOUSE: '#/products' };
 let me = { role: 'ADMIN', name: 'Staff' };

@@ -15,6 +15,7 @@ import {
   SAMPLE_NOTE, currentCustomer, accountSummary, orderList, invoiceList,
   ORDER_STATUS, formatGhs, formatDate,
 } from './customer-data.js';
+import { addLinesToCart } from '../cart.js';
 
 /** A figure, or a dash where Odoo has not given us one (a credit limit, say). */
 const money = (n) => (n === null || n === undefined ? '—' : formatGhs(n));
@@ -64,14 +65,22 @@ function banner(account, scope) {
   restart();
   scope.add(() => window.clearInterval(timer));
 
+  const siteConfig = window.__bflSiteSettings;
+  const storeName = siteConfig?.storefront?.storeName || 'Box for Less';
+  const hero = siteConfig?.storefront?.hero || {};
+  const headline = hero.headline || 'Your Trusted Wholesale Partner';
+  const subtitle = hero.subtitle || 'Quality products, great prices, reliable delivery.';
+  const ctaText = hero.ctaText || 'View Products';
+  const ctaLink = hero.ctaLink || pageUrl('products');
+
   return h('div', { class: 'p-hero-wrap' },
     h('section', { class: 'p-hero', 'aria-labelledby': 'heroTitle' },
       h('div', { class: 'p-hero-pics' }, pics),
       h('div', { class: 'p-hero-copy' },
-        h('p', { class: 'p-hero-hello' }, account ? `Welcome back, ${account.company}` : 'Welcome to Box for Less'),
-        h('h1', { id: 'heroTitle' }, 'Your Trusted Wholesale Partner'),
-        h('p', {}, 'Quality products, great prices, reliable delivery.'),
-        h('a', { class: 'p-btn', href: pageUrl('products') }, 'View Products', ' ', icon('arrow')))),
+        h('p', { class: 'p-hero-hello' }, account ? `Welcome back, ${account.company}` : `Welcome to ${storeName}`),
+        h('h1', { id: 'heroTitle' }, headline),
+        h('p', {}, subtitle),
+        h('a', { class: 'p-btn', href: ctaLink }, ctaText, ' ', icon('arrow')))),
     h('div', { class: 'p-dots' }, dots));
 }
 
@@ -109,6 +118,22 @@ function accountOverview(account) {
     link(pageUrl('balance'), 'View Full Balance'));
 }
 
+async function reorderOrderItems(items) {
+  let toAdd = items || [];
+  if (toAdd.some((i) => !i.barcode)) {
+    try {
+      const res = await getJSON('/api/catalog/products?view=available&limit=250');
+      const byName = new Map((res.items || []).map((p) => [p.name, p]));
+      toAdd = toAdd.map((i) => {
+        const match = byName.get(i.name);
+        return match ? { ...match, cartons: i.cartons } : i;
+      });
+    } catch { /* proceed */ }
+  }
+  addLinesToCart(toAdd);
+  window.dispatchEvent(new CustomEvent('bfl:open-request'));
+}
+
 function recentOrders(account) {
   if (!account) return null;
   const orders = orderList().slice(0, 4);
@@ -116,7 +141,15 @@ function recentOrders(account) {
     panelHead('Recent Orders', link(pageUrl('orders'), 'View All', 'p-link p-link-sm')),
     h('ul', { class: 'p-order-list' }, orders.map((o) => h('li', {},
       h('div', { class: 'p-order-top' }, h('b', {}, o.ref), statusPill(o.status)),
-      h('span', { class: 'p-muted' }, formatDate(o.at)),
+      h('div', { style: 'display:flex; justify-content:space-between; align-items:center; margin: 4px 0;' },
+        h('span', { class: 'p-muted' }, formatDate(o.at)),
+        h('button', {
+          type: 'button',
+          class: 'p-link p-link-sm',
+          style: 'background:none; border:none; color:var(--bfl-primary, #0052cc); cursor:pointer; font-weight:600; padding:2px 4px;',
+          title: 'Add items from this order to your request cart',
+          onClick: () => { reorderOrderItems(o.items); },
+        }, 'Reorder')),
       h('b', { class: 'p-order-amount' }, o.amount === null ? '—' : formatGhs(o.amount))))));
 }
 
@@ -195,12 +228,19 @@ export function mountOrders(container) {
   setChildren(container, h('div', { class: 'p-page' },
     pageHead('Orders', 'Every order with its Box for Less and Odoo numbers. The status follows Odoo; the amount appears once Odoo has invoiced it.'),
     h('p', { class: 'p-sample-note' }, SAMPLE_NOTE),
-    card('', table(['Order', 'Odoo number', 'Date', 'Cartons', 'Amount', 'Status'],
+    card('', table(['Order', 'Odoo number', 'Date', 'Cartons', 'Amount', 'Status', 'Action'],
       orders.map((o) => h('tr', {},
         h('td', {}, h('b', {}, o.ref),
           o.items.filter((i) => i.discountedCartons).map((i) => h('div', { class: 'p-muted' }, `${i.discountedCartons} × ${i.name} at ${i.discountPct}% off (not returnable)`))),
         h('td', {}, o.odoo), h('td', {}, formatDate(o.at)),
-        h('td', {}, `${o.cartons} (${o.lines} lines)`), h('td', {}, o.amount === null ? '—' : formatGhs(o.amount)), h('td', {}, statusPill(o.status))))))));
+        h('td', {}, `${o.cartons} (${o.lines} lines)`), h('td', {}, o.amount === null ? '—' : formatGhs(o.amount)), h('td', {}, statusPill(o.status)),
+        h('td', {}, h('button', {
+          type: 'button',
+          class: 'p-btn p-btn-secondary p-btn-sm',
+          style: 'padding: 4px 10px; font-size: 13px; cursor: pointer; white-space: nowrap;',
+          title: 'Add all items from this order into your cart',
+          onClick: () => { reorderOrderItems(o.items); },
+        }, 'Reorder')))))));
   return { destroy() {} };
 }
 

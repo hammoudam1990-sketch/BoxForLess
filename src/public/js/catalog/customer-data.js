@@ -37,7 +37,7 @@ function shapeInvoice(i) {
   return { ref: i.number, order: i.orderNumber || '—', at: i.invoiceDate, due: i.dueDate, amount: i.amount, open, status, payBy: i.payBy || null };
 }
 function shapeOrder(o) {
-  const items = (o.items || []).map((x) => ({ name: x.name, cartons: x.cartons, discountedCartons: x.discountedCartons || 0, discountPct: x.discountPct || null, bestBefore: x.bestBefore || null }));
+  const items = (o.items || []).map((x) => ({ barcode: x.barcode, name: x.name, cartons: x.cartons, discountedCartons: x.discountedCartons || 0, discountPct: x.discountPct || null, bestBefore: x.bestBefore || null }));
   return {
     ref: o.reference, odoo: o.odooNumber || '—', at: o.placedAt, status: STATUS_KEY[o.status] || 'received',
     cartons: items.reduce((n, x) => n + x.cartons, 0), lines: items.length, amount: o.total ?? null, items, hint: o.hint || '',

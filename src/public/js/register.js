@@ -1,8 +1,5 @@
-// C02 Register. Saves the account in this browser's localStorage (lib/local-accounts.js)
-// as "pending": like a real registration, it cannot sign in until it is approved.
-import { accounts } from './lib/local-accounts.js';
-
-const store = accounts();
+// C02 Register. Submits the registration to the backend database (/api/requests/access-requests)
+// for Sales Manager approval.
 const form = document.getElementById('registerForm');
 const message = document.getElementById('registerMessage');
 const button = document.getElementById('registerButton');
@@ -41,7 +38,7 @@ form.addEventListener('input', (event) => {
   if (event.target.getAttribute('aria-invalid')) clearError();
 });
 
-form.addEventListener('submit', (event) => {
+form.addEventListener('submit', async (event) => {
   event.preventDefault();
   clearError();
   const fields = Object.fromEntries(FIELDS.map((name) => [name, form.elements[name].value]));
@@ -53,16 +50,38 @@ form.addEventListener('submit', (event) => {
   }
 
   button.disabled = true;
-  const result = store.register(fields);
-  button.disabled = false;
-  if (!result.ok) return showError(result.error, result.field);
+  button.textContent = 'Submitting…';
 
-  document.getElementById('doneCompany').textContent = result.account.company;
-  document.getElementById('donePhone').textContent = result.account.phone;
-  document.getElementById('doneSignIn').href = `/login.html?registered=${encodeURIComponent(result.account.email)}`;
-  registerStep.hidden = true;
-  doneStep.hidden = false;
-  document.title = 'Waiting for approval — Box for Less';
-  window.scrollTo({ top: 0 });
-  doneStep.focus();
+  try {
+    const res = await fetch('/api/catalog/access-requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        company: fields.company.trim(),
+        contact: fields.contact.trim(),
+        phone: fields.phone.trim(),
+        email: fields.email.trim(),
+        address: fields.address.trim(),
+      }),
+    });
+
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(result.error || `Could not submit registration (${res.status}).`);
+    }
+
+    document.getElementById('doneCompany').textContent = fields.company;
+    document.getElementById('donePhone').textContent = fields.phone;
+    document.getElementById('doneSignIn').href = `/login.html?registered=${encodeURIComponent(fields.email || fields.phone)}`;
+    registerStep.hidden = true;
+    doneStep.hidden = false;
+    document.title = 'Waiting for approval — Box for Less';
+    window.scrollTo({ top: 0 });
+    doneStep.focus();
+  } catch (err) {
+    showError(err.message || 'Registration failed. Please check your connection.');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Create Account';
+  }
 });

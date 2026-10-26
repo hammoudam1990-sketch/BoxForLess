@@ -53,9 +53,69 @@ const nowIso = () => new Date().toISOString();
 /** How BFL names a delivered lot: "<customer>|<barcode>|<lot>|<sales order>". */
 export const shelfKey = (r) => `${r.customerId}|${r.barcode}|${r.lotName}|${r.salesOrder}`;
 
-/** @returns {{source:'SAMPLE', reps:object[], customers:object[], records:object[]}} */
-export function loadShelf(today) {
+/** @returns {{source:'DATABASE'|'SAMPLE', reps:object[], customers:object[], records:object[]}} */
+export function loadShelf(today, db = null) {
   const t = todayDay(today);
+
+  if (db) {
+    try {
+      const lotCount = db.prepare('SELECT COUNT(*) AS n FROM delivery_lots').get()?.n || 0;
+      if (lotCount > 0) {
+        const rows = db.prepare(`
+          SELECT l.id, l.customer_id, l.lot_code, l.delivered_ctn, l.expiry_date,
+                 l.delivered_at, l.created_at,
+                 p.name AS product_name, p.barcode,
+                 COALESCE(cat.path, 'FOOD / GENERAL') AS category_path,
+                 'SO-' || l.customer_id || '-' || l.id AS sales_order
+            FROM delivery_lots l
+            JOIN products p ON p.id = l.product_id
+            LEFT JOIN categories cat ON cat.id = p.category_id
+           ORDER BY l.expiry_date
+        `).all();
+
+        const dbCusts = db.prepare(`
+          SELECT c.id, c.name, COALESCE(c.odoo_customer_ref, CAST(c.id AS TEXT)) AS odooId,
+                 c.phone, c.delivery_address,
+                 COALESCE(sr.rep_id, 'rep-1') AS repId
+            FROM customers c
+            LEFT JOIN shop_reps sr ON sr.customer_id = c.id
+           WHERE c.is_active = 1
+        `).all();
+
+        const reps = allReps(db);
+
+        const records = rows.map((r) => {
+          const rec = {
+            customerId: r.customer_id,
+            salesOrder: r.sales_order,
+            productName: r.product_name,
+            barcode: r.barcode,
+            lotName: r.lot_code,
+            categoryPath: r.category_path,
+            deliveredCartons: r.delivered_ctn,
+            deliveredOn: (r.delivered_at || r.created_at || '').slice(0, 10) || formatDay(t - 30),
+            expiryDate: r.expiry_date,
+          };
+          return { ...rec, key: shelfKey(rec) };
+        });
+
+        return {
+          source: 'DATABASE',
+          reps,
+          customers: dbCusts.map((c) => ({
+            id: c.id,
+            odooId: c.odooId,
+            name: c.name,
+            repId: c.repId,
+            phone: c.phone || null,
+            deliveryAddress: c.delivery_address || null,
+          })),
+          records,
+        };
+      }
+    } catch { /* fallback to sample */ }
+  }
+
   const raw = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
   const customers = raw.customers.map((c) => ({ id: c.id, odooId: c.id, name: c.name, repId: c.repId }));
   const records = raw.records.map((r) => {
@@ -167,7 +227,7 @@ export function listReps(today, db = null) { return db ? allReps(db) : loadShelf
  * Only the rep's own customers appear.
  */
 export function myVisits(db, repId, { today, q = '', loader = loadShelf, settings = sampleSettings() } = {}) {
-  const shelf = overlayShelf(db, loader(today));
+  const shelf = overlayShelf(db, loader(today, db));
   const rep = requireRep(shelf, repId);
   const mine = shelf.customers.filter((c) => c.repId === rep.id);
   const records = describeAll(db, today, shelf, settings).filter((r) => mine.some((c) => c.id === r.customerId));
@@ -180,6 +240,8 @@ export function myVisits(db, repId, { today, q = '', loader = loadShelf, setting
     const nearest = open.reduce((a, r) => (a === null || r.daysLeft < a.daysLeft ? r : a), null);
     return {
       id: c.id, odooId: c.odooId, name: c.name,
+      phone: c.phone || null,
+      deliveryAddress: c.deliveryAddress || null,
       openAlerts: open.length,
       overdueAlerts: open.filter((r) => r.overdue).length,
       cartonsAtRisk: open.reduce((n, r) => n + r.cartonsOnShelf, 0),
@@ -216,7 +278,7 @@ function ownCustomer(shelf, repId, customerId) {
 
 /** The open alerts for one of the rep's customers, ready for the visit form. */
 export function visitSheet(db, repId, customerId, { today, loader = loadShelf, settings = sampleSettings() } = {}) {
-  const shelf = overlayShelf(db, loader(today));
+  const shelf = overlayShelf(db, loader(today, db));
   const rep = requireRep(shelf, repId);
   const customer = ownCustomer(shelf, rep.id, customerId);
   const offers = activeDiscounts(db, DiscountKind.SHELF);
@@ -241,7 +303,7 @@ const OUTCOMES = Object.values(VisitOutcome);
  * @param {{key:string, cartonsOnShelf?:number, outcome:string, discountPct?:number, contactName?:string, agreed?:boolean}[]} lines
  */
 export function recordVisit(db, repId, customerId, lines, { today, loader = loadShelf, settings = sampleSettings() } = {}) {
-  const shelf = overlayShelf(db, loader(today));
+  const shelf = overlayShelf(db, loader(today, db));
   const rep = requireRep(shelf, repId);
   const customer = ownCustomer(shelf, rep.id, customerId);
   if (!Array.isArray(lines) || lines.length === 0) throw new ShelfError('Record at least one lot.');
@@ -310,7 +372,7 @@ export function recordVisit(db, repId, customerId, lines, { today, loader = load
 // ---------------------------------------------------------------------------
 
 function discountRows(db, today, loader, settings) {
-  const shelf = overlayShelf(db, loader(today));
+  const shelf = overlayShelf(db, loader(today, db));
   const byKey = new Map(shelf.records.map((r) => [r.key, r]));
   const cust = new Map(shelf.customers.map((c) => [c.id, c]));
   const rep = new Map(shelf.reps.map((r) => [r.id, r]));
@@ -337,7 +399,7 @@ function discountRows(db, today, loader, settings) {
 /** Everything the Sales Manager screen shows. */
 export function approvals(db, { today, loader = loadShelf, settings = sampleSettings() } = {}) {
   const rows = discountRows(db, today, loader, settings);
-  const shelf = overlayShelf(db, loader(today));
+  const shelf = overlayShelf(db, loader(today, db));
   const all = describeAll(db, today, shelf, settings);
   const repName = new Map(shelf.reps.map((r) => [r.id, r.name]));
   const custRep = new Map(shelf.customers.map((c) => [c.id, c.repId]));
@@ -367,7 +429,7 @@ export function approvals(db, { today, loader = loadShelf, settings = sampleSett
  * on many shelves), with the discount the Sales Manager has put on each. Nearest expiry first.
  */
 export function shelfLotDiscounts(db, { today, loader = loadShelf, settings = sampleSettings() } = {}) {
-  const shelf = overlayShelf(db, loader(today));
+  const shelf = overlayShelf(db, loader(today, db));
   const offers = activeDiscounts(db, DiscountKind.SHELF);
   const groups = new Map();
   const customerOf = new Map(shelf.customers.map((c) => [c.id, c]));

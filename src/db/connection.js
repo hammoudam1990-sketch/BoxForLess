@@ -542,6 +542,15 @@ export function applyMigrations(db) {
       error  TEXT                                      -- never the API key
     )`);
   db.exec('CREATE INDEX IF NOT EXISTS ix_odoo_call_log_at ON odoo_call_log(at)');
+
+  // Site settings & Storefront/Rep Builder configuration
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS site_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      settings TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      updated_by TEXT
+    )`);
 }
 
 /** Add any of `columns` that the table does not already have. Idempotent. */

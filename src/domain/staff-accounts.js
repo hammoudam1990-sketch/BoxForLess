@@ -17,8 +17,8 @@ export const StaffRole = Object.freeze({
   SALES_REP: 'SALES_REP',
   WAREHOUSE: 'WAREHOUSE',
 });
-/** The roles that live in the database (ADMIN does not). */
-export const ACCOUNT_ROLES = Object.freeze([StaffRole.SALES_MANAGER, StaffRole.SALES_REP, StaffRole.WAREHOUSE]);
+/** The roles that live in the database. */
+export const ACCOUNT_ROLES = Object.freeze([StaffRole.ADMIN, StaffRole.SALES_MANAGER, StaffRole.SALES_REP, StaffRole.WAREHOUSE]);
 export const ROLE_LABEL = Object.freeze({
   ADMIN: 'Administrator', SALES_MANAGER: 'Sales Manager', SALES_REP: 'Sales rep', WAREHOUSE: 'Warehouse',
 });

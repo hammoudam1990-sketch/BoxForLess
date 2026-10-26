@@ -1,5 +1,7 @@
 import express from 'express';
 import config from '../../config.js';
+import { runDataQualityAudit } from '../../domain/data-quality.js';
+import { getSiteSettings, updateSiteSettings } from '../../domain/site-settings.js';
 
 const router = express.Router();
 const EXPIRY_BANDS = new Set(['all', 'expired', 'critical', 'warning', 'early', 'ok']);
@@ -107,6 +109,28 @@ router.get('/stock-expiry', (req, res, next) => {
       summary: Object.fromEntries([...EXPIRY_BANDS].filter((key) => key !== 'all')
         .map((key) => [key, items.filter((lot) => lot.band === key).length])),
     });
+  } catch (error) { next(error); }
+});
+
+router.get('/data-quality', (req, res, next) => {
+  try {
+    const report = runDataQualityAudit(req.db);
+    res.json(report);
+  } catch (error) { next(error); }
+});
+
+router.get('/site-settings', (req, res, next) => {
+  try {
+    const settings = getSiteSettings(req.db);
+    res.json(settings);
+  } catch (error) { next(error); }
+});
+
+router.put('/site-settings', (req, res, next) => {
+  try {
+    const updatedBy = req.staff?.name || req.staff?.role || 'admin';
+    const updated = updateSiteSettings(req.db, req.body, updatedBy);
+    res.json(updated);
   } catch (error) { next(error); }
 });
 

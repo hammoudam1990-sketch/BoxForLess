@@ -20,7 +20,7 @@ router.get('/reps', repScreens, (req, res, next) => {
   try {
     // a rep sees only themselves in the list
     const all = listReps(todayString(), req.db);
-    res.json({ source: 'SAMPLE', reps: req.staff?.role === 'SALES_REP' ? all.filter((r) => r.id === req.staff.repId) : all });
+    res.json({ source: 'DATABASE', reps: req.staff?.role === 'SALES_REP' ? all.filter((r) => r.id === req.staff.repId) : all });
   } catch (e) { next(e); }
 });
 

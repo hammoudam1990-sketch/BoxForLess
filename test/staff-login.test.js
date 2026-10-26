@@ -62,16 +62,15 @@ test('the universal sign-in page detects customer and team accounts', async () =
 
   const script = await fetch(`${baseUrl}/js/login.js`).then((response) => response.text());
   assert.match(script, /\/api\/auth\/login/);
-  assert.match(script, /store\.signIn/);
+  assert.match(script, /\/api\/auth\/customer\/login/);
   assert.match(script, /nextPath\(result\.role\)/);
-  assert.match(script, /lib\/local-accounts\.js/);
   assert.match(script, /Google sign-in is not connected yet/);
 
   const register = await fetch(`${baseUrl}/register.html`);
   assert.equal(register.status, 200);
   assert.match(await register.text(), /id="registerForm"/);
   const registerScript = await fetch(`${baseUrl}/js/register.js`).then((r) => r.text());
-  assert.doesNotMatch(registerScript, /fetch\s*\(|\/api\//);
+  assert.match(registerScript, /\/api\/catalog\/access-requests/);
 
   const css = await fetch(`${baseUrl}/css/login.css`).then((response) => response.text());
   assert.match(css, /login-warehouse-reference\.jpg/);
