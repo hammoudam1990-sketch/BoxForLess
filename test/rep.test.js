@@ -167,7 +167,7 @@ test('/rep and /api/rep need a rep session; admin and sales sessions do not open
   const login = await fetch(`${baseUrl}/rep/login`, { redirect: 'manual' });
   assert.equal(login.status, 302);
   assert.equal(login.headers.get('location'), '/?next=%2Frep');
-  assert.match(await fetch(`${baseUrl}/login.html`).then((r) => r.text()), /WHOLESALE · RETAIL · B2B/);
+  assert.match(await fetch(`${baseUrl}/login.html`).then((r) => r.text()), /WHOLESALE · B2B/);
 
   for (const [url, creds] of [['/api/staff/login', admin], ['/api/sales/login', sales]]) {
     const cookie = await signIn(url, creds);

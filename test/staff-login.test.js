@@ -48,7 +48,8 @@ test('the universal sign-in page detects customer and team accounts', async () =
   const html = await response.text();
 
   assert.equal(response.status, 200);
-  assert.match(html, /WHOLESALE · RETAIL · B2B/);
+  assert.match(html, /WHOLESALE · B2B/);
+  assert.doesNotMatch(html, /RETAIL/i);
   assert.match(html, /Welcome back/);
   assert.match(html, /Sign in securely to your Box for Less account\./);
   assert.match(html, /id="generalLoginForm"/);

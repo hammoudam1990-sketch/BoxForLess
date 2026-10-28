@@ -58,7 +58,7 @@ test('the sales sign-in route redirects to the universal sign-in page', async ()
   assert.equal(res.status, 302);
   assert.equal(res.headers.get('location'), '/?next=%2Fsales');
   const html = await fetch(`${baseUrl}/login.html`).then((r) => r.text());
-  assert.match(html, /WHOLESALE · RETAIL · B2B/);
+  assert.match(html, /WHOLESALE · B2B/);
 });
 
 test('/sales needs a sales session and is not reachable with the admin session', async () => {
