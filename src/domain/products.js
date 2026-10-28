@@ -18,6 +18,7 @@ function enrich(p) {
 const SORTS = {
   name_asc: 'name COLLATE NOCASE ASC',
   name_desc: 'name COLLATE NOCASE DESC',
+  image_first: '(primary_image_id IS NOT NULL) DESC, name COLLATE NOCASE ASC',
   stock_desc: 'free_to_use DESC, name COLLATE NOCASE ASC',
   stock_asc: 'free_to_use ASC, name COLLATE NOCASE ASC',
   barcode_asc: 'barcode ASC',
@@ -36,6 +37,7 @@ export function searchProducts(db, q = {}) {
   switch (filter) {
     case 'active': where.push('is_active = 1'); break;
     case 'inactive': where.push('is_active = 0'); break;
+    case 'with_image': where.push('primary_image_id IS NOT NULL'); break;
     case 'warning': where.push("data_quality_status = 'WARNING'"); break;
     case 'barcode_review': where.push('barcode_change_pending = 1'); break;
     case 'uom_review': where.push('uom_change_pending = 1'); break;

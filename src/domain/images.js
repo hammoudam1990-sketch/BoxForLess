@@ -4,8 +4,49 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import config from '../config.js';
+import { ensureCategoryPath } from './categories.js';
 
 const TYPE_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png' };
+const FIXTURE_IMAGES_DIR = path.join(config.root, 'fixtures', 'product-images');
+
+export const FEATURED_PHOTO_PRODUCTS = [
+  {
+    barcode: '5281012013065',
+    name: 'LAZIZA NON ALCOHOLIC BEER STRAWBERRY GLASS 330ML * 24',
+    box_uom: 'CTN24',
+    on_hand: 120,
+    free_to_use: 120,
+    category_path: 'DRINKS & BEVERAGES / SOFT DRINKS',
+    fixtureFile: '5281012013065.jpg',
+  },
+  {
+    barcode: '6281011703116',
+    name: 'LUNA ICED COFFEE ORIGINAL 240ML * 24',
+    box_uom: 'CTN24',
+    on_hand: 90,
+    free_to_use: 90,
+    category_path: 'DRINKS & BEVERAGES / COFFEE & TEA',
+    fixtureFile: '6281011703116.jpg',
+  },
+  {
+    barcode: '5283011830548',
+    name: 'AL AMIR TURNIP PICKLES 1000G * 12',
+    box_uom: 'CTN12',
+    on_hand: 65,
+    free_to_use: 65,
+    category_path: 'FOOD / CANNED FOOD / PICKLES & OLIVES',
+    fixtureFile: '5283011830548.jpg',
+  },
+  {
+    barcode: '5285001401116',
+    name: 'CHTOURA GARDEN FAVA BEANS LEBANESE RECIPE 400G * 24',
+    box_uom: 'CTN24',
+    on_hand: 150,
+    free_to_use: 150,
+    category_path: 'FOOD / CANNED FOOD',
+    fixtureFile: '5285001401116.jpg',
+  },
+];
 
 export class ImageValidationError extends Error {
   constructor(msg) { super(msg); this.name = 'ImageValidationError'; this.code = 'IMAGE_INVALID'; this.status = 400; }
@@ -98,8 +139,12 @@ export function readPrimaryImage(db, productId, opts = {}) {
   const storageDir = opts.storageDir || config.productImagesDir;
   const row = getPrimaryImageRow(db, productId);
   if (!row || !row.filename) return null;
-  const filePath = path.join(storageDir, row.filename);
-  if (!fs.existsSync(filePath)) return null;
+  let filePath = path.join(storageDir, row.filename);
+  if (!fs.existsSync(filePath)) {
+    const fallback = path.join(FIXTURE_IMAGES_DIR, path.basename(row.filename));
+    if (fs.existsSync(fallback)) filePath = fallback;
+    else return null;
+  }
   const ext = path.extname(row.filename).slice(1).toLowerCase();
   return {
     buffer: fs.readFileSync(filePath),
@@ -108,4 +153,45 @@ export function readPrimaryImage(db, productId, opts = {}) {
   };
 }
 
-export default { validateImage, getPrimaryImageRow, saveProductImage, readPrimaryImage };
+/** Ensure the 4 photographed products and their fixture images exist in the database. */
+export function seedFeaturedProductImages(db, opts = {}) {
+  const ts = new Date().toISOString();
+  const latestBatch = db.prepare("SELECT id FROM import_batches WHERE status = 'COMPLETED' ORDER BY id DESC LIMIT 1").get();
+  const batchId = latestBatch ? latestBatch.id : null;
+
+  for (const item of FEATURED_PHOTO_PRODUCTS) {
+    const fixturePath = path.join(FIXTURE_IMAGES_DIR, item.fixtureFile);
+    if (!fs.existsSync(fixturePath)) continue;
+
+    const categoryId = ensureCategoryPath(db, item.category_path, { now: ts });
+    const existing = db.prepare('SELECT id, primary_image_id FROM products WHERE barcode = ? OR UPPER(name) = UPPER(?)').get(item.barcode, item.name);
+    let productId;
+    if (existing) {
+      productId = existing.id;
+      db.prepare(
+        'UPDATE products SET barcode = ?, name = ?, box_uom = ?, on_hand = ?, free_to_use = ?, forecasted = ?, odoo_category_path = ?, category_id = ?, is_active = 1, updated_at = ? WHERE id = ?'
+      ).run(item.barcode, item.name, item.box_uom, item.on_hand, item.free_to_use, item.free_to_use, item.category_path, categoryId, ts, productId);
+    } else {
+      const info = db.prepare(
+        "INSERT INTO products (barcode, name, box_uom, on_hand, free_to_use, incoming, outgoing, forecasted, odoo_category_path, category_id, is_active, data_quality_status, created_at, updated_at, last_import_id, last_seen_import_id) VALUES (?,?,?,?,?,0,0,?,?,?,1,'OK',?,?,?,?)"
+      ).run(item.barcode, item.name, item.box_uom, item.on_hand, item.free_to_use, item.free_to_use, item.category_path, categoryId, ts, ts, batchId, batchId);
+      productId = Number(info.lastInsertRowid);
+    }
+
+    const currentImg = readPrimaryImage(db, productId, opts);
+    if (!currentImg) {
+      try {
+        const buf = fs.readFileSync(fixturePath);
+        saveProductImage(db, productId, buf, 'image/jpeg', { ...opts, confirmReplace: true });
+      } catch {
+        // Fallback when storageDir is read-only (e.g. serverless): point directly to fixtureFile
+        const info = db.prepare(
+          'INSERT INTO product_images (product_id, is_primary, filename, url_reference, uploaded_at, is_active, sort_order) VALUES (?, 1, ?, ?, ?, 1, 0)'
+        ).run(productId, item.fixtureFile, `/api/products/${productId}/image`, ts);
+        db.prepare('UPDATE products SET primary_image_id = ?, updated_at = ? WHERE id = ?').run(Number(info.lastInsertRowid), ts, productId);
+      }
+    }
+  }
+}
+
+export default { validateImage, getPrimaryImageRow, saveProductImage, readPrimaryImage, seedFeaturedProductImages };

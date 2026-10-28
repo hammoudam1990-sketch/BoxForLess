@@ -4,6 +4,7 @@ import openDatabase from '../src/db/connection.js';
 import { createPreview, confirmImport } from '../src/import/service.js';
 import { ROOT } from '../src/config.js';
 import { hashPassword } from '../src/domain/passwords.js';
+import { seedFeaturedProductImages } from '../src/domain/images.js';
 
 const dbPath = path.join(ROOT, 'data', 'product_master.db');
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -31,6 +32,13 @@ try {
   }
 } catch (e) {
   console.warn('[build] Products check/import notice:', e.message);
+}
+
+try {
+  seedFeaturedProductImages(db);
+  console.log('[build] Seeded featured photographed products and images.');
+} catch (e) {
+  console.warn('[build] Featured product images notice:', e.message);
 }
 
 // 2. Seed admins, reps, customers, delivery lots

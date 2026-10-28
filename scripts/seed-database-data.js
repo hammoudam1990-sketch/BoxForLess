@@ -2,6 +2,7 @@
 import { openDatabase } from '../src/db/connection.js';
 import config from '../src/config.js';
 import { hashPassword } from '../src/domain/passwords.js';
+import { seedFeaturedProductImages } from '../src/domain/images.js';
 
 const db = openDatabase(config.dbPath);
 const now = new Date();
@@ -141,6 +142,7 @@ try {
 
   console.log(`Inserted ${deliveryData.length} delivery lots in delivery_lots.`);
   db.exec('COMMIT');
+  seedFeaturedProductImages(db);
   console.log('Database successfully seeded with real business data!');
 } catch (e) {
   db.exec('ROLLBACK');

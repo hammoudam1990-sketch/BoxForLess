@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import openDatabase from '../src/db/connection.js';
 import { createApp } from '../src/server/index.js';
 import { createPreview, confirmImport } from '../src/import/service.js';
+import { seedFeaturedProductImages } from '../src/domain/images.js';
 import config from '../src/config.js';
 
 let appInstance = null;
@@ -56,6 +57,7 @@ function initializeApp() {
         }
       }
     }
+    seedFeaturedProductImages(db);
   } catch (err) {
     console.warn('[vercel] Auto-seed products note:', err.message);
   }

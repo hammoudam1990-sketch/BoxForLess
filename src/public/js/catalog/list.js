@@ -25,7 +25,7 @@ const SEARCH_DELAY = 220;
  * including out-of-stock.
  */
 const INITIAL = {
-  view: 'available', search: '', availability: 'all',
+  view: 'available', search: '', availability: 'all', withImage: false,
   topLevel: '', categoryPath: '', sort: 'name_asc', offset: 0,
 };
 export const state = { ...INITIAL };
@@ -48,18 +48,19 @@ export function patchList(patch) {
 }
 
 /** Back to "everything": no search, no category. */
-export const showEverything = () => patchList({ search: '', topLevel: '', categoryPath: '', offset: 0 });
+export const showEverything = () => patchList({ search: '', topLevel: '', categoryPath: '', withImage: false, offset: 0 });
 
 /** Which of the tab bar's Home / Categories the list is currently showing. */
 export const listTab = () => (state.topLevel ? 'categories' : 'home');
 
 const filtersActive = () => Boolean(state.search.trim() || state.topLevel || state.categoryPath
-  || state.availability !== 'all');
+  || state.availability !== 'all' || state.withImage);
 
 function listQuery() {
   const p = new URLSearchParams();
   if (state.search.trim()) p.set('search', state.search.trim());
   if (state.availability !== 'all') p.set('availability', state.availability);
+  if (state.withImage) p.set('with_image', 'true');
   p.set('view', state.view);
   if (state.topLevel) p.set('top_level', state.topLevel);
   if (state.categoryPath) p.set('category_path', state.categoryPath);
@@ -139,7 +140,7 @@ export function mountList(container, { onChange = () => {} } = {}) {
   const loadLater = debounce(() => loadProducts(), SEARCH_DELAY);
 
   function clearFilters() {
-    change({ search: '', topLevel: '', categoryPath: '', availability: 'all', offset: 0 });
+    change({ search: '', topLevel: '', categoryPath: '', availability: 'all', withImage: false, offset: 0 });
   }
 
   /** Apply a change: update the screen now, and fetch products (after a pause if it was typing). */
@@ -221,7 +222,9 @@ export function mountList(container, { onChange = () => {} } = {}) {
     const f = facets;
     setChildren(filterRegion,
       FILTERS.map((x) => chip(x.label, state.availability === x.key, f ? f[x.facet] : null,
-        () => change({ availability: x.key, offset: 0 }))));
+        () => change({ availability: x.key, offset: 0 }))),
+      chip('With Photo', state.withImage, f ? f.with_image : null,
+        () => change({ withImage: !state.withImage, offset: 0 })));
   }
 
   function renderSortRow() {

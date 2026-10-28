@@ -19,7 +19,7 @@ export async function renderProducts(view) {
   // A search typed in the top bar arrives here once, then is forgotten.
   let fromTopBar = '';
   try { fromTopBar = sessionStorage.getItem('bfl.productSearch') || ''; sessionStorage.removeItem('bfl.productSearch'); } catch { /* storage blocked */ }
-  const state = { search: fromTopBar, filter: 'all', stock: 'all', sort: 'name_asc', page: 0 };
+  const state = { search: fromTopBar, filter: 'all', stock: 'all', sort: 'image_first', page: 0 };
 
   view.innerHTML = `
     <h1>Product Master</h1>
@@ -37,6 +37,7 @@ export async function renderProducts(view) {
         <select id="filter" aria-label="Status">
           <option value="all">All statuses</option>
           <option value="active">Active</option>
+          <option value="with_image">With photo</option>
           <option value="inactive">Inactive</option>
           <option value="warning">Data quality warning</option>
           <option value="barcode_review">Barcode review</option>
@@ -49,6 +50,7 @@ export async function renderProducts(view) {
           <option value="out">Out of stock</option>
         </select>
         <select id="sort" aria-label="Sort by">
+          <option value="image_first">Photos first</option>
           <option value="name_asc">Name A → Z</option>
           <option value="name_desc">Name Z → A</option>
           <option value="stock_desc">Most free stock first</option>
@@ -113,8 +115,8 @@ export async function renderProducts(view) {
   $('#stock').addEventListener('change', (e) => { state.stock = e.target.value; reset(); });
   $('#sort').addEventListener('change', (e) => { state.sort = e.target.value; reset(); });
   $('#clear').addEventListener('click', () => {
-    q.value = ''; state.search = ''; state.filter = 'all'; state.stock = 'all'; state.sort = 'name_asc';
-    $('#filter').value = 'all'; $('#stock').value = 'all'; $('#sort').value = 'name_asc';
+    q.value = ''; state.search = ''; state.filter = 'all'; state.stock = 'all'; state.sort = 'image_first';
+    $('#filter').value = 'all'; $('#stock').value = 'all'; $('#sort').value = 'image_first';
     reset();
   });
   $('#pager').addEventListener('click', (e) => {
@@ -147,6 +149,7 @@ function tableHtml(items) {
   if (!items.length) return '<div class="muted">No products found.</div>';
   const rows = items.map((p) => `
     <tr class="clickable" onclick="location.hash='#/products/${p.id}'">
+      <td style="width:52px;text-align:center">${p.primary_image_id ? `<img src="/api/products/${p.id}/image" alt="" loading="lazy" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid #e5e7eb" />` : '<span class="muted">—</span>'}</td>
       <td>${esc(p.barcode)}</td>
       <td>${esc(p.name)}</td>
       <td>${esc(p.box_uom || '')}</td>
@@ -160,7 +163,7 @@ function tableHtml(items) {
     </tr>`).join('');
   return `<table>
     <thead><tr>
-      <th>Barcode</th><th>Product Name</th><th>UoM</th>
+      <th>Photo</th><th>Barcode</th><th>Product Name</th><th>UoM</th>
       <th class="num">On Hand</th><th class="num">Free To Use</th><th class="num">Incoming</th>
       <th class="num">Outgoing</th><th class="num">Forecasted</th><th>Status</th><th>Data Quality</th>
     </tr></thead><tbody>${rows}</tbody></table>`;

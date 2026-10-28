@@ -187,9 +187,21 @@ export function mountHome(container) {
       recentOrders(account),
       quickActions(account))));
 
-  getJSON('/api/catalog/products?view=available&sort=name_asc&limit=12&offset=0').then((data) => {
+  Promise.all([
+    getJSON('/api/catalog/products?view=available&with_image=true&sort=name_asc&limit=12&offset=0').catch(() => ({ items: [] })),
+    getJSON('/api/catalog/products?view=available&sort=name_asc&limit=12&offset=0'),
+  ]).then(([withImg, allAvail]) => {
     if (!alive) return;
-    setChildren(grid, data.items.length ? data.items.map((p) => createProductCard(p, scope))
+    const seen = new Set();
+    const merged = [];
+    for (const p of [...(withImg.items || []), ...(allAvail.items || [])]) {
+      if (!seen.has(p.id)) {
+        seen.add(p.id);
+        merged.push(p);
+      }
+      if (merged.length >= 12) break;
+    }
+    setChildren(grid, merged.length ? merged.map((p) => createProductCard(p, scope))
       : h('p', { class: 'p-empty' }, 'No products are available right now.'));
   }, () => {
     if (!alive) return;
@@ -240,7 +252,7 @@ export function mountOrders(container) {
           style: 'padding: 4px 10px; font-size: 13px; cursor: pointer; white-space: nowrap;',
           title: 'Add all items from this order into your cart',
           onClick: () => { reorderOrderItems(o.items); },
-        }, 'Reorder')))))));
+        }, 'Reorder'))))))));
   return { destroy() {} };
 }
 
