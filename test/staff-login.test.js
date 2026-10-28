@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import http from 'node:http';
 import { createApp } from '../src/server/index.js';
+import { createStaffUser, StaffRole } from '../src/domain/staff-accounts.js';
 import { freshDb } from './helpers.js';
 
 let server;
@@ -47,24 +48,33 @@ test('the universal sign-in page detects customer and team accounts', async () =
   const html = await response.text();
 
   assert.equal(response.status, 200);
-  assert.match(html, /ONE SIGN-IN · ALL BOX FOR LESS ACCOUNTS/);
+  assert.match(html, /WHOLESALE · RETAIL · B2B/);
+  assert.match(html, /Welcome back/);
+  assert.match(html, /Sign in securely to your Box for Less account\./);
   assert.match(html, /id="generalLoginForm"/);
-  assert.match(html, /Email, phone or username/);
-  assert.match(html, /Remember me/);
-  assert.match(html, /Forgot password\?/);
+  assert.match(html, /Customer ID or work email/);
+  assert.match(html, /Enter your Customer ID or work email/);
   assert.match(html, /name="password"/);
   assert.match(html, /id="togglePassword"/);
-  assert.match(html, /id="registerLink"[^>]*href="\/register\.html"/);
-  assert.match(html, /id="googleSignIn"/);
+  assert.match(html, /aria-label="Show password"/);
+  assert.match(html, /Secure Access/);
+  assert.match(html, /Quality Products/);
+  assert.match(html, /Great Prices/);
+  assert.match(html, /Fast &amp; Reliable/);
+  assert.match(html, /Authorized access only · Your account is protected/);
+  assert.doesNotMatch(html, /hero-brand-mark|login-brand-mark|googleSignIn|forgotPassword|rememberMe/);
+  assert.doesNotMatch(html, /login-warehouse|<img\b/i);
   assert.match(html, /\/css\/login\.css/);
-  assert.match(html, /class="login-brand-mark"/);
   assert.doesNotMatch(html, /Staff portal|Staff access only|Admin Login/i);
 
   const script = await fetch(`${baseUrl}/js/login.js`).then((response) => response.text());
   assert.match(script, /\/api\/auth\/login/);
   assert.match(script, /\/api\/auth\/customer\/login/);
+  assert.match(script, /\/api\/staff\/login/);
   assert.match(script, /nextPath\(result\.role\)/);
-  assert.match(script, /Google sign-in is not connected yet/);
+  assert.match(script, /mustChangePassword/);
+  assert.match(script, /aria-busy/);
+  assert.doesNotMatch(script, /googleSignIn|forgotPassword/);
 
   const register = await fetch(`${baseUrl}/register.html`);
   assert.equal(register.status, 200);
@@ -73,12 +83,29 @@ test('the universal sign-in page detects customer and team accounts', async () =
   assert.match(registerScript, /\/api\/catalog\/access-requests/);
 
   const css = await fetch(`${baseUrl}/css/login.css`).then((response) => response.text());
-  assert.match(css, /login-warehouse-reference\.jpg/);
-  assert.doesNotMatch(css, /login-warehouse-clean\.svg/);
-  const image = await fetch(`${baseUrl}/img/login-warehouse-reference.jpg`);
-  assert.equal(image.status, 200);
-  assert.match(image.headers.get('content-type'), /image\/jpeg/);
+  assert.match(css, /body\.unified-login-page \.login-layout/);
+  assert.match(css, /body\.unified-login-page \.login-info-panel/);
 
+});
+
+test('database-backed staff can sign in with their work email through the staff endpoint', async () => {
+  const { temporaryPassword } = createStaffUser(db, {
+    name: 'Test Sales Rep',
+    email: 'rep.login@example.test',
+    role: StaffRole.SALES_REP,
+  }, StaffRole.ADMIN);
+
+  const response = await fetch(`${baseUrl}/api/staff/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: 'rep.login@example.test', password: temporaryPassword }),
+  });
+
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.authenticated, true);
+  assert.equal(result.role, StaffRole.SALES_REP);
+  assert.equal(result.mustChangePassword, true);
 });
 
 test('all role-specific sign-in routes lead to the one front door', async () => {
@@ -100,7 +127,7 @@ test('all role-specific sign-in routes lead to the one front door', async () => 
   }
   const html = await fetch(`${baseUrl}/login.html`).then((response) => response.text());
   assert.match(html, /id="generalLoginForm"/);
-  assert.match(html, /Email, phone or username/);
+  assert.match(html, /Customer ID or work email/);
 });
 
 test('staff sign-in validates credentials, issues a protected session and honors private-page gating', async () => {
