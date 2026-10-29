@@ -20,6 +20,7 @@ import { renderRepCustomers } from './rep-customers.js';
 import { renderWorkspacePage, renderCategories } from './workspace.js';
 import { renderWarehouseHome } from './warehouse.js';
 import { renderVisits } from './visits.js';
+import { renderTeamPerformance, renderSalesTargets } from './sales-targets.js';
 
 const view = document.getElementById('view');
 const side = document.getElementById('side');
@@ -31,10 +32,10 @@ const menuToggle = document.getElementById('menuToggle');
 // person can use. null = everything.
 const ROLE_NAV = {
   ADMIN: null,
-  SALES_MANAGER: ['dashboard', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
+  SALES_MANAGER: ['dashboard', 'team-performance', 'sales-targets', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
   WAREHOUSE: ['warehouse', 'dashboard', 'products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-data-quality'],
 };
-const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/access', WAREHOUSE: '#/warehouse' };
+const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/dashboard', WAREHOUSE: '#/warehouse' };
 let me = { role: 'ADMIN', name: 'Staff' };
 const allowed = (name) => !ROLE_NAV[me.role] || ROLE_NAV[me.role].includes(name);
 const canSee = (name) => (ROLE_NAV[me.role] || []).includes(name) || !ROLE_NAV[me.role];
@@ -170,15 +171,19 @@ const LOADING = '<div class="card"><div class="sk-lines" role="status" aria-labe
 
 async function route() {
   const hash = location.hash || '#/dashboard';
-  const [routeHash] = hash.split('?');
+  const [routeHash, queryStr = ''] = hash.split('?');
   const [, path, arg] = routeHash.split('/'); // "#", "products", "123"
   // a role is sent to its own start page when it asks for something it cannot use
   const page = path || 'dashboard';
-  if (page === 'dashboard' ? me.role !== 'ADMIN' : !allowed(page)) { location.hash = ROLE_START[me.role] || '#/dashboard'; return; }
+  if (!allowed(page)) { location.hash = ROLE_START[me.role] || '#/dashboard'; return; }
   openSide(false);
   view.innerHTML = LOADING;
+  const routeCtx = { query: new URLSearchParams(queryStr), parts: [path, arg].filter(Boolean) };
+  const pageHead = (title, sub) => `<div class="ad-head" style="margin-bottom:16px"><div><h1>${title}</h1><p>${sub}</p></div></div>`;
   try {
     if (path === 'dashboard' || !path) { setActiveNav('dashboard'); await renderDashboard(view); }
+    else if (path === 'team-performance') { setActiveNav('team-performance'); await renderTeamPerformance(view, routeCtx, { pageHead }); }
+    else if (path === 'sales-targets') { setActiveNav('sales-targets'); await renderSalesTargets(view, routeCtx, { pageHead }); }
     else if (path === 'warehouse') { setActiveNav('warehouse'); await renderWarehouseHome(view); }
     else if (path === 'products' && arg) { setActiveNav('products'); await renderProductDetail(view, arg); }
     else if (path === 'products') { setActiveNav('products'); await renderProducts(view); }

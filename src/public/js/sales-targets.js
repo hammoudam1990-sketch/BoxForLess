@@ -135,7 +135,7 @@ export async function mountSalesOverview(container) {
       h('div', null,
         h('h2', null, 'Sales Representatives'),
         h('p', null, `Eligible net sales against each representative's target · ${monthLabel(month)}${sales.monthToDate ? ' (so far)' : ''}`)),
-      h('a', { class: 'bfl-btn secondary', href: '#/team' }, 'View all')),
+      h('a', { class: 'bfl-btn secondary', href: location.pathname.startsWith('/sales') ? '#team' : '#/team-performance' }, 'View all')),
     rows.length ? h('div', { class: 'bfl-table-wrap' }, h('table', { class: 'bfl-table' },
       h('thead', null, h('tr', null,
         [h('th', null, 'Name'), h('th', { class: 'num' }, 'Target'), h('th', { class: 'num' }, 'Sales'), h('th', null, 'Progress')])),
@@ -196,7 +196,8 @@ export async function renderTeamPerformance(view, route, { pageHead }) {
   function go() {
     const q = new URLSearchParams({ month: monthSel.value, sort: sortSel.value });
     if (searchBox.value.trim()) q.set('search', searchBox.value.trim());
-    location.hash = `#/team?${q}`;
+    const baseHash = location.pathname.startsWith('/sales') ? '#team' : '#/team-performance';
+    location.hash = `${baseHash}?${q}`;
   }
 
   const totals = rows.reduce((t, r) => ({ sales: t.sales + r.netSales, target: t.target + (r.target || 0) }), { sales: 0, target: 0 });

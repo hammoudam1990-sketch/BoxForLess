@@ -5,7 +5,8 @@
 // Every number is read from the server. Where the mockup shows something that does not exist yet
 // (sales in GH₵, Odoo numbers, a live Odoo connection), the dashboard shows what is true today
 // instead: lines rather than money, "—" for the Odoo reference, and "Not connected" for Odoo.
-import { api, esc, num } from './api.js';
+import { api, esc, num, toast } from './api.js';
+import { mountSalesOverview } from './sales-targets.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 const svg = (d, cls = '') => `<svg ${cls ? `class="${cls}" ` : ''}viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
@@ -197,11 +198,13 @@ export async function renderDashboard(view) {
   view.innerHTML = `
     <div class="ad-head">
       <div>
-        <h1>Admin Dashboard</h1>
-        <p>Overview of your Box for Less platform</p>
+        <h1>Dashboard</h1>
+        <p>Overview of your Box for Less sales, targets, orders &amp; inventory</p>
       </div>
       <div class="ad-clock">${svg(ICON.calendar)}<span>${esc(today.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }))}<br><span id="adClock">${esc(time(today))}</span></span></div>
     </div>
+
+    <div id="adSalesOverview" style="margin-bottom:18px"></div>
 
     <div class="ad-layout">
       <div class="ad-main">
@@ -337,6 +340,7 @@ export async function renderDashboard(view) {
       </aside>
     </div>`;
 
+  mountSalesOverview(view.querySelector('#adSalesOverview'));
   view.querySelector('#chartRange').addEventListener('change', (e) => {
     view.querySelector('#chartSlot').innerHTML = lineChart(all, Number(e.target.value));
   });
