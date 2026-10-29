@@ -49,11 +49,19 @@ export async function loadCustomerData() {
   let access = null;
   try { access = await getJSON('/api/catalog/access'); } catch { /* offline or not signed in: a visitor */ }
   if (!access || !access.authenticated) { state = empty(); setSession(null); return state; }
-  const customer = { company: access.customer.name, address: access.customer.deliveryAddress || '' };
-  const [account, orders] = await Promise.all([
+  const [account, orders, profile] = await Promise.all([
     getJSON('/api/catalog/account').catch(() => null),
     getJSON('/api/catalog/orders').catch(() => ({ orders: [] })),
+    getJSON('/api/catalog/profile').catch(() => null),
   ]);
+  const customer = {
+    company: profile?.name || access.customer.name,
+    address: profile?.deliveryAddress || access.customer.deliveryAddress || '',
+    phone: profile?.phone || '',
+    email: profile?.email || '',
+    contact: profile?.salesperson ? `Assigned Rep: ${profile.salesperson}` : '',
+    viaPassword: Boolean(profile?.viaPassword),
+  };
   customer.type = account && account.type === 'CASH' ? 'cash' : 'credit';
   state = { customer, account, orders: (orders.orders || []).map(shapeOrder) };
   setSession({ name: customer.company });

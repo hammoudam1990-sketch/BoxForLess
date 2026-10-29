@@ -21,7 +21,7 @@ export async function renderRepCustomers(view) {
   const repFilter = h('select', { 'aria-label': 'Show customers of', onChange: apply },
     [h('option', { value: '' }, 'Every rep'), h('option', { value: 'NONE' }, 'No rep yet'), ...data.reps.map((r) => h('option', { value: r.id }, r.name))]);
   const kindFilter = h('select', { 'aria-label': 'Kind of customer', onChange: apply },
-    [['', 'All customers'], ['SHOP', 'Sample shops (expiry list)'], ['BFL', 'Customers in BFL']].map(([v, t]) => h('option', { value: v }, t)));
+    [['', 'All customers'], ['SHOP', 'Shelf-monitored shops'], ['BFL', 'Catalogue customers']].map(([v, t]) => h('option', { value: v }, t)));
   const count = h('p', { class: 'muted', role: 'status' });
   const tbody = h('tbody');
 
@@ -31,9 +31,9 @@ export async function renderRepCustomers(view) {
       [h('option', { value: '' }, '— no rep —'), ...data.reps.map((r) => h('option', { value: r.id }, r.name))]);
     row.sel.value = c.repId || '';
     row.tr = h('tr', null,
-      h('td', null, h('b', null, c.name), c.kind === 'SHOP' ? h('span', { class: 'badge' }, ' SAMPLE') : null),
+      h('td', null, h('b', null, c.name), c.kind === 'SHOP' ? h('span', { class: 'badge' }, ' SHELF') : null),
       h('td', null, c.odooId || '—'),
-      h('td', { class: 'muted' }, c.kind === 'SHOP' ? 'Sample shop' : c.customerType === 'CASH' ? 'Cash customer' : 'Customer'),
+      h('td', { class: 'muted' }, c.kind === 'SHOP' ? 'Shelf-monitored shop' : c.customerType === 'CASH' ? 'Cash customer' : 'Credit customer'),
       h('td', null, row.sel));
     tbody.appendChild(row.tr);
   }

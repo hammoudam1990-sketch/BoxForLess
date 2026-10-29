@@ -131,7 +131,6 @@ export function createOrderView({ onBack }) {
   function renderProducts() {
     if (!state.items.length) { setChildren(productList, h('p', { class: 'rep-empty' }, 'No product matches that.')); moreBtn.classList.add('hidden'); return; }
     setChildren(productList,
-      state.sample ? h('p', { class: 'rep-note' }, 'Sample prices until Odoo is connected.') : null,
       state.items.map(productRow));
     moreBtn.classList.toggle('hidden', state.items.length >= state.total);
   }

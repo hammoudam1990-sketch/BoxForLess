@@ -131,9 +131,7 @@ export async function renderReports(view) {
     setChildren(banner,
       h('b', null, `${r.title} — ${monthName(r.month)}${r.monthToDate ? ' (month to date, as of ' + fmt(r.asOf, 'date') + ')' : ''}. `),
       r.purpose, ` For: ${r.recipients}. `,
-      h('b', null, 'Sample data. '), 'The figures come from the Sample Odoo stand-in until Odoo is connected; ',
-      r.monthToDate ? 'marks (on track / close / behind) appear once the month is complete. ' : '',
-      h('a', { href: '#/sample-odoo' }, 'Load sample history'), ' on that screen to fill fourteen months.');
+      r.monthToDate ? 'Marks (on track / close / behind) appear once the month is complete.' : '');
     setChildren(body, r.measures ? measuresTable() : null, r.sections.map(sectionCard));
 
     // the three lines

@@ -260,7 +260,7 @@ function createDrawer() {
     const known = lines.length > 0 && values.every((v) => v !== null);
     if (known) {
       const total = values.reduce((sum, v) => sum + v.total, 0);
-      totalEl.textContent = `Total ${formatPrice(total)}${priceSession().source === 'SAMPLE' ? ' (sample prices)' : ''} — Odoo confirms the final price on your order.`;
+      totalEl.textContent = `Total ${formatPrice(total)} — Odoo confirms the final price on your order.`;
     }
     toggleHidden(totalEl, !known);
   }

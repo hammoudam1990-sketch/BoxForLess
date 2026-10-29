@@ -142,7 +142,7 @@ export function buildPriceBar() {
     if (s.signedIn) {
       note.textContent = s.available === false && s.source
         ? `Signed in as ${s.name}. No price class is set for your account yet — please ask the Box for Less team.`
-        : `Prices for ${s.name}, per carton in GHS${s.source === 'SAMPLE' ? ' — sample prices, not real' : ''}.`;
+        : `Prices for ${s.name}, per carton in GHS.`;
     } else {
       note.textContent = 'Prices are shown to approved customers.';
     }

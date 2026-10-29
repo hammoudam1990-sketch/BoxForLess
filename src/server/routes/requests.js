@@ -120,6 +120,25 @@ customerRouter.get('/account', requireCustomer, (req, res, next) => {
   try { res.json({ source: 'SAMPLE', ...accountFor(req.db, req.customer.id) }); } catch (e) { next(e); }
 });
 
+// GET /api/catalog/profile — MY contact & account profile for the Settings screen (no internal id, code, or price class).
+customerRouter.get('/profile', requireCustomer, (req, res, next) => {
+  try {
+    const row = req.db.prepare(
+      'SELECT name, phone, email, delivery_address, salesperson, customer_type FROM customers WHERE id = ? AND is_active = 1'
+    ).get(req.customer.id);
+    if (!row) return res.status(404).json({ error: 'Customer not found.' });
+    res.json({
+      name: row.name,
+      phone: row.phone || null,
+      email: row.email || null,
+      deliveryAddress: row.delivery_address || null,
+      salesperson: row.salesperson || null,
+      customerType: row.customer_type || 'CREDIT',
+      viaPassword: req.customer.method === 'password',
+    });
+  } catch (e) { next(e); }
+});
+
 // POST /api/catalog/requests/credit-check — would MY request go over MY available credit? A dry run
 // for the drawer; the same check is enforced again when the request is submitted. Says nothing when
 // there is nothing to check (cash customer, no limit known).

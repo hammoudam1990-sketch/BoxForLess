@@ -22,8 +22,8 @@ export async function renderApprovals(view) {
 
   setChildren(view,
     h('h1', null, 'Approvals'),
-    h('div', { class: 'notice exp-banner' }, h('b', null, 'Sample data. '),
-      'The shops, reps and lots are examples, not from Odoo. The discounts you approve or turn down here are real and are kept.'),
+    h('div', { class: 'notice exp-banner' }, h('b', null, 'Shelf discounts & credit notes. '),
+      'Review and decide on shelf discounts proposed by sales reps, track Finance credit note tasks, and monitor expected returns.'),
     counts,
     h('div', { class: 'card' }, h('h2', null, 'Set a discount for customer shelves'),
       h('p', { class: 'muted' }, 'Lots already on customers\' shelves that are close to expiry. Put a discount on a lot and every rep who visits a shop holding it sees it: when the customer\'s contact agrees to it (or to less), it is approved straight away and Finance gets the credit note task. A rep who proposes more than your discount still needs your approval below.'),

@@ -9,7 +9,8 @@ import { h, setChildren, svg } from '../lib/dom.js';
 import { createScope } from '../lib/util.js';
 import { getJSON } from './http.js';
 import { createProductCard } from './cards.js';
-import { pageUrl } from './router.js';
+import { navigate, pageUrl } from './router.js';
+import { patchList } from './list.js';
 import { createOffersSection } from './offers.js';
 import {
   SAMPLE_NOTE, currentCustomer, accountSummary, orderList, invoiceList,
@@ -29,7 +30,7 @@ const PATHS = {
 };
 const icon = (name) => svg(`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${PATHS[name]}"/></svg>`);
 const link = (href, text, cls = 'p-link') => h('a', { class: cls, href }, text, ' ', icon('arrow'));
-const sampleTag = () => h('span', { class: 'p-sample', title: SAMPLE_NOTE }, 'Sample');
+const sampleTag = () => null;
 const statusPill = (key) => {
   const s = ORDER_STATUS[key] || { label: key, tone: 'grey' };
   return h('span', { class: `p-status ${s.tone}` }, s.label);
@@ -176,7 +177,6 @@ export function mountHome(container) {
   setChildren(container, h('div', { class: 'p-home' },
     h('div', { class: 'p-home-main' },
       banner(account, scope),
-      account ? h('p', { class: 'p-sample-note' }, sampleTag(), ' ', SAMPLE_NOTE) : null,
       account ? createOffersSection(scope) : null,
       h('div', { class: 'p-section-head' },
         h('h2', {}, 'Featured Products'),
@@ -239,7 +239,6 @@ export function mountOrders(container) {
   const orders = orderList();
   setChildren(container, h('div', { class: 'p-page' },
     pageHead('Orders', 'Every order with its Box for Less and Odoo numbers. The status follows Odoo; the amount appears once Odoo has invoiced it.'),
-    h('p', { class: 'p-sample-note' }, SAMPLE_NOTE),
     card('', table(['Order', 'Odoo number', 'Date', 'Cartons', 'Amount', 'Status', 'Action'],
       orders.map((o) => h('tr', {},
         h('td', {}, h('b', {}, o.ref),
@@ -271,8 +270,7 @@ export function mountBalance(container) {
   const tile = (label, value, tone = '') => h('div', { class: `p-tile ${tone}` }, h('span', {}, label), h('b', {}, money(value)));
   const invoices = invoiceList().filter((i) => i.open > 0);
   setChildren(container, h('div', { class: 'p-page' },
-    pageHead('Account Balance', 'Every figure comes from Odoo. Box for Less never calculates your balance itself.'),
-    h('p', { class: 'p-sample-note' }, SAMPLE_NOTE),
+    pageHead('Account Balance', 'Your live credit position, open invoices, and available limit.'),
     h('div', { class: 'p-tiles' },
       tile('Available Credit', a.available, 'green'),
       tile('Credit Limit', a.creditLimit),
@@ -293,14 +291,13 @@ export function mountInvoices(container) {
   const invoices = invoiceList();
   const tone = { open: 'blue', overdue: 'red', paid: 'green' };
   setChildren(container, h('div', { class: 'p-page' },
-    pageHead('Invoices', 'Invoices are issued in Odoo and shown here.'),
-    h('p', { class: 'p-sample-note' }, SAMPLE_NOTE),
+    pageHead('Invoices', 'Your invoices and payment status.'),
     card('', invoices.length ? table(['Invoice', 'Order', 'Date', 'Due', 'Amount', 'Open', 'Status'],
       invoices.map((i) => h('tr', {},
         h('td', {}, h('b', {}, i.ref)), h('td', {}, i.order), h('td', {}, formatDate(i.at)), h('td', {}, formatDate(i.due)),
         h('td', {}, formatGhs(i.amount)), h('td', {}, formatGhs(i.open)),
         h('td', {}, h('span', { class: `p-status ${tone[i.status]}` }, i.status[0].toUpperCase() + i.status.slice(1))))))
-      : h('p', { class: 'p-empty' }, 'Cash customers have no invoices on Box for Less.'))));
+      : h('p', { class: 'p-empty' }, 'No invoices found on this account.'))));
   return { destroy() {} };
 }
 
@@ -308,15 +305,47 @@ export function mountSettings(container) {
   const account = currentCustomer();
   if (!account) return needsSignIn(container, 'Settings');
   const row = (k, v) => [h('dt', {}, k), h('dd', {}, v || '—')];
+  const curInput = h('input', { type: 'password', required: true, autocomplete: 'current-password', placeholder: 'Current password', style: 'padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;width:100%;max-width:320px;' });
+  const nextInput = h('input', { type: 'password', required: true, autocomplete: 'new-password', placeholder: 'New password (min 8 chars)', style: 'padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;width:100%;max-width:320px;' });
+  const statusEl = h('p', { class: 'p-muted', role: 'status', style: 'margin-top:8px;font-weight:600;' });
+  const saveBtn = h('button', { type: 'submit', class: 'p-btn', style: 'margin-top:8px;' }, 'Update Password');
+  const pwForm = h('form', {
+    style: 'display:flex;flex-direction:column;gap:10px;margin-top:10px;align-items:flex-start;',
+    onSubmit: async (e) => {
+      e.preventDefault();
+      statusEl.textContent = '';
+      saveBtn.disabled = true;
+      try {
+        const res = await fetch('/api/auth/customer/password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current: curInput.value, next: nextInput.value }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not update password.');
+        curInput.value = '';
+        nextInput.value = '';
+        statusEl.style.color = '#15803d';
+        statusEl.textContent = 'Password updated successfully.';
+      } catch (err) {
+        statusEl.style.color = '#b91c1c';
+        statusEl.textContent = err.message;
+      } finally {
+        saveBtn.disabled = false;
+      }
+    },
+  }, curInput, nextInput, saveBtn, statusEl);
+
   setChildren(container, h('div', { class: 'p-page' },
-    h('div', { class: 'p-page-head' }, h('div', {}, h('h1', {}, 'Settings'), h('p', {}, 'Your account details. To change them, contact Box for Less.'))),
+    h('div', { class: 'p-page-head' }, h('div', {}, h('h1', {}, 'Settings'), h('p', {}, 'Your account details and password security.'))),
     card('', panelHead('Account'),
       h('dl', { class: 'p-details' },
-        row('Company', account.company), row('Contact person', account.contact), row('Phone', account.phone),
+        row('Company', account.company), row('Sales Representative', account.contact), row('Phone', account.phone),
         row('Email', account.email), row('Delivery address', account.address),
         row('Account type', account.type === 'cash' ? 'Cash customer' : 'Credit customer'))),
-    card('', panelHead('Security'),
-      h('p', { class: 'p-muted' }, 'Your sign-in is kept safely on the Box for Less server. To change your password, use the sign-in page; to change your details, contact Box for Less.'))));
+    card('', panelHead('Change Password'),
+      h('p', { class: 'p-muted' }, 'Update the password you use to sign in with your Customer ID or email.'),
+      pwForm)));
   return { destroy() {} };
 }
 
@@ -336,9 +365,35 @@ export function mountHelp(container) {
 }
 
 export function mountBrands(container) {
+  const brandGrid = h('div', { style: 'display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:12px;' },
+    h('p', { class: 'p-muted' }, 'Loading brands…'));
   setChildren(container, h('div', { class: 'p-page' },
-    h('div', { class: 'p-page-head' }, h('div', {}, h('h1', {}, 'Brands'))),
-    card('', h('p', {}, 'Browsing by brand is coming soon, once every product has its brand recorded.'),
-      link(pageUrl('products'), 'Browse all products'))));
+    h('div', { class: 'p-page-head' }, h('div', {}, h('h1', {}, 'Brands & Product Lines'), h('p', {}, 'Select any brand below to browse its available products.'))),
+    card('', brandGrid)));
+
+  getJSON('/api/catalog/products?view=full&limit=250').then((res) => {
+    const counts = new Map();
+    for (const p of res.items || []) {
+      const words = String(p.name || '').trim().split(/\s+/);
+      let brand = words[0] || 'OTHER';
+      if (words.length >= 2 && ['AL', 'CHTOURA', 'ST', 'EL'].includes(brand.toUpperCase())) {
+        brand = `${words[0]} ${words[1]}`;
+      }
+      brand = brand.toUpperCase();
+      counts.set(brand, (counts.get(brand) || 0) + 1);
+    }
+    const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    setChildren(brandGrid, entries.map(([brand, count]) => h('button', {
+      type: 'button',
+      class: 'p-quick',
+      style: 'text-align:left;cursor:pointer;border:1px solid #e2e8f0;background:#fff;border-radius:10px;padding:14px;',
+      onClick: () => {
+        patchList({ search: brand, offset: 0 });
+        navigate(pageUrl('products'));
+      },
+    }, h('span', {}, h('b', {}, brand), h('small', { style: 'display:block;color:#64748b;margin-top:4px;' }, `${count} product${count === 1 ? '' : 's'}`)))));
+  }).catch(() => {
+    setChildren(brandGrid, link(pageUrl('products'), 'Browse all products'));
+  });
   return { destroy() {} };
 }
