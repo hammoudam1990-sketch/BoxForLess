@@ -137,7 +137,25 @@ export function saveVisit(db, { customerId, repName, contactName, noReturnAgreed
         throw new VisitError(`Cartons on the shelf must be a whole number from 0 to ${lot.delivered_ctn}.`);
       }
     }
-    clean.push({ lotId: lot.id, shelf, outcome });
+    let returnReason = null;
+    let returnNote = null;
+    if (outcome === 'RETURN') {
+      if (line.returnReason !== undefined) {
+        const rr = String(line.returnReason || '').trim().toUpperCase();
+        if (!['DAMAGED', 'EXPIRED', 'OTHER'].includes(rr)) {
+          throw new VisitError('Choose a reason for the return (damaged, expired, or other).');
+        }
+        const rn = String(line.returnNote ?? '').trim().slice(0, 300) || null;
+        if (rr === 'OTHER' && !rn) {
+          throw new VisitError('Enter a note explaining the other return reason.');
+        }
+        returnReason = rr;
+        returnNote = rn;
+      } else {
+        returnReason = 'EXPIRED';
+      }
+    }
+    clean.push({ lotId: lot.id, shelf, outcome, returnReason, returnNote });
   }
 
   const written = [];
@@ -145,10 +163,10 @@ export function saveVisit(db, { customerId, repName, contactName, noReturnAgreed
     db.exec('BEGIN');
     const visitId = Number(db.prepare(`INSERT INTO rep_visits (customer_id, rep_name, contact_name, no_return_agreed, visited_at)
       VALUES (?, ?, ?, ?, ?)`).run(customerId, repName, contact, noReturnAgreed ? 1 : 0, now.toISOString()).lastInsertRowid);
-    const ins = db.prepare('INSERT INTO rep_visit_lines (visit_id, lot_id, shelf_ctn, outcome, photo_file) VALUES (?, ?, ?, ?, NULL)');
+    const ins = db.prepare('INSERT INTO rep_visit_lines (visit_id, lot_id, shelf_ctn, outcome, return_reason, return_note, photo_file) VALUES (?, ?, ?, ?, ?, ?, NULL)');
     const setPhoto = db.prepare('UPDATE rep_visit_lines SET photo_file = ? WHERE id = ?');
     for (const c of clean) {
-      const lineId = Number(ins.run(visitId, c.lotId, c.shelf, c.outcome).lastInsertRowid);
+      const lineId = Number(ins.run(visitId, c.lotId, c.shelf, c.outcome, c.returnReason, c.returnNote).lastInsertRowid);
       const photo = photos.get(c.lotId);
       if (photo) {
         const file = savePhoto(lineId, photo);

@@ -59,13 +59,33 @@ export function searchProducts(db, q = {}) {
     `SELECT * FROM products ${whereSql} ORDER BY ${orderSql} LIMIT ? OFFSET ?`
   ).all(...params, Math.min(Number(limit) || 100, 1000), Number(offset) || 0);
 
-  return { total, items: items.map(enrich) };
+  let limitsMap = new Map();
+  try {
+    limitsMap = new Map(
+      db.prepare('SELECT barcode, max_order_ctn FROM product_order_limits WHERE max_order_ctn > 0').all()
+        .map((r) => [String(r.barcode), Number(r.max_order_ctn)]),
+    );
+  } catch { /* table may not exist on legacy pre-migration test db */ }
+
+  return {
+    total,
+    items: items.map((p) => ({
+      ...enrich(p),
+      max_order_ctn: limitsMap.get(String(p.barcode)) || null,
+    })),
+  };
 }
 
 /** Full product detail bundle for the detail page. */
 export function getProductDetail(db, id) {
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   if (!product) return null;
+
+  let maxOrderCtn = null;
+  try {
+    const lim = db.prepare('SELECT max_order_ctn FROM product_order_limits WHERE barcode = ?').get(String(product.barcode));
+    if (lim && lim.max_order_ctn > 0) maxOrderCtn = Number(lim.max_order_ctn);
+  } catch { /* ignore */ }
 
   const category = product.category_id
     ? db.prepare('SELECT * FROM categories WHERE id = ?').get(product.category_id) : null;
@@ -85,7 +105,47 @@ export function getProductDetail(db, id) {
     "SELECT * FROM import_changes WHERE product_id = ? AND review_status = 'PENDING' ORDER BY id DESC"
   ).all(id);
 
-  return { product: enrich(product), category, images, changeHistory, importHistory, pendingReviews };
+  return { product: { ...enrich(product), max_order_ctn: maxOrderCtn }, category, images, changeHistory, importHistory, pendingReviews };
+}
+
+/** Set or clear a per-product purchasing limitation (max cartons per order) in product_order_limits. */
+export function setProductOrderLimit(db, id, maxOrderCtn) {
+  const product = db.prepare('SELECT id, barcode, name FROM products WHERE id = ?').get(Number(id));
+  if (!product) {
+    const err = new Error('Product not found');
+    err.status = 404;
+    throw err;
+  }
+  const raw = maxOrderCtn === '' || maxOrderCtn === null || maxOrderCtn === undefined ? 0 : Number(maxOrderCtn);
+  if (!Number.isInteger(raw) || raw < 0 || raw > 100000) {
+    const err = new Error('Order limit must be a whole number of cartons (0 or empty to clear).');
+    err.status = 400;
+    throw err;
+  }
+  const ts = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO product_order_limits (barcode, max_order_ctn, updated_at) VALUES (?, ?, ?)
+    ON CONFLICT(barcode) DO UPDATE SET max_order_ctn = excluded.max_order_ctn, updated_at = excluded.updated_at
+  `).run(String(product.barcode), raw, ts);
+  return { id: product.id, barcode: product.barcode, maxOrderCtn: raw > 0 ? raw : null };
+}
+
+/** Set or clear upcoming incoming stock (cartons arriving soon) for a product. */
+export function setProductIncoming(db, id, incomingCtn) {
+  const product = db.prepare('SELECT id, barcode, name FROM products WHERE id = ?').get(Number(id));
+  if (!product) {
+    const err = new Error('Product not found');
+    err.status = 404;
+    throw err;
+  }
+  const raw = incomingCtn === '' || incomingCtn === null || incomingCtn === undefined ? 0 : Number(incomingCtn);
+  if (!Number.isFinite(raw) || raw < 0 || raw > 1000000) {
+    const err = new Error('Incoming cartons must be 0 or a positive number.');
+    err.status = 400;
+    throw err;
+  }
+  db.prepare('UPDATE products SET incoming = ?, updated_at = ? WHERE id = ?').run(Math.trunc(raw), new Date().toISOString(), product.id);
+  return { id: product.id, barcode: product.barcode, incoming: Math.trunc(raw) };
 }
 
 /** Aggregate stats for dashboards / data-quality report. */

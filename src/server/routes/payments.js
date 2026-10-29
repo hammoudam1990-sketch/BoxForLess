@@ -2,19 +2,30 @@
 // the Sales Manager sets each credit customer's payment schedule and sees what is due, overdue and
 // which reminders went out. The platform reminds; it does not collect.
 import express from 'express';
-import { paymentsOverview, setSchedule, runReminders, markReminderSent, PaymentError } from '../../domain/payments.js';
+import { paymentsOverview, setSchedule, runReminders, runUnsettled20dFollowUps, markReminderSent, PaymentError } from '../../domain/payments.js';
 import { todayString } from '../../domain/expiry-list.js';
 
 const router = express.Router();
 const fail = (e, res, next) => (e instanceof PaymentError ? res.status(e.status).json({ error: e.message }) : next(e));
 
 router.get('/', (req, res, next) => {
-  try { res.json(paymentsOverview(req.db, todayString())); } catch (e) { next(e); }
+  try {
+    const data = paymentsOverview(req.db, todayString());
+    if (req.query.unsettled20d === 'true') {
+      data.invoices = data.invoices.filter((i) => i.unsettled20d);
+    }
+    res.json(data);
+  } catch (e) { next(e); }
 });
 
 // Look for reminders that are due now (the server also does this every hour).
 router.post('/run', (req, res, next) => {
   try { res.json({ created: runReminders(req.db, todayString()).length }); } catch (e) { next(e); }
+});
+
+// Generate follow-up reminders specifically for credit customers with open invoices unsettled for 20+ days.
+router.post('/follow-up-20d', (req, res, next) => {
+  try { res.json({ created: runUnsettled20dFollowUps(req.db, todayString()).length }); } catch (e) { next(e); }
 });
 
 router.put('/customers/:id/schedule', (req, res, next) => {

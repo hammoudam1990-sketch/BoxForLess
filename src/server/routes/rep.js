@@ -4,6 +4,9 @@ import multer from 'multer';
 import config from '../../config.js';
 import { readPrimaryImage } from '../../domain/images.js';
 import { repShops, shopLots, saveVisit, VisitError } from '../../domain/rep-visits.js';
+import { repMonth, monthOf } from '../../domain/reports.js';
+import { todayString } from '../../domain/expiry-list.js';
+import { listReps } from '../../domain/shelf.js';
 
 const router = express.Router();
 const upload = multer({
@@ -11,9 +14,24 @@ const upload = multer({
   limits: { fileSize: config.maxImageBytes + 1024 * 1024, files: 40, fields: 5 },
 });
 
-const repName = () => process.env.BFL_REP_NAME || process.env.BFL_REP_USERNAME || 'Sales rep';
+const repName = (req) => req?.staff?.name || process.env.BFL_REP_NAME || process.env.BFL_REP_USERNAME || 'Sales rep';
 
-router.get('/me', (_req, res) => res.json({ name: repName() }));
+router.get('/me', (req, res) => {
+  const name = repName(req);
+  let monthSummary = null;
+  try {
+    const today = todayString();
+    const reps = listReps(today, req.db);
+    const matched = reps.find((r) => r.id === req.staff?.repId || r.name === name) || reps[0];
+    if (matched) monthSummary = repMonth(req.db, matched.name, monthOf(today), today);
+  } catch { /* ignore */ }
+  res.json({
+    name,
+    role: req.staff?.role || 'SALES_REP',
+    roleLabel: 'Sales Representative',
+    monthSummary,
+  });
+});
 
 router.get('/shops', (req, res, next) => {
   try { res.json(repShops(req.db, { q: req.query.q })); } catch (e) { next(e); }
@@ -46,7 +64,7 @@ router.post('/visits', upload.any(), (req, res, next) => {
     }
     const result = saveVisit(req.db, {
       customerId: Number(body.customerId),
-      repName: repName(),
+      repName: repName(req),
       contactName: body.contactName,
       noReturnAgreed: !!body.noReturnAgreed,
       lines: body.lines,

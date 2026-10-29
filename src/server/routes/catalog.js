@@ -6,6 +6,7 @@
 import express from 'express';
 import {
   searchCatalog, getCatalogProduct, resolveInternalId, catalogFacets, categoryFacets,
+  upcomingCatalogProducts, productOrderLimits,
   DEFAULT_SORT, DEFAULT_PAGE_SIZE,
 } from '../../domain/catalog.js';
 import { readPrimaryImage } from '../../domain/images.js';
@@ -54,6 +55,16 @@ router.get('/products', (req, res, next) => {
 // GET /api/catalog/facets — counts for the filter chips (no quantities).
 router.get('/facets', (req, res, next) => {
   try { res.json(catalogFacets(req.db, undefined, viewerOf(req, res))); } catch (e) { next(e); }
+});
+
+// GET /api/catalog/upcoming — products expected to become available (incoming > 0), serialized safely without quantities.
+router.get('/upcoming', (req, res, next) => {
+  try { res.json({ items: upcomingCatalogProducts(req.db, undefined, viewerOf(req, res)) }); } catch (e) { next(e); }
+});
+
+// GET /api/catalog/limits — per-product maximum order carton limits ({ limits: { [barcode]: maxOrderCtn } }).
+router.get('/limits', (req, res, next) => {
+  try { res.json({ limits: productOrderLimits(req.db, viewerOf(req, res)) }); } catch (e) { next(e); }
 });
 
 // GET /api/catalog/categories — the Odoo category tree with counts (names only).

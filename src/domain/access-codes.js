@@ -125,23 +125,28 @@ export function resolveAccessCode(db, input) {
   return null;
 }
 
-/** Staff view: who holds which code. Internal only — never customer-facing. */
+/** Staff view: who holds which code, their Customer ID, and their assigned Customer Class (pricelist). Internal only — never customer-facing. */
 export function listCustomerCodes(db, { q = '', limit = 100, offset = 0 } = {}) {
   const lim = Math.min(Math.max(Number(limit) || 100, 1), 500);
   const off = Math.max(Number(offset) || 0, 0);
   const term = `%${String(q ?? '').trim()}%`;
-  const total = db.prepare('SELECT COUNT(*) n FROM customers WHERE name LIKE ?').get(term).n;
+  const total = db.prepare("SELECT COUNT(*) n FROM customers WHERE (name LIKE ? OR COALESCE(odoo_customer_ref, '') LIKE ?)").get(term, term).n;
   const items = db.prepare(
     `SELECT id, name, access_code, access_code_issued_at, is_active, phone, email, odoo_customer_ref,
+            pricelist, customer_type, salesperson,
             (password_hash IS NOT NULL) AS password_set
-       FROM customers WHERE name LIKE ?
+       FROM customers WHERE (name LIKE ? OR COALESCE(odoo_customer_ref, '') LIKE ?)
       ORDER BY name COLLATE NOCASE LIMIT ? OFFSET ?`
-  ).all(term, lim, off);
+  ).all(term, term, lim, off);
   return {
     total,
     limit: lim,
     offset: off,
-    items: items.map((c) => ({ ...c, access_code_display: c.access_code ? formatAccessCode(c.access_code) : null })),
+    items: items.map((c) => ({
+      ...c,
+      customer_class: c.pricelist ? String(c.pricelist).replace(/\s*\(GHS\)/i, '').trim() : null,
+      access_code_display: c.access_code ? formatAccessCode(c.access_code) : null,
+    })),
   };
 }
 

@@ -87,6 +87,7 @@ const repSelect = h('select', {
   onChange: () => {
     repId = repSelect.value;
     try { localStorage.setItem(REP_KEY, repId); } catch { /* storage blocked */ }
+    loadRepMonthSummary();
     showList();
   },
 });
@@ -517,6 +518,29 @@ function lotCard(lot, index) {
       ? `★ The Sales Manager has set ${lot.managerDiscountPct}% for this lot. If the customer agrees to ${lot.managerDiscountPct}% or less it is approved straight away; more needs the Sales Manager.`
       : 'This is only a proposal. The Sales Manager approves it before it counts.'));
 
+  const returnReasonSelect = h('select', {
+    id: `rr-${index}`,
+    onChange: () => {
+      returnNoteRow.classList.toggle('hidden', returnReasonSelect.value !== 'OTHER');
+    },
+  },
+    h('option', { value: '' }, 'Choose reason for return…'),
+    h('option', { value: 'EXPIRED' }, 'Approaching expiry / Expired'),
+    h('option', { value: 'DAMAGED' }, 'Damaged packaging / cartons'),
+    h('option', { value: 'OTHER' }, 'Other reason (specify below)'));
+
+  const returnNoteInput = h('input', {
+    type: 'text', id: `rn-${index}`, maxlength: '300', placeholder: 'Describe the reason for return…',
+  });
+  const returnNoteRow = h('label', { for: `rn-${index}`, class: 'hidden' },
+    'Return reason details (required for Other)',
+    returnNoteInput);
+
+  const returnBox = h('div', { class: 'rep-extra hidden' },
+    h('label', { for: `rr-${index}` }, 'Reason for return (required)', returnReasonSelect),
+    returnNoteRow,
+    h('p', { class: 'rep-note' }, 'Recorded for reference and tracking on the Returns & Approvals screens.'));
+
   const extra = h('div', { class: 'rep-extra hidden' }, cartonsRow);
 
   const choose = () => {
@@ -524,6 +548,7 @@ function lotCard(lot, index) {
     cartonsRow.classList.toggle('hidden', !(o === 'DISCOUNT_AGREED' || o === 'RETURN_EXPECTED'));
     extra.classList.toggle('hidden', cartonsRow.classList.contains('hidden'));
     discountBox.classList.toggle('hidden', o !== 'DISCOUNT_AGREED');
+    returnBox.classList.toggle('hidden', o !== 'RETURN_EXPECTED');
   };
 
   const radios = OUTCOMES.map(([v, label, help]) => {
@@ -560,7 +585,8 @@ function lotCard(lot, index) {
       h('legend', null, 'What did you find on the shelf?'),
       radios.map((r) => r.el)),
     extra,
-    discountBox);
+    discountBox,
+    returnBox);
 
   return {
     el,
@@ -575,6 +601,10 @@ function lotCard(lot, index) {
           contactName: contact.value,
           agreed: agreed.checked,
         });
+      }
+      if (o === 'RETURN_EXPECTED') {
+        out.returnReason = returnReasonSelect.value;
+        out.returnNote = returnNoteInput.value.trim();
       }
       return out;
     },
@@ -592,6 +622,54 @@ function done(shop, res) {
       proposals ? h('p', { class: 'rep-note' }, `${plural(proposals, 'discount')} submitted and waiting for Sales Manager sign-off.`) : null,
       h('button', { type: 'button', class: 'rep-save', onClick: showList }, 'Back to My visits')));
   window.scrollTo(0, 0);
+}
+
+let currentStaffRole = null;
+
+function renderMonthCard(m, repLabel = '') {
+  const money = (n) => `GHS ${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const monthName = new Date(`${m.month}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const rem = m.remainingTarget !== undefined ? m.remainingTarget : (m.target !== null ? Math.max(0, m.target - m.netSales) : null);
+  const pct = m.vsTarget !== null && m.vsTarget !== undefined ? Math.min(100, Math.max(0, Math.round(m.vsTarget))) : 0;
+  const fig = (label, value, highlight = false) => h('div', {
+    class: 'rep-fig',
+    style: highlight ? 'border:1px solid #fdba74;background:#fff7ed;border-radius:8px;padding:8px;' : '',
+  }, h('div', { class: 'rep-fig-k' }, label), h('div', { class: 'rep-fig-v' }, value));
+
+  setChildren(monthCard,
+    h('div', { style: 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;' },
+      h('h2', { style: 'margin:0;' }, `${repLabel ? `${repLabel} — ` : 'My month — '}${monthName}`),
+      m.target !== null
+        ? h('span', { class: `rep-pill ${rem === 0 ? 'ok' : 'warn'}` }, rem === 0 ? 'Target Achieved' : `${m.vsTarget ?? 0}% of target`)
+        : null),
+    h('div', { class: 'rep-figs' },
+      fig('Monthly Target', m.target === null ? 'Not set' : money(m.target)),
+      fig('Sales Achieved', money(m.netSales)),
+      fig('Remaining Target Balance', rem === null ? '—' : rem === 0 ? 'GHS 0.00 (Met!)' : money(rem), rem !== null && rem > 0),
+      fig('Collections', money(m.collections)),
+      fig('Active Customers', `${m.activeCustomers} of ${m.customers}`)),
+    m.target !== null
+      ? h('div', { style: 'margin:10px 0 6px;' },
+          h('div', { style: 'display:flex;justify-content:space-between;font-size:12px;color:#475569;margin-bottom:4px;' },
+            h('span', null, `Target progress: ${money(m.netSales)} / ${money(m.target)}`),
+            h('strong', null, `${m.vsTarget ?? 0}%`)),
+          h('div', { class: 'rep-progress-bar-bg' },
+            h('div', { class: 'rep-progress-bar-fill', style: { width: `${pct}%`, background: rem === 0 ? '#16a34a' : '#2563eb' } })))
+      : null,
+    m.dormant && m.dormant.length ? h('div', null,
+      h('p', { class: 'rep-note' }, 'Call these customers: no invoice for 30 days or more.'),
+      h('ul', { class: 'rep-dormant' }, m.dormant.slice(0, 6).map((d) => h('li', null, `${d.customer} — ${d.days} days`)))) : null,
+    h('p', { class: 'rep-note' }, '● Live Database: Monthly target, sales achieved & remaining balance.'));
+  monthCard.classList.remove('hidden');
+}
+
+function loadRepMonthSummary() {
+  if (currentStaffRole === 'SALES_REP') {
+    api.myMonth().then((m) => renderMonthCard(m)).catch(() => {});
+  } else if (currentStaffRole === 'ADMIN' || currentStaffRole === 'SALES_MANAGER') {
+    const picked = reps.find((r) => r.id === repId);
+    api.repSummary(repId).then((m) => renderMonthCard(m, picked ? picked.name : 'Sales Rep')).catch(() => {});
+  }
 }
 
 // ---- Startup --------------------------------------------------------------------------------
@@ -614,37 +692,38 @@ function done(shop, res) {
   const mine = reps.length === 1;
   try {
     const me = await (await fetch('/api/auth/me')).json();
-    if (me.staff && me.staff.role === 'SALES_REP') {
+    if (me.staff) {
+      currentStaffRole = me.staff.role;
+      const roleTitles = {
+        ADMIN: 'Administrator',
+        SALES_MANAGER: 'Sales Manager',
+        WAREHOUSE: 'Warehouse Administrator',
+        SALES_REP: 'Sales Representative',
+      };
+      const roleTitle = roleTitles[me.staff.role] || me.staff.role;
       const nav = document.getElementById('repNav');
       if (nav) {
-        nav.textContent = '';
-        const out = h('button', {
-          type: 'button', class: 'rep-signout',
-          onClick: async () => { await fetch('/api/auth/logout', { method: 'POST' }); location.assign('/'); },
-        }, 'Sign out');
-        nav.append(out);
+        const badge = h('span', {
+          class: 'rep-pill ok',
+          style: 'margin-right:8px;font-size:12px;',
+        }, `${roleTitle} · ${me.staff.name}`);
+        if (me.staff.role === 'SALES_REP') {
+          nav.textContent = '';
+          const out = h('button', {
+            type: 'button', class: 'rep-signout',
+            onClick: async () => { await fetch('/api/auth/logout', { method: 'POST' }); location.assign('/'); },
+          }, 'Sign out');
+          nav.append(badge, out);
+        } else {
+          nav.prepend(badge);
+        }
       }
-      tabs.classList.remove('hidden');
-      // My Month dashboard
-      api.myMonth().then((m) => {
-        const money = (n) => `GHS ${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        const monthName = new Date(`${m.month}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-        const fig = (label, value) => h('div', { class: 'rep-fig' }, h('div', { class: 'rep-fig-k' }, label), h('div', { class: 'rep-fig-v' }, value));
-        setChildren(monthCard,
-          h('h2', null, `My month — ${monthName}`),
-          h('div', { class: 'rep-figs' },
-            fig('Net sales', money(m.netSales)),
-            fig('Target', m.target === null ? 'not set' : `${money(m.target)} (${m.vsTarget}%)`),
-            fig('Active customers', `${m.activeCustomers} of ${m.customers}`),
-            fig('Collections', money(m.collections))),
-          m.dormant.length ? h('div', null,
-            h('p', { class: 'rep-note' }, 'Call these customers: no invoice for 30 days or more.'),
-            h('ul', { class: 'rep-dormant' }, m.dormant.slice(0, 6).map((d) => h('li', null, `${d.customer} — ${d.days} days`)))) : null,
-          h('p', { class: 'rep-note' }, '● Live Database: Verified sales & collections figures.'));
-        monthCard.classList.remove('hidden');
-      }).catch(() => { /* works without figures */ });
-      const sub = document.querySelector('.brand-sub');
-      if (sub) sub.textContent = `Shop visits · ${reps[0].name}`;
+      if (me.staff.role === 'SALES_REP') {
+        tabs.classList.remove('hidden');
+        const sub = document.querySelector('.brand-sub');
+        if (sub) sub.textContent = `Sales Representative · ${reps[0].name}`;
+      }
+      loadRepMonthSummary();
     }
   } catch { /* works without this */ }
 

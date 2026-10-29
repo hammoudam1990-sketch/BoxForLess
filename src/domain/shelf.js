@@ -137,7 +137,8 @@ export function loadShelf(today, db = null) {
 function latestLines(db) {
   const rows = db.prepare(`
     SELECT l.id, l.record_key, l.cartons_on_shelf, l.outcome, l.discount_pct, l.contact_name, l.agreement,
-           l.approval_status, l.approval_reason, l.approved_at, l.credit_note_ref, l.created_at, v.visited_on, v.rep_id
+           l.approval_status, l.approval_reason, l.approved_at, l.credit_note_ref, l.return_reason, l.return_note,
+           l.created_at, v.visited_on, v.rep_id
       FROM shelf_visit_lines l JOIN shelf_visits v ON v.id = l.visit_id
      WHERE l.id IN (SELECT MAX(id) FROM shelf_visit_lines GROUP BY record_key)`).all();
   return new Map(rows.map((r) => [r.record_key, r]));
@@ -188,6 +189,7 @@ function describe(record, line, today, settings, returned = 0) {
   return {
     ...record, daysLeft: left, alerting, alertKind: alert.current, expired: alert.expired,
     state, dueOn, overdue, rejectedReason, cartonsOnShelf, returned, lastLineId: line?.id ?? null,
+    returnReason: line?.return_reason ?? null, returnNote: line?.return_note ?? null,
   };
 }
 
@@ -320,13 +322,29 @@ export function recordVisit(db, repId, customerId, lines, { today, loader = load
     seen.add(l.key);
     if (!OUTCOMES.includes(l.outcome)) throw new ShelfError(`${where}: choose what happened.`);
 
-    const out = { recordKey: l.key, outcome: l.outcome, cartons: null, discountPct: null, contactName: null, agreement: 0, approval: null, offeredPct: null, autoApproved: false };
+    const out = { recordKey: l.key, outcome: l.outcome, cartons: null, discountPct: null, contactName: null, agreement: 0, approval: null, offeredPct: null, autoApproved: false, returnReason: null, returnNote: null };
     if (l.outcome === VisitOutcome.SOLD_OUT) out.cartons = 0;
     if (l.outcome === VisitOutcome.DISCOUNT_AGREED || l.outcome === VisitOutcome.RETURN_EXPECTED) {
       const n = Number(l.cartonsOnShelf);
       if (!Number.isInteger(n) || n < 1) throw new ShelfError(`${where}: enter how many cartons are still on the shelf (at least 1; if none, choose "sold out").`);
       if (n > record.deliveredCartons) throw new ShelfError(`${where}: only ${record.deliveredCartons} cartons were delivered.`);
       out.cartons = n;
+    }
+    if (l.outcome === VisitOutcome.RETURN_EXPECTED) {
+      if (l.returnReason !== undefined) {
+        const rr = String(l.returnReason || '').trim().toUpperCase();
+        if (!['DAMAGED', 'EXPIRED', 'OTHER'].includes(rr)) {
+          throw new ShelfError(`${where}: choose a reason for the return (damaged, expired, or other).`);
+        }
+        const rn = String(l.returnNote ?? '').trim().slice(0, 300) || null;
+        if (rr === 'OTHER' && !rn) {
+          throw new ShelfError(`${where}: enter a note explaining the other return reason.`);
+        }
+        out.returnReason = rr;
+        out.returnNote = rn;
+      } else {
+        out.returnReason = 'EXPIRED';
+      }
     }
     if (l.outcome === VisitOutcome.DISCOUNT_AGREED) {
       // the Sales Manager may already have put a discount on this lot: with none typed, the rep offers that one
@@ -354,9 +372,9 @@ export function recordVisit(db, repId, customerId, lines, { today, loader = load
       'INSERT INTO shelf_visits (rep_id, customer_id, visited_on, created_at) VALUES (?, ?, ?, ?)',
     ).run(rep.id, customer.id, today, t);
     const ins = db.prepare(`INSERT INTO shelf_visit_lines
-      (visit_id, record_key, cartons_on_shelf, outcome, discount_pct, contact_name, agreement, approval_status, offered_pct, approved_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-    for (const c of clean) ins.run(visitId, c.recordKey, c.cartons, c.outcome, c.discountPct, c.contactName, c.agreement, c.approval, c.offeredPct, c.autoApproved ? t : null, t);
+      (visit_id, record_key, cartons_on_shelf, outcome, discount_pct, contact_name, agreement, approval_status, offered_pct, return_reason, return_note, approved_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    for (const c of clean) ins.run(visitId, c.recordKey, c.cartons, c.outcome, c.discountPct, c.contactName, c.agreement, c.approval, c.offeredPct, c.returnReason, c.returnNote, c.autoApproved ? t : null, t);
     db.exec('COMMIT');
     return {
       visitId: Number(visitId), customer: { id: customer.id, name: customer.name },
@@ -412,6 +430,7 @@ export function approvals(db, { today, loader = loadShelf, settings = sampleSett
   const returns = all.filter((r) => r.state === ShelfState.RETURN_EXPECTED).map((r) => ({
     customer: shelf.customers.find((c) => c.id === r.customerId)?.name, productName: r.productName, lotName: r.lotName,
     expiryDate: r.expiryDate, cartonsOnShelf: r.cartonsOnShelf, rep: repName.get(custRep.get(r.customerId)),
+    returnReason: r.returnReason || 'EXPIRED', returnNote: r.returnNote || null,
   }));
 
   return {

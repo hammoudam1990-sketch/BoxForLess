@@ -39,25 +39,42 @@ export async function renderPayments(view) {
   const noInvoices = h('p', { class: 'muted hidden' }, 'No open invoices. Invoices appear here once Odoo posts them (on the Sample Odoo screen for now).');
   const noReminders = h('p', { class: 'muted hidden' }, 'No reminders yet. They are composed the day before a payment day, on it, and every 7 days while an invoice stays unpaid.');
   const runBtn = h('button', { type: 'button', class: 'secondary', onClick: run }, 'Check for reminders now');
+  const followUp20dBtn = h('button', { type: 'button', onClick: runFollowUp20d }, 'Generate 20+ Day Follow-Up Reminders');
+  let onlyUnsettled20d = false;
+  let allInvoicesCache = [];
+
+  const filter20dBtn = h('button', {
+    type: 'button',
+    class: 'secondary',
+    onClick: () => {
+      onlyUnsettled20d = !onlyUnsettled20d;
+      filter20dBtn.className = onlyUnsettled20d ? '' : 'secondary';
+      filter20dBtn.textContent = onlyUnsettled20d ? '✓ Showing 20+ Days Unsettled Only (Show All)' : 'Filter: 20+ Days Unsettled Follow-Up';
+      paintInvoices();
+    },
+  }, 'Filter: 20+ Days Unsettled Follow-Up');
 
   setChildren(view,
-    h('h1', null, 'Payments due'),
+    h('h1', null, 'Payments due & Credit Follow-Up'),
     h('div', { class: 'notice' },
       h('b', null, 'The platform reminds; it does not collect. '),
       'Customers pay as they do today and Finance records the payment in Odoo, which stops the reminders. ',
+      'Invoices unsettled for 20+ days since invoice date are highlighted for follow-up. ',
       'Only a credit customer is reminded, each message lists only their own open invoices, and a reminder never blocks an order — only the credit limit does.'),
     tiles,
     h('div', { class: 'card' },
-      h('h2', null, 'Open invoices'),
+      h('div', { style: 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;' },
+        h('h2', { style: 'margin:0;' }, 'Open invoices & 20-Day Follow-Up'),
+        filter20dBtn),
       h('div', { class: 'exp-wrap' },
         h('table', null,
-          h('thead', null, h('tr', null, ['Customer', 'Invoice', 'Still due', 'Pay by', 'Where it stands', 'Schedule', 'Last reminder'].map((t) => h('th', null, t)))),
+          h('thead', null, h('tr', null, ['Customer', 'Invoice', 'Invoiced', 'Still due', 'Pay by', 'Where it stands / Follow-up', 'Schedule', 'Last reminder'].map((t) => h('th', null, t)))),
           invoices)),
       noInvoices),
     h('div', { class: 'card' },
       h('h2', null, 'Reminders'),
       h('p', { class: 'muted' }, 'No email, SMS or WhatsApp provider is connected yet. Copy a message, send it yourself, then tap Mark sent. Every reminder stays in this log.'),
-      h('div', { class: 'controls' }, runBtn),
+      h('div', { class: 'controls' }, runBtn, followUp20dBtn),
       reminders, noReminders),
     h('div', { class: 'card' },
       h('h2', null, 'Payment schedules'),
@@ -74,11 +91,23 @@ export async function renderPayments(view) {
 
   function invoiceRow(i) {
     const stands = i.daysToPay < 0 ? `Overdue ${-i.daysToPay} day${i.daysToPay === -1 ? '' : 's'}` : i.daysToPay === 0 ? 'Due today' : `In ${i.daysToPay} day${i.daysToPay === 1 ? '' : 's'}`;
-    return h('tr', null,
-      h('td', null, h('b', null, i.customer)), h('td', null, i.number), h('td', { class: 'num' }, money(i.amountDue)),
+    return h('tr', i.unsettled20d ? { style: 'background:rgba(254, 242, 242, 0.55);' } : null,
+      h('td', null, h('b', null, i.customer)),
+      h('td', null, i.number),
+      h('td', { class: 'muted' }, i.invoiceDate ? `${dayText(i.invoiceDate)} (${i.daysSinceInvoice}d ago)` : '—'),
+      h('td', { class: 'num' }, money(i.amountDue)),
       h('td', null, dayText(i.payBy)),
-      h('td', null, h('span', { class: `badge${i.bucket === 'OVERDUE' ? ' err' : ''}` }, stands)),
-      h('td', { class: 'muted' }, i.schedule), h('td', { class: 'muted' }, dayText(i.lastReminder)));
+      h('td', null,
+        h('span', { class: `badge${i.bucket === 'OVERDUE' ? ' err' : ''}` }, stands),
+        i.unsettled20d ? h('span', { class: 'badge warn', style: 'margin-left:6px;' }, `20+ days unsettled (${i.daysSinceInvoice}d)`) : null),
+      h('td', { class: 'muted' }, i.schedule),
+      h('td', { class: 'muted' }, dayText(i.lastReminder)));
+  }
+
+  function paintInvoices() {
+    const list = onlyUnsettled20d ? allInvoicesCache.filter((i) => i.unsettled20d) : allInvoicesCache;
+    setChildren(invoices, list.map(invoiceRow));
+    noInvoices.classList.toggle('hidden', list.length > 0);
   }
 
   function reminderCard(r) {
@@ -106,15 +135,17 @@ export async function renderPayments(view) {
       dom.hidden = kind.value !== 'MONTHLY';
     }
     sync();
-    const save = h('button', { type: 'button', class: 'secondary', onClick: async () => {
-      try {
-        const r = await api.setPaymentSchedule(s.customerId, {
-          kind: kind.value, weekday: kind.value === 'WEEKLY' ? Number(weekday.value) : undefined, dayOfMonth: kind.value === 'MONTHLY' ? Number(dom.value) : undefined,
-        });
-        note.textContent = `Saved — ${r.description}`;
-        load();
-      } catch (e) { toast(e.message, 'err'); }
-    } }, 'Save');
+    const save = h('button', {
+      type: 'button', class: 'secondary', onClick: async () => {
+        try {
+          const r = await api.setPaymentSchedule(s.customerId, {
+            kind: kind.value, weekday: kind.value === 'WEEKLY' ? Number(weekday.value) : undefined, dayOfMonth: kind.value === 'MONTHLY' ? Number(dom.value) : undefined,
+          });
+          note.textContent = `Saved — ${r.description}`;
+          load();
+        } catch (e) { toast(e.message, 'err'); }
+      }
+    }, 'Save');
     return h('tr', null, h('td', null, h('b', null, s.customer)), h('td', null, kind, ' ', weekday, ' ', dom, ' ', note), h('td', null, save));
   }
 
@@ -131,6 +162,15 @@ export async function renderPayments(view) {
     } catch (e) { toast(e.message, 'err'); } finally { runBtn.disabled = false; }
   }
 
+  async function runFollowUp20d() {
+    followUp20dBtn.disabled = true;
+    try {
+      const r = await api.runFollowUp20d({ days: 20 });
+      toast(r.created ? `${r.created} new 20+ day follow-up reminder${r.created === 1 ? '' : 's'} composed.` : 'All 20+ day unsettled invoices already have today\'s follow-up reminder.', 'ok');
+      await load();
+    } catch (e) { toast(e.message, 'err'); } finally { followUp20dBtn.disabled = false; }
+  }
+
   let editing = false;
   view.addEventListener('focusin', (e) => { editing = /^(INPUT|SELECT)$/.test(e.target.tagName); });
   view.addEventListener('focusout', () => { editing = false; });
@@ -138,13 +178,15 @@ export async function renderPayments(view) {
   async function load() {
     let d;
     try { d = await api.payments(); } catch (e) { toast(e.message, 'err'); return; }
+    allInvoicesCache = d.invoices || [];
+    const u20 = d.summary.unsettled20d || { count: 0, amount: 0 };
     setChildren(tiles,
       tile('Overdue', d.summary.overdue.count, d.summary.overdue.amount, 'err'),
+      tile('20+ days unsettled', u20.count, u20.amount, u20.count ? 'warn' : 'ok'),
       tile('Due this week', d.summary.thisWeek.count, d.summary.thisWeek.amount, 'warn'),
       tile('Later', d.summary.later.count, d.summary.later.amount, 'ok'),
       tile('Reminders ready to send', d.summary.remindersWaiting, null, 'info'));
-    setChildren(invoices, d.invoices.map(invoiceRow));
-    noInvoices.classList.toggle('hidden', d.invoices.length > 0);
+    paintInvoices();
     setChildren(reminders, d.reminders.map(reminderCard));
     noReminders.classList.toggle('hidden', d.reminders.length > 0);
     if (!editing) setChildren(schedules, d.schedules.map(scheduleRow));

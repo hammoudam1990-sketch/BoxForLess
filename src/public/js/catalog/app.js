@@ -94,23 +94,29 @@ export async function startCatalog(root) {
     'aria-label': pending ? `${pending} order waiting for approval` : 'Notifications',
   }, icon('bell'), pending ? h('span', { class: 'p-badge' }, pending) : null);
 
+  const acctBadgeText = account
+    ? [account.customerId ? `ID #${account.customerId}` : null, account.customerClass || null].filter(Boolean).join(' · ')
+    : '';
   const userMenu = h('div', { class: 'p-user-menu', role: 'menu', hidden: true },
     account
-      ? [h('p', { class: 'p-user-menu-head' }, 'Signed in as', h('b', {}, account.company)),
-        h('a', { href: pageUrl('balance'), role: 'menuitem' }, icon('balance'), 'Account Balance'),
-        h('a', { href: pageUrl('orders'), role: 'menuitem' }, icon('orders'), 'Orders'),
-        h('a', { href: pageUrl('settings'), role: 'menuitem' }, icon('settings'), 'Settings'),
-        h('hr'),
-        h('button', { type: 'button', role: 'menuitem', onClick: signOut }, icon('signOut'), 'Sign out')]
+      ? [h('p', { class: 'p-user-menu-head' },
+        'Signed in as Customer',
+        h('b', {}, account.company),
+        acctBadgeText ? h('small', { style: 'display:block;margin-top:2px;color:#2563eb;font-weight:700;' }, acctBadgeText) : null),
+      h('a', { href: pageUrl('balance'), role: 'menuitem' }, icon('balance'), 'Account Balance'),
+      h('a', { href: pageUrl('orders'), role: 'menuitem' }, icon('orders'), 'Orders'),
+      h('a', { href: pageUrl('settings'), role: 'menuitem' }, icon('settings'), 'Settings'),
+      h('hr'),
+      h('button', { type: 'button', role: 'menuitem', onClick: signOut }, icon('signOut'), 'Sign out')]
       : [h('a', { href: '/?next=%2Fcatalog', role: 'menuitem' }, icon('user'), 'Sign in'),
-        h('a', { href: '/signup', role: 'menuitem' }, icon('box'), 'Create an account')]);
+      h('a', { href: '/signup', role: 'menuitem' }, icon('box'), 'Create an account')]);
   const userBtn = h('button', {
     type: 'button', class: 'p-user', 'aria-haspopup': 'menu', 'aria-expanded': 'false',
     onClick: () => setUserMenu(userMenu.hidden),
   },
-  h('span', { class: 'p-avatar' }, icon('user')),
-  h('span', { class: 'p-user-name' }, account ? `Hello, ${account.company}` : 'Sign in'),
-  icon('chevron'));
+    h('span', { class: 'p-avatar' }, icon('user')),
+    h('span', { class: 'p-user-name' }, account ? `${account.company}${account.customerId ? ` (#${account.customerId})` : ''}` : 'Sign in'),
+    icon('chevron'));
   function setUserMenu(open) {
     userMenu.hidden = !open;
     userBtn.setAttribute('aria-expanded', String(open));
@@ -217,7 +223,7 @@ export async function startCatalog(root) {
       current = mountDetail(page, route.id);
     } else if (route.name === 'products') {
       document.title = `Products — ${TITLE}`;
-      current = mountList(page, { onChange: () => {} });
+      current = mountList(page, { onChange: () => { } });
       // the list has its own search box; the header search stands in for it
       page.querySelector('.c-search')?.remove();
       searchInput.value = listState.search;

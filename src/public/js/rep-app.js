@@ -38,6 +38,9 @@ function toast(text) {
 }
 
 let repName = '';
+let repRoleLabel = 'Sales Representative';
+let repMonthData = null;
+const formatGhs = (n) => `GH₵ ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 async function signOut() {
   await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
@@ -48,12 +51,24 @@ async function signOut() {
 async function renderHome() {
   const list = h('div', { class: 'rp-shop-grid' });
   const tiles = h('div', { class: 'rp-tiles' });
-  const heading = h('h2', { class: 'rp-h' }, 'Shops');
   let timer;
   const search = h('input', {
     type: 'search', placeholder: 'Find a customer by name or ID', 'aria-label': 'Find a customer', autocomplete: 'off',
     onInput: () => { clearTimeout(timer); timer = setTimeout(load, 250); },
   });
+
+  const m = repMonthData;
+  const targetCard = m ? h('div', {
+    class: 'rp-card',
+    style: { marginBottom: '12px', padding: '14px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '12px' },
+  },
+    h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' } },
+      h('b', { style: { fontSize: '15px', color: '#0f172a' } }, `Monthly Sales Target (${m.month})`),
+      h('span', { class: `pill ${m.remainingTarget === 0 ? 'green' : 'amber'}` }, m.target ? `${m.vsTarget ?? 0}% achieved` : 'Target')),
+    h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px' } },
+      h('div', null, h('div', { style: { color: '#64748b', fontSize: '11px' } }, 'Target'), h('b', null, m.target !== null ? formatGhs(m.target) : 'Not set')),
+      h('div', null, h('div', { style: { color: '#64748b', fontSize: '11px' } }, 'Sales Achieved'), h('b', { style: { color: '#15803d' } }, formatGhs(m.netSales))),
+      h('div', null, h('div', { style: { color: '#64748b', fontSize: '11px' } }, 'Remaining Balance'), h('b', { style: { color: '#b45309' } }, m.remainingTarget !== null ? formatGhs(m.remainingTarget) : '—')))) : null;
 
   setChildren(app,
     h('header', { class: 'rp-head' },
@@ -61,8 +76,9 @@ async function renderHome() {
         h('div', { class: 'rp-brand' }, logo(), h('div', null, h('b', null, 'Box for Less'), h('small', null, 'Bigger boxes. Better value.'))),
         h('button', { class: 'rp-icon-btn', type: 'button', 'aria-label': 'Sign out', title: 'Sign out', onClick: signOut }, icon('user'))),
       h('h1', null, 'My visits'),
-      h('p', null, `${repName} - Sales Rep`)),
+      h('p', null, `${repName} · ${repRoleLabel}`)),
     h('div', { class: 'rp-body' },
+      targetCard,
       h('label', { class: 'rp-search' }, icon('search'), search),
       tiles,
       h('h2', { class: 'rp-h' }, 'Shops ', h('small', null, '(sorted by nearest expiry)')),
@@ -126,8 +142,8 @@ async function renderVisit(shopId) {
     return;
   }
 
-  const state = new Map(); // lotId -> { shelf, outcome, photo }
-  for (const lot of data.lots) state.set(lot.id, { shelf: lot.shelfCtn, outcome: 'OK', photo: null });
+  const state = new Map(); // lotId -> { shelf, outcome, returnReason, returnNote, photo }
+  for (const lot of data.lots) state.set(lot.id, { shelf: lot.shelfCtn, outcome: 'OK', returnReason: '', returnNote: '', photo: null });
 
   const errBox = h('div');
   const contact = h('input', { class: 'rp-input', type: 'text', id: 'contact', autocomplete: 'off', placeholder: 'Who did you speak to?' });
@@ -151,7 +167,15 @@ async function renderVisit(shopId) {
       customerId: data.shop.id,
       contactName: contact.value.trim(),
       noReturnAgreed: agree.checked,
-      lines: data.lots.map((l) => ({ lotId: l.id, shelfCtn: state.get(l.id).shelf, outcome: state.get(l.id).outcome })),
+      lines: data.lots.map((l) => {
+        const s = state.get(l.id);
+        const line = { lotId: l.id, shelfCtn: s.shelf, outcome: s.outcome };
+        if (s.outcome === 'RETURN') {
+          line.returnReason = s.returnReason;
+          line.returnNote = s.returnNote;
+        }
+        return line;
+      }),
     }));
     for (const lot of data.lots) {
       const photo = state.get(lot.id).photo;
@@ -207,9 +231,32 @@ function lotCard(lot, st, refreshCount) {
     });
     return [value, b];
   });
+  const reasonSelect = h('select', {
+    class: 'rp-input',
+    style: { marginTop: '8px' },
+    onChange: () => {
+      st.returnReason = reasonSelect.value;
+      reasonNote.hidden = reasonSelect.value !== 'OTHER';
+    },
+  },
+    h('option', { value: '' }, 'Choose return reason (required)…'),
+    h('option', { value: 'EXPIRED' }, 'Approaching expiry / Expired'),
+    h('option', { value: 'DAMAGED' }, 'Damaged cartons / packaging'),
+    h('option', { value: 'OTHER' }, 'Other reason (specify)'));
+  const reasonNote = h('input', {
+    class: 'rp-input',
+    type: 'text',
+    placeholder: 'Specify other return reason…',
+    hidden: true,
+    style: { marginTop: '6px' },
+    onInput: () => { st.returnNote = reasonNote.value.trim(); },
+  });
+  const returnReasonWrap = h('div', { hidden: true }, reasonSelect, reasonNote);
+
   function sync() {
     for (const [value, b] of buttons) b.setAttribute('aria-pressed', String(st.outcome === value));
     stepper.classList.toggle('off', st.outcome === 'SOLD_OUT' || st.outcome === 'NOT_CHECKED');
+    returnReasonWrap.hidden = st.outcome !== 'RETURN';
   }
 
   const photoSlot = h('div');
@@ -243,7 +290,8 @@ function lotCard(lot, st, refreshCount) {
     h('div', { class: 'lot-row' }, stepper,
       h('button', { class: 'rp-btn ghost', type: 'button', onClick: () => file.click() }, icon('camera'), 'Take photo'),
       photoSlot, file),
-    h('div', { class: 'outcomes' }, buttons.map(([, b]) => b)));
+    h('div', { class: 'outcomes' }, buttons.map(([, b]) => b)),
+    returnReasonWrap);
   sync();
   return card;
 }
@@ -255,4 +303,8 @@ function route() {
   if (m) renderVisit(Number(m[1])); else renderHome();
 }
 window.addEventListener('hashchange', route);
-api('/api/rep/me').then((me) => { repName = me.name; }).catch(() => {}).finally(() => route());
+api('/api/rep/me').then((me) => {
+  repName = me.name;
+  repRoleLabel = me.roleLabel || 'Sales Representative';
+  repMonthData = me.monthSummary || null;
+}).catch(() => {}).finally(() => route());

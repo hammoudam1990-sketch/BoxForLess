@@ -12,7 +12,7 @@ import { h, setChildren, svg, toggleHidden } from '../lib/dom.js';
 import { createScope, createLatest, debounce, tween } from '../lib/util.js';
 import { getJSON } from './http.js';
 import { createProductCard } from './cards.js';
-import { createOffersSection } from './offers.js';
+import { createOffersSection, createUpcomingSection } from './offers.js';
 import { doodle, doodleForTop } from './doodles.js';
 
 const PAGE_SIZE = 24;
@@ -132,9 +132,10 @@ export function mountList(container, { onChange = () => {} } = {}) {
   const controlsEl = h('div', { class: 'c-controls' }, topRegion, subRegion, filterRegion, sortRow);
   const resultsEl = h('div');
 
-  // the discounted near-expiry offers (a signed-in customer only; empty for anyone else)
+  // the discounted near-expiry offers (a signed-in customer only; empty for anyone else) and upcoming products
   const offersEl = createOffersSection(scope);
-  setChildren(container, productsHeading, offersEl, viewsEl, statEl, searchEl, controlsEl, resultsEl);
+  const upcomingEl = createUpcomingSection(scope);
+  setChildren(container, productsHeading, offersEl, upcomingEl, viewsEl, statEl, searchEl, controlsEl, resultsEl);
 
   // ---- state changes ----
   const loadLater = debounce(() => loadProducts(), SEARCH_DELAY);

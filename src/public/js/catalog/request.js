@@ -367,7 +367,7 @@ function createDrawer() {
   }
 
   async function signOut() {
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => { });
     customer = null;
     setSession(null);
     shelfWarnings = {};

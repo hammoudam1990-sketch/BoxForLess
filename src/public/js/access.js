@@ -66,15 +66,29 @@ function invitation(name, code, catalogUrl, loginId = null) {
     + 'After that you sign in with your ID and password. Keep them private — they are for your company only.';
 }
 
+const PRICE_CLASSES = [
+  ['CLASS A (GHS)', 'CLASS A'],
+  ['CLASS B (GHS)', 'CLASS B'],
+  ['CLASS C (GHS)', 'CLASS C'],
+  ['SHOPRITE (GHS)', 'SHOPRITE'],
+];
+
 /**
  * One customer's row. Kept separate from the page shell because the shell —
  * crucially the search box — must survive a search.
  */
 function codeRow(c) {
+  const curClass = c.pricelist || 'CLASS A (GHS)';
+  const classOpts = PRICE_CLASSES.map(([val, label]) => `<option value="${esc(val)}"${curClass === val ? ' selected' : ''}>${esc(label)}</option>`).join('');
   return `
     <tr data-id="${c.id}" data-sid="${esc(c.odoo_customer_ref || c.phone || '')}" data-odoo-id="${esc(c.odoo_customer_ref || '')}">
-      <td>${esc(c.name)}${c.is_active ? '' : ' <span class="badge">inactive</span>'}
-        <div class="muted">${c.odoo_customer_ref ? `Odoo ID ${esc(c.odoo_customer_ref)}` : 'no Odoo ID yet'} · ${c.password_set ? 'password set' : 'not activated'}</div></td>
+      <td><b>${esc(c.name)}</b>${c.is_active ? '' : ' <span class="badge">inactive</span>'}
+        <div class="muted">${c.odoo_customer_ref ? `Customer ID: <b>${esc(c.odoo_customer_ref)}</b>` : 'no Customer ID yet'} · ${c.password_set ? 'password set' : 'not activated'}</div></td>
+      <td>
+        <select data-class-select aria-label="Customer class for ${esc(c.name)}" style="font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid #cbd5e1;font-weight:600;">
+          ${classOpts}
+        </select>
+      </td>
       <td class="code-value code">${c.access_code_display ? esc(c.access_code_display) : '<span class="muted">none</span>'}</td>
       <td class="muted">${when(c.access_code_issued_at)}</td>
       <td class="nowrap">
@@ -82,7 +96,7 @@ function codeRow(c) {
           <button class="secondary" data-copy>Copy code</button>
           <button data-copy-msg>Copy message</button>` : ''}
         <button class="ghost" data-issue>${c.access_code ? 'Reissue' : 'Issue'}</button>
-        <button class="ghost" data-odoo>Odoo ID</button>
+        <button class="ghost" data-odoo>Customer ID</button>
         ${c.password_set ? '<button class="ghost" data-reset>Reset password</button>' : ''}
       </td>
     </tr>`;
@@ -132,7 +146,7 @@ export async function renderAccessCodes(view, query = '') {
         <button class="ghost" data-copy-link>Copy link</button>
       </p>
       <table>
-        <thead><tr><th>Customer</th><th>Access code</th><th>Issued</th><th></th></tr></thead>
+        <thead><tr><th>Customer &amp; ID</th><th>Customer Class</th><th>Access code (1st-time setup)</th><th>Issued</th><th></th></tr></thead>
         <tbody id="codeRows">${rows}</tbody>
       </table>
     </div>`;
@@ -164,6 +178,18 @@ function wireCodeRows(view, data) {
 
   view.querySelectorAll('[data-copy-msg]').forEach((b) => b.addEventListener('click', () => {
     copyWithFeedback(b, invitation(nameOf(b), codeOf(b), data.catalogUrl, b.closest('tr').dataset.sid || null));
+  }));
+
+  view.querySelectorAll('[data-class-select]').forEach((sel) => sel.addEventListener('change', async () => {
+    const row = sel.closest('tr');
+    sel.disabled = true;
+    try {
+      await api.setCustomerClassification(row.dataset.id, { priceClass: sel.value });
+    } catch (e) {
+      window.alert(e.message);
+    } finally {
+      sel.disabled = false;
+    }
   }));
 
   view.querySelectorAll('[data-odoo]').forEach((b) => b.addEventListener('click', async () => {

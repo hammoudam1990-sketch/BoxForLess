@@ -127,7 +127,8 @@ function donut(counts) {
 
 // ------------------------------------------------------------------ the page
 export async function renderDashboard(view) {
-  const [active, withdrawn, customers, access, reviews, stock, imports, customerImports, returnsAlert] = await Promise.all([
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const [active, withdrawn, customers, access, reviews, stock, imports, customerImports, returnsAlert, salesRepReport] = await Promise.all([
     api.requests({ limit: 500 }),
     api.requests({ deleted: true, limit: 500 }),
     api.customerCodes({ limit: 1 }),
@@ -137,7 +138,11 @@ export async function renderDashboard(view) {
     api.imports(),
     api.customerImports().catch(() => ({ items: [] })),
     api.returnsAlert().catch(() => ({ overdue: 0 })),   // returns that have waited too long for a reason
+    api.report('SALES', currentMonth).catch(() => null),
   ]);
+
+  const repTargetRows = salesRepReport?.sections?.find((s) => s.id === 'sales_by_rep')?.rows?.filter((r) => r.rep && r.rep !== '(no rep)') || [];
+  const fmtGhs = (n) => (n === null || n === undefined ? '—' : `GH₵ ${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
   const all = [...active.items, ...withdrawn.items];
   const now = Date.now();
@@ -231,6 +236,53 @@ export async function renderDashboard(view) {
           </section>
         </div>
 
+        ${repTargetRows.length ? `
+        <section class="ad-card">
+          <div class="ad-card-head">
+            <h2>Sales Representatives — Monthly Targets &amp; Performance (${esc(currentMonth)})</h2>
+            <a href="#/reports">Manage Targets &amp; Full Report →</a>
+          </div>
+          <div class="ad-table-wrap">
+            <table class="ad-table">
+              <thead>
+                <tr>
+                  <th>Sales Representative</th>
+                  <th>Monthly Target</th>
+                  <th>Sales Achieved</th>
+                  <th>Remaining Target Balance</th>
+                  <th>Progress</th>
+                  <th>Active Customers</th>
+                  <th>Shop Visits</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${repTargetRows.map((r) => {
+                  const pctVal = r.vsTarget !== null && r.vsTarget !== undefined ? Math.min(100, Math.max(0, Number(r.vsTarget))) : 0;
+                  const tone = pctVal >= 100 ? 'green' : pctVal >= 60 ? 'amber' : 'blue';
+                  return `<tr>
+                    <td><b>${esc(r.rep)}</b></td>
+                    <td>${fmtGhs(r.target)}</td>
+                    <td><b>${fmtGhs(r.netSales)}</b></td>
+                    <td><span class="ad-pill ${r.remainingTarget === 0 ? 'green' : 'amber'}">${r.remainingTarget === 0 ? 'Target Met!' : fmtGhs(r.remainingTarget)}</span></td>
+                    <td style="min-width:140px">
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <div style="flex:1;height:8px;background:var(--line,#e2e8f0);border-radius:999px;overflow:hidden">
+                          <div style="width:${pctVal}%;height:100%;background:${tone === 'green' ? '#16a34a' : '#2563eb'};border-radius:999px"></div>
+                        </div>
+                        <small style="font-weight:700">${r.vsTarget !== null ? `${r.vsTarget}%` : '—'}</small>
+                      </div>
+                    </td>
+                    <td>${num(r.active)}</td>
+                    <td>${num(r.visits)}</td>
+                    <td><button type="button" class="secondary js-set-rep-target" data-rep="${esc(r.rep)}" data-target="${Number(r.target) || 10000}" style="padding:4px 10px;font-size:12px;">Set Target</button></td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </section>` : ''}
+
         <section class="ad-card">
           <div class="ad-card-head"><h2>Recent Orders</h2><a href="#/requests">View All →</a></div>
           ${recent.length ? `
@@ -287,6 +339,21 @@ export async function renderDashboard(view) {
 
   view.querySelector('#chartRange').addEventListener('change', (e) => {
     view.querySelector('#chartSlot').innerHTML = lineChart(all, Number(e.target.value));
+  });
+  view.querySelectorAll('.js-set-rep-target').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const repName = btn.dataset.rep;
+      const cur = btn.dataset.target || '10000';
+      const next = window.prompt(`Set monthly sales target (GHS) for ${repName}:`, cur);
+      if (next === null) return;
+      const numVal = Number(next);
+      if (!Number.isFinite(numVal) || numVal < 0) { toast('Enter a valid non-negative target in GHS.', 'err'); return; }
+      try {
+        await api.setReportTarget({ scope: 'REP', scopeValue: repName, measure: 'net_sales', month: 'DEFAULT', value: numVal });
+        toast(`Monthly target for ${repName} updated to ${fmtGhs(numVal)}.`, 'ok');
+        await renderDashboard(view);
+      } catch (e) { toast(e.message, 'err'); }
+    });
   });
   // keep the clock current while the dashboard is open
   const clock = view.querySelector('#adClock');

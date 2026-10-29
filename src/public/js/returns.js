@@ -32,7 +32,7 @@ export async function renderReturns(view) {
   const expectedCard = h('div', { class: 'card hidden' },
     h('h2', null, 'Returns expected'),
     h('p', { class: 'muted' }, 'Lots a customer refused to keep at a discount on a shop visit. Not received yet — when Odoo receives the return it appears above.'),
-    h('div', { class: 'exp-wrap' }, h('table', null, h('thead', null, h('tr', null, ['Customer', 'Rep', 'Product', 'Lot', 'Cartons on shelf', 'Expires'].map((t) => h('th', null, t)))), expected)));
+    h('div', { class: 'exp-wrap' }, h('table', null, h('thead', null, h('tr', null, ['Customer', 'Rep', 'Product', 'Lot', 'Cartons on shelf', 'Reason recorded by rep', 'Expires'].map((t) => h('th', null, t)))), expected)));
   const done = h('div', { class: 'ret-list' });
   const noDone = h('p', { class: 'muted hidden' }, 'No return has been classified yet.');
 
@@ -86,7 +86,14 @@ export async function renderReturns(view) {
       h('td', null, h('b', null, r.customer)), h('td', null, r.rep || '—'), h('td', null, r.brokenAgreement.product), h('td', null, r.brokenAgreement.lot || '—'),
       h('td', { class: 'num' }, `${r.brokenAgreement.discountPct}%`), h('td', null, r.brokenAgreement.agreedBy), h('td', null, day(r.brokenAgreement.agreedOn)), h('td', null, r.brokenAgreement.creditNoteGiven || 'none yet'))));
     toggleHidden(brokenCard, d.brokenAgreements.length === 0);
-    setChildren(expected, d.expected.map((r) => h('tr', null, h('td', null, h('b', null, r.customer)), h('td', null, r.rep || '—'), h('td', null, r.product), h('td', null, r.lot), h('td', { class: 'num' }, String(r.cartons)), h('td', null, day(r.expiryDate)))));
+    setChildren(expected, d.expected.map((r) => h('tr', null,
+      h('td', null, h('b', null, r.customer)),
+      h('td', null, r.rep || '—'),
+      h('td', null, r.product),
+      h('td', null, r.lot),
+      h('td', { class: 'num' }, String(r.cartons)),
+      h('td', null, r.returnReason ? `${r.returnReason}${r.returnNote ? ` — ${r.returnNote}` : ''}` : 'Expired'),
+      h('td', null, day(r.expiryDate)))));
     toggleHidden(expectedCard, d.expected.length === 0);
     setChildren(done, d.classified.slice(0, 40).map(returnCard));
     toggleHidden(noDone, d.classified.length > 0);

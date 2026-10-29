@@ -11,7 +11,8 @@ import { getJSON } from './http.js';
 import { createProductCard } from './cards.js';
 import { navigate, pageUrl } from './router.js';
 import { patchList } from './list.js';
-import { createOffersSection } from './offers.js';
+import { createOffersSection, createUpcomingSection } from './offers.js';
+import { onPrices, offerList } from './prices.js';
 import {
   SAMPLE_NOTE, currentCustomer, accountSummary, orderList, invoiceList,
   ORDER_STATUS, formatGhs, formatDate,
@@ -109,6 +110,9 @@ function accountOverview(account) {
   return card('p-account',
     panelHead('Account Overview', sampleTag()),
     h('div', { class: 'p-credit' },
+      account.customerId || account.customerClass ? h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;' },
+        account.customerId ? h('span', { class: 'p-status blue' }, `Customer ID #${account.customerId}`) : null,
+        account.customerClass ? h('span', { class: 'p-status green' }, account.customerClass) : null) : null,
       h('span', {}, 'Available Credit'),
       h('b', {}, money(a.available)),
       h('div', { class: 'p-bar', role: 'img', 'aria-label': `${Math.round(pct)}% of the credit limit available` }, h('i', { style: { width: `${pct}%` } })),
@@ -178,6 +182,7 @@ export function mountHome(container) {
     h('div', { class: 'p-home-main' },
       banner(account, scope),
       account ? createOffersSection(scope) : null,
+      createUpcomingSection(scope),
       h('div', { class: 'p-section-head' },
         h('h2', {}, 'Featured Products'),
         link(pageUrl('products'), 'View All')),
@@ -187,22 +192,73 @@ export function mountHome(container) {
       recentOrders(account),
       quickActions(account))));
 
-  Promise.all([
-    getJSON('/api/catalog/products?view=available&with_image=true&sort=name_asc&limit=12&offset=0').catch(() => ({ items: [] })),
-    getJSON('/api/catalog/products?view=available&sort=name_asc&limit=12&offset=0'),
-  ]).then(([withImg, allAvail]) => {
-    if (!alive) return;
+  let baseItems = [];
+  let lastOfferKey = '';
+  let cardsScope = createScope();
+  scope.add(() => cardsScope.dispose());
+
+  async function renderFeaturedGrid() {
+    if (!alive || !baseItems.length) return;
+    const offers = offerList();
+    const offerBarcodes = offers.map((o) => String(o.barcode));
+    const byId = new Map(baseItems.map((p) => [String(p.id), p]));
+    const missing = offerBarcodes.filter((b) => !byId.has(b));
+    if (missing.length) {
+      const fetched = await Promise.all(
+        missing.map((b) => getJSON(`/api/catalog/products/${encodeURIComponent(b)}`).catch(() => null)),
+      );
+      if (!alive) return;
+      for (const p of fetched) {
+        if (p && p.id) {
+          byId.set(String(p.id), p);
+          baseItems.unshift(p);
+        }
+      }
+    }
     const seen = new Set();
     const merged = [];
-    for (const p of [...(withImg.items || []), ...(allAvail.items || [])]) {
+    for (const b of offerBarcodes) {
+      const p = byId.get(b);
+      if (p && !seen.has(p.id)) {
+        seen.add(p.id);
+        merged.push(p);
+      }
+    }
+    for (const p of baseItems) {
       if (!seen.has(p.id)) {
         seen.add(p.id);
         merged.push(p);
       }
       if (merged.length >= 12) break;
     }
-    setChildren(grid, merged.length ? merged.map((p) => createProductCard(p, scope))
+    cardsScope.dispose();
+    cardsScope = createScope();
+    setChildren(grid, merged.length ? merged.map((p) => createProductCard(p, cardsScope))
       : h('p', { class: 'p-empty' }, 'No products are available right now.'));
+  }
+
+  scope.add(onPrices(() => {
+    const key = offerList().map((o) => `${o.barcode}:${o.discountPct}`).sort().join('|');
+    if (key !== lastOfferKey) {
+      lastOfferKey = key;
+      renderFeaturedGrid();
+    }
+  }));
+
+  Promise.all([
+    getJSON('/api/catalog/products?view=available&with_image=true&sort=name_asc&limit=12&offset=0').catch(() => ({ items: [] })),
+    getJSON('/api/catalog/products?view=available&sort=name_asc&limit=12&offset=0'),
+  ]).then(([withImg, allAvail]) => {
+    if (!alive) return;
+    const seen = new Set();
+    for (const p of [...(withImg.items || []), ...(allAvail.items || [])]) {
+      if (!seen.has(p.id)) {
+        seen.add(p.id);
+        baseItems.push(p);
+      }
+    }
+    lastOfferKey = offerList().map((o) => `${o.barcode}:${o.discountPct}`).sort().join('|');
+    renderFeaturedGrid();
   }, () => {
     if (!alive) return;
     setChildren(grid, h('div', { class: 'c-error', role: 'alert' },
@@ -340,6 +396,8 @@ export function mountSettings(container) {
     h('div', { class: 'p-page-head' }, h('div', {}, h('h1', {}, 'Settings'), h('p', {}, 'Your account details and password security.'))),
     card('', panelHead('Account'),
       h('dl', { class: 'p-details' },
+        row('Customer ID', account.customerId ? `#${account.customerId}` : '—'),
+        row('Customer Class', account.customerClass || '—'),
         row('Company', account.company), row('Sales Representative', account.contact), row('Phone', account.phone),
         row('Email', account.email), row('Delivery address', account.address),
         row('Account type', account.type === 'cash' ? 'Cash customer' : 'Credit customer'))),

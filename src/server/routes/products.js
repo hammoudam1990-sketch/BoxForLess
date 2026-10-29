@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { searchProducts, getProductDetail, productStats, exportProductsRows } from '../../domain/products.js';
+import { searchProducts, getProductDetail, productStats, exportProductsRows, setProductOrderLimit, setProductIncoming } from '../../domain/products.js';
 import { saveProductImage, readPrimaryImage } from '../../domain/images.js';
 import config from '../../config.js';
 
@@ -63,6 +63,26 @@ router.get('/:id', (req, res, next) => {
     if (!detail) return res.status(404).json({ error: 'Product not found' });
     res.json(detail);
   } catch (e) { next(e); }
+});
+
+// Set or clear per-product purchasing limitation (max cartons per order).
+router.put('/:id/order-limit', (req, res, next) => {
+  try {
+    res.json(setProductOrderLimit(req.db, Number(req.params.id), req.body?.maxOrderCtn));
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
+    next(e);
+  }
+});
+
+// Set or clear upcoming incoming stock ("Arriving Soon" cartons).
+router.put('/:id/upcoming', (req, res, next) => {
+  try {
+    res.json(setProductIncoming(req.db, Number(req.params.id), req.body?.incoming));
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ error: e.message });
+    next(e);
+  }
 });
 
 // Serve the current primary image (used for display + reload-after-save + refresh).

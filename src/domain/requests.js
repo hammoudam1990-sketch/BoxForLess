@@ -22,6 +22,7 @@ export const RejectionCode = Object.freeze({
   PRODUCT_UNAVAILABLE: 'PRODUCT_UNAVAILABLE',
   QUANTITY_INVALID: 'QUANTITY_INVALID',
   INSUFFICIENT_STOCK: 'INSUFFICIENT_STOCK',
+  ORDER_LIMIT_EXCEEDED: 'ORDER_LIMIT_EXCEEDED',
   NOT_REQUESTABLE: 'NOT_REQUESTABLE',
   EMPTY_REQUEST: 'EMPTY_REQUEST',
   CUSTOMER_REQUIRED: 'CUSTOMER_REQUIRED',
@@ -51,10 +52,12 @@ export function isValidQuantity(q) {
  * the data boundary forbids exposing exact stock, so the customer is told what
  * happened and which product, never how many are left.
  */
-export function rejectionMessage(code, productName) {
+export function rejectionMessage(code, productName, maxLimit = null) {
   switch (code) {
     case RejectionCode.INSUFFICIENT_STOCK:
       return `Availability changed for ${productName}. The quantity you requested is no longer available — please reduce it.`;
+    case RejectionCode.ORDER_LIMIT_EXCEEDED:
+      return `${productName} has a purchasing limit of ${maxLimit ? `${maxLimit} cartons` : 'a maximum number of cartons'} per order. Please reduce the quantity.`;
     case RejectionCode.PRODUCT_UNAVAILABLE:
       return `${productName} is no longer available. Please remove it from your request.`;
     case RejectionCode.NOT_REQUESTABLE:
@@ -106,6 +109,7 @@ export function validateRequest(db, lines = [], opts = {}) {
   const barcodes = lines.map((l) => String(l.barcode ?? '').trim());
   const found = new Map();
   const displayNames = new Map();
+  const maxOrderLimits = new Map();
   if (barcodes.length) {
     const placeholders = barcodes.map(() => '?').join(',');
     // Names are read for ACTIVE and INACTIVE alike, purely so a rejection can say
@@ -115,7 +119,15 @@ export function validateRequest(db, lines = [], opts = {}) {
       `SELECT id, barcode, name, is_active FROM products WHERE barcode IN (${placeholders})`
     ).all(...barcodes)) {
       displayNames.set(r.barcode, r.name);
-      if (r.is_active === 1) found.set(r.barcode, r.id);
+      if (r.is_active === 1) {
+        found.set(r.barcode, r.id);
+      }
+    }
+    for (const lim of db.prepare(
+      `SELECT barcode, max_order_ctn FROM product_order_limits WHERE barcode IN (${placeholders})`
+    ).all(...barcodes)) {
+      const pid = found.get(lim.barcode);
+      if (pid && lim.max_order_ctn > 0) maxOrderLimits.set(pid, lim.max_order_ctn);
     }
     // A product hidden from this viewer is refused exactly like one that no longer exists.
     if (found.size) {
@@ -143,9 +155,11 @@ export function validateRequest(db, lines = [], opts = {}) {
     const name = info?.name || displayNames.get(barcode) || line.name || barcode || 'This product';
 
     let code = null;
+    const maxLimit = productId ? maxOrderLimits.get(productId) : null;
     if (!productId || !info) code = RejectionCode.PRODUCT_UNAVAILABLE;
     else if (!isValidQuantity(qty)) code = RejectionCode.QUANTITY_INVALID;
     else if (info.availableCtn < 1) code = RejectionCode.NOT_REQUESTABLE;
+    else if (maxLimit && totals.get(productId) > maxLimit) code = RejectionCode.ORDER_LIMIT_EXCEEDED;
     else if (totals.get(productId) > info.availableCtn) code = RejectionCode.INSUFFICIENT_STOCK;
 
     results.push({
@@ -157,7 +171,7 @@ export function validateRequest(db, lines = [], opts = {}) {
       availableCtn: info?.availableCtn ?? 0,   // SERVER-SIDE ONLY — never serialized to a customer
       ok: code === null,
       code,
-      message: code ? rejectionMessage(code, name) : null,
+      message: code ? rejectionMessage(code, name, maxLimit) : null,
     });
   }
 

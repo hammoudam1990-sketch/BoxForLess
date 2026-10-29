@@ -29,10 +29,10 @@ const menuToggle = document.getElementById('menuToggle');
 // person can use. null = everything.
 const ROLE_NAV = {
   ADMIN: null,
-  SALES_MANAGER: ['access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health', 'workspace', 'workspace-data-quality'],
-  WAREHOUSE: ['products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-data-quality'],
+  SALES_MANAGER: ['dashboard', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health', 'workspace', 'workspace-data-quality'],
+  WAREHOUSE: ['dashboard', 'products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-data-quality'],
 };
-const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/access', WAREHOUSE: '#/products' };
+const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/dashboard', WAREHOUSE: '#/products' };
 let me = { role: 'ADMIN', name: 'Staff' };
 const allowed = (name) => !ROLE_NAV[me.role] || ROLE_NAV[me.role].includes(name);
 const canSee = (name) => (ROLE_NAV[me.role] || []).includes(name) || !ROLE_NAV[me.role];
@@ -44,15 +44,24 @@ async function loadMe() {
     if (r.staff.mustChangePassword) { location.assign('/staff/login?change=1'); return false; }
     me = { role: r.staff.role, name: r.staff.name };
   } catch { /* keep the default; the server still enforces everything */ }
-  document.querySelectorAll('[data-nav]').forEach((a) => { if (a.dataset.nav === 'dashboard' ? me.role !== 'ADMIN' : !canSee(a.dataset.nav)) a.classList.add('hidden'); });
+  document.querySelectorAll('[data-nav]').forEach((a) => { if (!canSee(a.dataset.nav)) a.classList.add('hidden'); });
   // a heading with nothing visible under it (a role that sees none of those screens) is hidden too
   document.querySelectorAll('.adm-nav .adm-label, #side .adm-label').forEach((label) => {
     let el = label.nextElementSibling; let any = false;
     while (el && !el.classList.contains('adm-label')) { if (el.dataset && el.dataset.nav && !el.classList.contains('hidden')) any = true; el = el.nextElementSibling; }
     label.classList.toggle('hidden', !any);
   });
+  const ROLE_TITLE = {
+    ADMIN: 'Administrator',
+    SALES_MANAGER: 'Sales Manager',
+    WAREHOUSE: 'Warehouse Administrator',
+    SALES_REP: 'Sales Representative',
+  };
   const who = document.getElementById('staffName');
-  if (who) who.textContent = me.role === 'ADMIN' ? 'Administrator' : me.name;
+  if (who) {
+    const roleLabel = ROLE_TITLE[me.role] || me.role;
+    who.textContent = me.name && me.name !== roleLabel ? `${me.name} · ${roleLabel}` : roleLabel;
+  }
   return true;
 }
 

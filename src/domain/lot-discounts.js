@@ -107,13 +107,13 @@ function cartonsTaken(db, lotKey) {
  * @returns {Map<string, object>}
  */
 export function clearanceOffersFor(db, customerId, { today = todayUtc(), loader = loadLots, settings = sampleSettings() } = {}) {
-  const live = activeDiscounts(db, DiscountKind.CLEARANCE);
+  const live = new Map([...activeDiscounts(db, DiscountKind.SHELF), ...activeDiscounts(db, DiscountKind.CLEARANCE)]);
   const out = new Map();
   if (!live.size || !customerId) return out;
   const minDays = getMinShelfLifeDays(db, customerId);
   const cls = priceClassOf(db, customerId);
 
-  const lots = loader(today).lots
+  const lots = loader(today, db).lots
     .map((lot) => ({ lot, key: `${lot.barcode}|${lot.lotName}` }))
     .filter(({ key }) => live.has(key))
     .map(({ lot, key }) => ({ ...buildExpiryRow(lot, today, settings), key }))
