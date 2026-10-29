@@ -114,6 +114,7 @@ export function listReturns(db, todayStr) {
   const expected = records.filter((r) => r.state === ShelfState.RETURN_EXPECTED).map((r) => ({
     customer: shelf.customers.find((c) => c.id === r.customerId)?.name, rep: repOf.get(r.customerId) || null,
     product: r.productName, lot: r.lotName, cartons: r.cartonsOnShelf, expiryDate: r.expiryDate,
+    returnReason: r.returnReason ?? null,
   }));
 
   const unclassified = all.filter((r) => !r.reason).sort((a, b) => b.ageDays - a.ageDays);

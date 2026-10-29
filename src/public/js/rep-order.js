@@ -249,6 +249,7 @@ export function createOrderView({ onBack }) {
         h('p', null, `${plural(r.data.items, 'product')} ordered for ${name}.`),
         h('p', null, h('b', null, r.data.reference)),
         h('p', { class: 'rep-note' }, 'A draft quotation is on its way to Odoo, where a person approves it. The customer can follow it in their own account.'),
+        h('p', { class: 'rep-note' }, 'It counts towards your monthly target once it is invoiced in Odoo — your "My month" figures update then.'),
         h('button', { type: 'button', class: 'rep-save', onClick: () => { show(pickView); loadCustomers(customerSearch.value.trim()); } }, 'Another order'),
         h('button', { type: 'button', class: 'rep-link', onClick: onBack }, 'Back to my visits')));
     show(doneView);
@@ -275,6 +276,7 @@ export function createOrderView({ onBack }) {
       show(state.customer && state.cart.size ? orderView : pickView);
       loadCustomers(customerSearch.value.trim());
     },
+    showMine,
     close() { el.classList.add('hidden'); },
   };
 }

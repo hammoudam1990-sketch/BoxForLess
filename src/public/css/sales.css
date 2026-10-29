@@ -249,3 +249,54 @@ button.sm-kpi-card:hover { border-color: #bdd4fa; box-shadow: 0 6px 18px #164483
 @media (prefers-reduced-motion: reduce) {
   .sm-page *, .sm-page *::before, .sm-page *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+/* shared design-system mount points */
+.sm-month-target { margin: 0 0 18px; }
+.sm-month-target:empty { display: none; }
+
+/* Recent activity feed */
+.sm-activity { list-style: none; margin: 0; padding: 0; display: grid; }
+.sm-activity li { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--sm-border); }
+.sm-activity li:last-child { border-bottom: 0; }
+.sm-activity-dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: #f5a623; }
+.sm-activity-dot.ok { background: #22b978; }
+.sm-activity-dot.err { background: #e5484d; }
+.sm-activity-text { min-width: 0; font-size: 13px; color: var(--sm-text); }
+.sm-activity-when { margin-left: auto; flex: none; color: var(--sm-muted); font-size: 12px; white-space: nowrap; }
+
+/* ------------------------------------------------------------------ dark theme
+   /sales defaults to light and has no toggle, but a dark choice saved on another page
+   (bfl.theme) still applies here — keep the dashboard readable under it. Same palette as
+   css/dark.css and the bfl-* dark tokens in css/dashboard-pro.css. */
+html[data-theme="dark"] body.adm.sm-page {
+  --sm-text: #f5efe8; --sm-muted: #b8aea2; --sm-border: #3a342d; --sm-surface: #1f1b17;
+  background: #14110e; color: #f5efe8;
+}
+html[data-theme="dark"] .sm-panel, html[data-theme="dark"] .sm-kpi-card { border-color: #3a342d; background: #1f1b17; box-shadow: 0 2px 4px rgba(0, 0, 0, .4); }
+html[data-theme="dark"] .sm-page h1, html[data-theme="dark"] .sm-page h2 { color: #f5efe8; }
+html[data-theme="dark"] .sm-page-head p, html[data-theme="dark"] .sm-eyebrow,
+html[data-theme="dark"] .sm-panel-head p, html[data-theme="dark"] .sm-kpi-label,
+html[data-theme="dark"] .sm-kpi-sub, html[data-theme="dark"] .sm-muted,
+html[data-theme="dark"] .sm-empty, html[data-theme="dark"] .sm-loading { color: #b8aea2; }
+html[data-theme="dark"] .sm-kpi-value, html[data-theme="dark"] .sm-table .primary-text,
+html[data-theme="dark"] .sm-donut-center b { color: #f5efe8; }
+html[data-theme="dark"] .sm-kpi-icon { background: #1d2a44; color: #6ea3ff; }
+html[data-theme="dark"] .sm-kpi-icon.amber { background: #3a2c10; color: #e0a23a; }
+html[data-theme="dark"] .sm-kpi-icon.green { background: #1d3326; color: #5ec38a; }
+html[data-theme="dark"] .sm-kpi-icon.purple { background: #2a2444; color: #b7a5f5; }
+html[data-theme="dark"] .sm-btn, html[data-theme="dark"] .sm-table-btn, html[data-theme="dark"] .sm-select,
+html[data-theme="dark"] .sm-filters input { border-color: #3a342d; background: #1f1b17; color: #e8e2d8; }
+html[data-theme="dark"] .sm-btn:hover, html[data-theme="dark"] .sm-table-btn:hover { border-color: #6ea3ff; background: #2a2520; }
+html[data-theme="dark"] .sm-table th { background: #26211c; color: #b8aea2; }
+html[data-theme="dark"] .sm-table td { border-bottom-color: #3a342d; color: #e8e2d8; }
+html[data-theme="dark"] .sm-table tbody tr:hover { background: #2a2520; }
+html[data-theme="dark"] .sm-status.pending { color: #e0a23a; background: #3a2c10; }
+html[data-theme="dark"] .sm-status.accepted { color: #5ec38a; background: #1d3326; }
+html[data-theme="dark"] .sm-status.withdrawn { color: #ff8f85; background: #3d1f1c; }
+html[data-theme="dark"] .sm-status.other { color: #b8aea2; background: #332d27; }
+html[data-theme="dark"] .sm-stock-ring::before, html[data-theme="dark"] .sm-donut::before { background: #1f1b17; }
+html[data-theme="dark"] .sm-donut-center span, html[data-theme="dark"] .sm-stock-legend li { color: #b8aea2; }
+html[data-theme="dark"] .sm-stock-legend b { color: #f0ebe4; }
+html[data-theme="dark"] .sm-bar-chart .gridline { stroke: #3a342d; }
+html[data-theme="dark"] .sm-bar-chart .axis-label, html[data-theme="dark"] .sm-bar-chart .bar-value { fill: #b8aea2; }
+html[data-theme="dark"] .sm-error { color: #ff8f85; background: #3d1f1c; }

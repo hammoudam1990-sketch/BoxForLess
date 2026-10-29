@@ -7,7 +7,7 @@
 // Rep screens: sales rep, Sales Manager, administrator. Approvals: Sales Manager and administrator only.
 import express from 'express';
 import { requireRole } from '../staff-auth.js';
-import { listReps, myVisits, visitSheet, recordVisit, approvals, decideDiscount, recordCreditNote, shelfLotDiscounts, saveShelfLotDiscount } from '../../domain/shelf.js';
+import { listReps, myVisits, visitSheet, recordVisit, listVisits, approvals, decideDiscount, recordCreditNote, shelfLotDiscounts, saveShelfLotDiscount } from '../../domain/shelf.js';
 import { LotDiscountError } from '../../domain/lot-discounts.js';
 import { todayString } from '../../domain/expiry-list.js';
 
@@ -34,6 +34,11 @@ router.get('/visit-sheet', repScreens, (req, res, next) => {
 
 router.post('/visits', repScreens, (req, res, next) => {
   try { res.status(201).json(recordVisit(req.db, rep(req), req.body?.customer, req.body?.lines, { today: todayString() })); } catch (e) { next(e); }
+});
+
+// The visit log: every saved visit with its lines, for the Sales Manager and the administrator.
+router.get('/visits', managersOnly, (req, res, next) => {
+  try { res.json(listVisits(req.db, { today: todayString(), limit: req.query.limit })); } catch (e) { next(e); }
 });
 
 // The Sales Manager's discount on lots that sit on customers' shelves; the rep sees it on the shop visit.

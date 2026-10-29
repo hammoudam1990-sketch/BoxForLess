@@ -4,16 +4,54 @@
 :root {
   --rep-card-bg: var(--panel);
   --rep-card-border: var(--line);
-  --rep-accent-glow: rgba(168, 64, 11, 0.12);
+  --rep-accent-glow: rgba(20, 85, 192, 0.12);
   --rep-overdue-glow: rgba(168, 57, 47, 0.15);
   --rep-warn-glow: rgba(224, 162, 58, 0.15);
+}
+
+/* The rep workspace wears the white-and-blue dashboard palette (css/dashboard-pro.css):
+   the shared catalogue tokens are remapped on this page only, so the customer catalogue
+   keeps its own look. Light mode here; dark mode below keeps the dark surfaces and only
+   moves the accent to blue. */
+html:not([data-theme="dark"]) body.rep-page {
+  --bg: #F5F8FC;
+  --panel: #FFFFFF;
+  --ink: #172B4D;
+  --muted: #64748B;
+  --on-bg: #172B4D;
+  --on-bg-muted: #3D5474;
+  --line: #DCE5F0;
+  --brand: #1455C0;
+  --brand-dark: #0B2E59;
+  --orange: #1455C0;
+  --yellow: #EAF2FF;
+  --ok: #16803D;
+  --ok-bg: #E7F4EC;
+  --warn: #B7791F;
+  --warn-bg: #FBF3E4;
+  --err: #C62828;
+  --err-bg: #FBEAEA;
+  --info-bg: #EAF2FF;
+  --shadow: 0 1px 2px rgba(11, 46, 89, .05), 0 4px 14px rgba(11, 46, 89, .06);
+}
+html[data-theme="dark"] body.rep-page {
+  --brand: #6ea3ff;
+  --brand-dark: #9dbfff;
+  --orange: #6ea3ff;
+  --info-bg: #1d2a44;
+}
+
+/* the top bar's accent line and glow follow the page palette, not the catalogue's orange */
+body.rep-page .topbar {
+  border-bottom-color: var(--line);
+  box-shadow: 0 2px 10px rgba(11, 46, 89, .08);
 }
 
 .rep-wrap {
   max-width: 680px;
   margin: 0 auto;
   padding: 16px 16px 120px;
-  animation: fadeIn 0.25s ease-out;
+  animation: fadeIn 0.25s ease-out both;
 }
 
 @keyframes fadeIn {
@@ -47,9 +85,10 @@
 
 /* Route Broadcast Banner from Admin Settings */
 .rep-broadcast-banner {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: #92400e;
-  border: 1px solid #fcd34d;
+  background: var(--info-bg);
+  color: var(--brand-dark);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brand);
   border-radius: 12px;
   padding: 12px 16px;
   font-size: 14px;
@@ -59,7 +98,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.12);
+  box-shadow: 0 2px 8px rgba(20, 85, 192, 0.10);
 }
 
 /* Manager Rep Switcher */
@@ -288,7 +327,7 @@
 
 .rep-search:focus {
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(168, 64, 11, 0.15);
+  box-shadow: 0 0 0 3px rgba(20, 85, 192, 0.18);
   outline: none;
 }
 
@@ -732,7 +771,7 @@
 
 .rep-choice:has(input:checked) {
   border-color: var(--brand);
-  background: linear-gradient(135deg, var(--panel), rgba(168, 64, 11, 0.05));
+  background: linear-gradient(135deg, var(--panel), rgba(20, 85, 192, 0.06));
   box-shadow: inset 0 0 0 1px var(--brand);
   font-weight: 600;
 }
@@ -760,7 +799,7 @@
   font-size: 14px;
 }
 
-.rep-extra input[type="number"], .rep-extra input[type="text"] {
+.rep-extra input[type="number"], .rep-extra input[type="text"], .rep-extra textarea {
   width: 100%;
   min-height: 48px;
   font-size: 16px;
@@ -769,7 +808,9 @@
   padding: 8px 12px;
   background: var(--panel);
   color: var(--ink);
+  font-family: inherit;
 }
+.rep-extra textarea { resize: vertical; line-height: 1.4; }
 
 /* Discount preset quick chips */
 .rep-preset-row {
@@ -829,7 +870,7 @@
   color: #fff;
   border: 0;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(168, 64, 11, 0.35);
+  box-shadow: 0 8px 24px rgba(20, 85, 192, 0.32);
   transition: transform 0.15s, background 0.15s;
 }
 
@@ -977,3 +1018,27 @@
 .rep-review-extra { display: grid; gap: 12px; margin: 12px 0; padding: 16px; border-radius: 20px; }
 .rep-review-extra label { display: grid; gap: 4px; font-weight: 700; font-size: 15px; }
 .rep-review-extra input, .rep-review-extra textarea { width: 100%; min-height: 48px; font-size: 16px; }
+
+/* My month: shared target panel inside the rep card */
+.rep-month-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.rep-month-head h2 { margin: 0; }
+.rep-recent-orders { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+.rep-recent-orders li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 11px; border: 1px solid var(--bfl-border, #dce5f0); border-radius: 8px; }
+
+/* quick actions under My month — four icon tiles, two per row on a phone */
+.rep-quick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 0 0 14px; }
+@media (min-width: 720px) { .rep-quick { grid-template-columns: repeat(4, 1fr); } }
+.rep-quick-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 13px 14px; border: 1px solid var(--bfl-border, #dce5f0); border-radius: 12px; background: var(--bfl-white, #fff); color: var(--bfl-text, #172b4d); font: inherit; text-align: left; cursor: pointer; box-shadow: var(--bfl-shadow, 0 1px 2px rgba(11,46,89,.05)); }
+.rep-quick-btn:hover { border-color: var(--bfl-blue, #1455c0); }
+.rep-quick-btn:focus-visible { outline: 2px solid var(--bfl-blue, #1455c0); outline-offset: 2px; }
+.rep-quick-ic { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 4px; border-radius: 9px; color: var(--bfl-blue, #1455c0); background: var(--bfl-blue-soft, #eaf2ff); }
+.rep-quick-ic svg { width: 18px; height: 18px; }
+.rep-quick-btn b { font-size: 13.5px; }
+.rep-quick-sub { color: var(--bfl-muted, #64748b); font-size: 11.5px; }
+
+/* My month hero cards (My Target / My Sales / Remaining) and the recent-orders table */
+.rep-hero { margin: 0 0 14px; }
+.rep-hero .bfl-hero-value { font-size: 19px; }
+.rep-orders-table { margin-bottom: 10px; font-size: 12.5px; }
+.rep-orders-table th, .rep-orders-table td { padding: 8px 9px; }
+.rep-orders-table td:last-child, .rep-orders-table th:last-child { text-align: right; }

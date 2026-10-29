@@ -137,7 +137,7 @@ export function loadShelf(today, db = null) {
 function latestLines(db) {
   const rows = db.prepare(`
     SELECT l.id, l.record_key, l.cartons_on_shelf, l.outcome, l.discount_pct, l.contact_name, l.agreement,
-           l.approval_status, l.approval_reason, l.approved_at, l.credit_note_ref, l.created_at, v.visited_on, v.rep_id
+           l.approval_status, l.approval_reason, l.approved_at, l.credit_note_ref, l.return_reason, l.created_at, v.visited_on, v.rep_id
       FROM shelf_visit_lines l JOIN shelf_visits v ON v.id = l.visit_id
      WHERE l.id IN (SELECT MAX(id) FROM shelf_visit_lines GROUP BY record_key)`).all();
   return new Map(rows.map((r) => [r.record_key, r]));
@@ -188,6 +188,7 @@ function describe(record, line, today, settings, returned = 0) {
   return {
     ...record, daysLeft: left, alerting, alertKind: alert.current, expired: alert.expired,
     state, dueOn, overdue, rejectedReason, cartonsOnShelf, returned, lastLineId: line?.id ?? null,
+    returnReason: line?.return_reason ?? null,
   };
 }
 
@@ -320,13 +321,19 @@ export function recordVisit(db, repId, customerId, lines, { today, loader = load
     seen.add(l.key);
     if (!OUTCOMES.includes(l.outcome)) throw new ShelfError(`${where}: choose what happened.`);
 
-    const out = { recordKey: l.key, outcome: l.outcome, cartons: null, discountPct: null, contactName: null, agreement: 0, approval: null, offeredPct: null, autoApproved: false };
+    const out = { recordKey: l.key, outcome: l.outcome, cartons: null, discountPct: null, contactName: null, agreement: 0, approval: null, offeredPct: null, autoApproved: false, returnReason: null };
     if (l.outcome === VisitOutcome.SOLD_OUT) out.cartons = 0;
     if (l.outcome === VisitOutcome.DISCOUNT_AGREED || l.outcome === VisitOutcome.RETURN_EXPECTED) {
       const n = Number(l.cartonsOnShelf);
       if (!Number.isInteger(n) || n < 1) throw new ShelfError(`${where}: enter how many cartons are still on the shelf (at least 1; if none, choose "sold out").`);
       if (n > record.deliveredCartons) throw new ShelfError(`${where}: only ${record.deliveredCartons} cartons were delivered.`);
       out.cartons = n;
+    }
+    if (l.outcome === VisitOutcome.RETURN_EXPECTED) {
+      // the reason the customer would not keep the lot — the warehouse and the Sales Manager act on it
+      const reason = String(l.returnReason ?? '').trim();
+      if (reason.length < 3 || reason.length > 300) throw new ShelfError(`${where}: give the reason for the return (at least 3 characters).`);
+      out.returnReason = reason;
     }
     if (l.outcome === VisitOutcome.DISCOUNT_AGREED) {
       // the Sales Manager may already have put a discount on this lot: with none typed, the rep offers that one
@@ -354,9 +361,9 @@ export function recordVisit(db, repId, customerId, lines, { today, loader = load
       'INSERT INTO shelf_visits (rep_id, customer_id, visited_on, created_at) VALUES (?, ?, ?, ?)',
     ).run(rep.id, customer.id, today, t);
     const ins = db.prepare(`INSERT INTO shelf_visit_lines
-      (visit_id, record_key, cartons_on_shelf, outcome, discount_pct, contact_name, agreement, approval_status, offered_pct, approved_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-    for (const c of clean) ins.run(visitId, c.recordKey, c.cartons, c.outcome, c.discountPct, c.contactName, c.agreement, c.approval, c.offeredPct, c.autoApproved ? t : null, t);
+      (visit_id, record_key, cartons_on_shelf, outcome, discount_pct, contact_name, agreement, approval_status, offered_pct, approved_at, return_reason, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    for (const c of clean) ins.run(visitId, c.recordKey, c.cartons, c.outcome, c.discountPct, c.contactName, c.agreement, c.approval, c.offeredPct, c.autoApproved ? t : null, c.returnReason, t);
     db.exec('COMMIT');
     return {
       visitId: Number(visitId), customer: { id: customer.id, name: customer.name },
@@ -365,6 +372,55 @@ export function recordVisit(db, repId, customerId, lines, { today, loader = load
       byOutcome: clean.reduce((m, c) => ({ ...m, [c.outcome]: (m[c.outcome] || 0) + 1 }), {}),
     };
   } catch (e) { db.exec('ROLLBACK'); throw e; }
+}
+
+// ---------------------------------------------------------------------------
+// the visit log: every saved visit, for the Sales Manager and the administrator
+// ---------------------------------------------------------------------------
+
+const OUTCOME_LABEL = Object.freeze({
+  SOLD_OUT: 'Sold out', DISCOUNT_AGREED: 'Discount agreed', RETURN_EXPECTED: 'Return expected', NOT_CHECKED: 'Not checked',
+});
+
+/**
+ * Every recorded shop visit, newest first, with its lines. Read-only; the Sales Manager and the
+ * administrator use it to follow what happened on each visit (including the reason for a return).
+ */
+export function listVisits(db, { today, loader = loadShelf, limit = 100 } = {}) {
+  const shelf = overlayShelf(db, loader(today, db));
+  const repName = new Map(shelf.reps.map((r) => [r.id, r.name]));
+  const custName = new Map(shelf.customers.map((c) => [c.id, c.name]));
+  const recordByKey = new Map(shelf.records.map((r) => [r.key, r]));
+
+  const visits = db.prepare(`
+    SELECT id, rep_id, customer_id, visited_on, created_at FROM shelf_visits
+     ORDER BY id DESC LIMIT ?`).all(Math.min(Math.max(Number(limit) || 100, 1), 500));
+  if (!visits.length) return { visits: [] };
+
+  const lineRows = db.prepare(`
+    SELECT id, visit_id, record_key, cartons_on_shelf, outcome, discount_pct, contact_name, return_reason
+      FROM shelf_visit_lines WHERE visit_id IN (SELECT id FROM shelf_visits ORDER BY id DESC LIMIT ?)
+     ORDER BY id`).all(visits.length);
+  const byVisit = new Map();
+  for (const l of lineRows) {
+    const rec = recordByKey.get(l.record_key);
+    const line = {
+      productName: rec?.productName ?? l.record_key, lotName: rec?.lotName ?? '',
+      outcome: OUTCOME_LABEL[l.outcome] ?? l.outcome, cartonsOnShelf: l.cartons_on_shelf,
+      discountPct: l.discount_pct, contactName: l.contact_name, returnReason: l.return_reason,
+    };
+    if (!byVisit.has(l.visit_id)) byVisit.set(l.visit_id, []);
+    byVisit.get(l.visit_id).push(line);
+  }
+
+  return {
+    visits: visits.map((v) => ({
+      id: v.id, rep: repName.get(v.rep_id) ?? v.rep_id,
+      customer: custName.get(v.customer_id) ?? `Customer ${v.customer_id}`,
+      visitedOn: v.visited_on, createdAt: v.created_at,
+      lines: byVisit.get(v.id) ?? [],
+    })),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -412,6 +468,7 @@ export function approvals(db, { today, loader = loadShelf, settings = sampleSett
   const returns = all.filter((r) => r.state === ShelfState.RETURN_EXPECTED).map((r) => ({
     customer: shelf.customers.find((c) => c.id === r.customerId)?.name, productName: r.productName, lotName: r.lotName,
     expiryDate: r.expiryDate, cartonsOnShelf: r.cartonsOnShelf, rep: repName.get(custRep.get(r.customerId)),
+    returnReason: r.returnReason ?? null,
   }));
 
   return {

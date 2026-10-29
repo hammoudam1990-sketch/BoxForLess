@@ -207,6 +207,8 @@ export const api = {
   saveShelfVisit: (body) => fetch('/api/shelf/visits', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   }).then(handle),
+  // the visit log (Sales Manager / administrator): every saved visit with its lines
+  shelfVisitLog: (limit = 100) => fetch(`/api/shelf/visits?${new URLSearchParams({ limit })}`).then(handle),
   // The Sales Manager's discount on lots that sit on customers' shelves (the rep sees it on the visit).
   shelfLotDiscounts: () => fetch('/api/shelf/lot-discounts').then(handle),
   setShelfLotDiscount: (key, pct) => fetch(`/api/shelf/lot-discounts/${encodeURIComponent(key)}`, {

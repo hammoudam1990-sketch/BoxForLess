@@ -402,6 +402,9 @@ export function applyMigrations(db) {
   // what the Sales Manager had offered on a shelf lot when the rep visited (a discount within it is approved at once)
   addColumns(db, 'shelf_visit_lines', { offered_pct: 'REAL' });
 
+  // why the customer would not keep the lot, when the visit outcome is "return expected"
+  addColumns(db, 'shelf_visit_lines', { return_reason: 'TEXT' });
+
   // Which rep owns a sample shop (the Sales Manager can change the sample list). '' = nobody.
   db.exec(`
     CREATE TABLE IF NOT EXISTS shop_reps (

@@ -7,7 +7,7 @@ import { freshDb } from './helpers.js';
 import { createApp } from '../src/server/index.js';
 import { VisitOutcome } from '../src/domain/expiry.js';
 import {
-  loadShelf, myVisits, visitSheet, recordVisit, approvals, decideDiscount, recordCreditNote,
+  loadShelf, myVisits, visitSheet, recordVisit, listVisits, approvals, decideDiscount, recordCreditNote,
   ShelfError, ShelfState, ApprovalStatus, shelfKey, OVERDUE_AFTER_DAYS,
 } from '../src/domain/shelf.js';
 
@@ -205,12 +205,12 @@ test('15. a decision on something that is not a proposed discount is refused', (
 test('16. return expected: the lot leaves the rep\'s list and is passed on to returns', () => {
   const db = freshDb();
   const l = lot(db, 4102, 'SAMPLE-0015');
-  record(db, 4102, [{ key: l.key, outcome: VisitOutcome.RETURN_EXPECTED, cartonsOnShelf: 3 }]);
+  record(db, 4102, [{ key: l.key, outcome: VisitOutcome.RETURN_EXPECTED, cartonsOnShelf: 3, returnReason: 'Customer refused the lot' }]);
   assert.equal(lot(db, 4102, 'SAMPLE-0015'), undefined);
   const r = approvals(db, { today: TODAY }).returnsExpected;
   assert.equal(r.length, 1);
   assert.deepEqual([r[0].customer, r[0].productName, r[0].cartonsOnShelf, r[0].rep], ['Akwaaba Mini Mart', 'CANDIA JUICE 180ML *24/MANGO', 3, 'Kwame Asante']);
-  assert.throws(() => record(db, 4102, [{ key: l.key, outcome: VisitOutcome.RETURN_EXPECTED, cartonsOnShelf: 0 }]), ShelfError);
+  assert.throws(() => record(db, 4102, [{ key: l.key, outcome: VisitOutcome.RETURN_EXPECTED, cartonsOnShelf: 0, returnReason: 'Customer refused the lot' }]), ShelfError);
 });
 
 // ===========================================================================
@@ -357,4 +357,35 @@ test('26. the shelf API and the rep page are staff-only', async () => {
 test('27. the shelf states are the ones the specification names', () => {
   assert.deepEqual(Object.keys(ShelfState).sort(), ['CLOSED_CREDIT_NOTE', 'CLOSED_RETURNED', 'CLOSED_SOLD', 'DISCOUNT_APPROVED', 'DISCOUNT_PENDING', 'OPEN', 'RETURN_EXPECTED']);
   assert.deepEqual(Object.keys(ApprovalStatus), ['PENDING', 'APPROVED', 'REJECTED']);
+});
+
+// ===========================================================================
+// the reason for a return, and the visit log
+// ===========================================================================
+test('28. return expected needs a reason, and the reason is stored', () => {
+  const db = freshDb();
+  const l = lot(db, 4102, 'SAMPLE-0015');
+  assert.throws(() => record(db, 4102, [{ key: l.key, outcome: VisitOutcome.RETURN_EXPECTED, cartonsOnShelf: 3 }]), /reason for the return/);
+  assert.throws(() => record(db, 4102, [{ key: l.key, outcome: VisitOutcome.RETURN_EXPECTED, cartonsOnShelf: 3, returnReason: '  ' }]), /reason for the return/);
+  assert.throws(() => record(db, 4102, [{ key: l.key, outcome: VisitOutcome.RETURN_EXPECTED, cartonsOnShelf: 3, returnReason: 'no' }]), /reason for the return/);
+  record(db, 4102, [{ key: l.key, outcome: VisitOutcome.RETURN_EXPECTED, cartonsOnShelf: 3, returnReason: 'Too close to the expiry date' }]);
+  assert.equal(db.prepare('SELECT return_reason FROM shelf_visit_lines').get().return_reason, 'Too close to the expiry date');
+  // the reason travels with the expected return, for the warehouse and the Sales Manager
+  assert.equal(approvals(db, { today: TODAY }).returnsExpected[0].returnReason, 'Too close to the expiry date');
+});
+
+test('29. the visit log lists every saved visit with its lines, newest first', () => {
+  const db = freshDb();
+  assert.deepEqual(listVisits(db, { today: TODAY }).visits, []);
+  const a = lot(db, 4101, 'SAMPLE-0004');
+  record(db, 4101, [{ key: a.key, outcome: VisitOutcome.SOLD_OUT }]);
+  const b = lot(db, 4102, 'SAMPLE-0015');
+  record(db, 4102, [{ key: b.key, outcome: VisitOutcome.RETURN_EXPECTED, cartonsOnShelf: 3, returnReason: 'Damaged cartons' }]);
+  const { visits } = listVisits(db, { today: TODAY });
+  assert.equal(visits.length, 2);
+  assert.equal(visits[0].customer, 'Akwaaba Mini Mart');           // newest first
+  assert.equal(visits[0].rep, 'Kwame Asante');
+  assert.equal(visits[0].lines[0].outcome, 'Return expected');
+  assert.equal(visits[0].lines[0].returnReason, 'Damaged cartons');
+  assert.equal(visits[1].lines[0].outcome, 'Sold out');
 });

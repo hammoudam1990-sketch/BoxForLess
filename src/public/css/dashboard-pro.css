@@ -1,0 +1,286 @@
+/* Box for Less — shared dashboard design system (white & blue).
+   One visual identity for the Sales Manager, Sales Representative and Warehouse workspaces:
+   the same tokens, metric cards, progress bars, badges, panels and states everywhere.
+   Loaded after the page's own stylesheet; the .bfl-* names keep it separate from existing styles. */
+
+:root {
+  /* palette */
+  --bfl-blue: #1455C0;
+  --bfl-blue-dark: #0B2E59;
+  --bfl-blue-soft: #EAF2FF;
+  --bfl-white: #FFFFFF;
+  --bfl-bg: #F5F8FC;
+  --bfl-text: #172B4D;
+  --bfl-muted: #64748B;
+  --bfl-border: #DCE5F0;
+  --bfl-success: #16803D;
+  --bfl-success-soft: #E7F4EC;
+  --bfl-warning: #B7791F;
+  --bfl-warning-soft: #FBF3E4;
+  --bfl-error: #C62828;
+  --bfl-error-soft: #FBEAEA;
+
+  /* shape and depth */
+  --bfl-radius: 12px;
+  --bfl-radius-sm: 8px;
+  --bfl-shadow: 0 1px 2px rgba(11, 46, 89, .05), 0 4px 14px rgba(11, 46, 89, .06);
+}
+
+/* ------------------------------------------------------------------ panels */
+.bfl-panel {
+  background: var(--bfl-white);
+  border: 1px solid var(--bfl-border);
+  border-radius: var(--bfl-radius);
+  box-shadow: var(--bfl-shadow);
+  padding: 18px 20px;
+}
+.bfl-panel > h2 { margin: 0 0 4px; color: var(--bfl-text); font-size: 16px; letter-spacing: -.01em; }
+.bfl-panel > .bfl-panel-sub { margin: 0 0 14px; color: var(--bfl-muted); font-size: 12.5px; }
+.bfl-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.bfl-panel-head > div > h2 { margin: 0 0 4px; color: var(--bfl-text); font-size: 16px; letter-spacing: -.01em; }
+.bfl-panel-head > div > p { margin: 0; color: var(--bfl-muted); font-size: 12.5px; }
+
+/* ------------------------------------------------------------------ metric cards */
+.bfl-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin: 0 0 18px; }
+.bfl-metric {
+  display: flex; align-items: center; gap: 13px;
+  padding: 15px 16px; background: var(--bfl-white);
+  border: 1px solid var(--bfl-border); border-radius: var(--bfl-radius); box-shadow: var(--bfl-shadow);
+  text-align: left; color: var(--bfl-text); text-decoration: none;
+}
+button.bfl-metric { cursor: pointer; font: inherit; width: 100%; }
+button.bfl-metric:hover, a.bfl-metric:hover { border-color: var(--bfl-blue); }
+.bfl-metric-icon {
+  display: grid; place-items: center; width: 42px; height: 42px; flex: none;
+  border-radius: 10px; color: var(--bfl-blue); background: var(--bfl-blue-soft);
+}
+.bfl-metric-icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.bfl-metric-icon.success { color: var(--bfl-success); background: var(--bfl-success-soft); }
+.bfl-metric-icon.warning { color: var(--bfl-warning); background: var(--bfl-warning-soft); }
+.bfl-metric-icon.error { color: var(--bfl-error); background: var(--bfl-error-soft); }
+.bfl-metric-copy { min-width: 0; }
+.bfl-metric-label { display: block; color: var(--bfl-muted); font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.bfl-metric-value { display: block; margin-top: 2px; color: var(--bfl-text); font-size: 21px; font-weight: 750; letter-spacing: -.02em; }
+.bfl-metric-sub { display: block; margin-top: 2px; color: var(--bfl-muted); font-size: 12px; }
+
+/* ------------------------------------------------------------------ target progress */
+.bfl-progress { height: 9px; border-radius: 99px; background: var(--bfl-blue-soft); overflow: hidden; }
+.bfl-progress > i {
+  display: block; height: 100%; border-radius: 99px; background: var(--bfl-blue);
+  transition: width .5s ease;
+}
+.bfl-progress.reached > i { background: var(--bfl-success); }
+.bfl-progress.behind > i { background: var(--bfl-warning); }
+@media (prefers-reduced-motion: reduce) { .bfl-progress > i { transition: none; } }
+
+.bfl-target-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 18px; margin: 12px 0; }
+.bfl-target-stat span { display: block; color: var(--bfl-muted); font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.bfl-target-stat b { display: block; margin-top: 2px; color: var(--bfl-text); font-size: 17px; font-weight: 720; }
+.bfl-target-stat b.over { color: var(--bfl-success); }
+
+/* ------------------------------------------------------------------ badges */
+.bfl-badge {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 22px; padding: 1px 9px;
+  border-radius: 99px; font-size: 11.5px; font-weight: 680; white-space: nowrap;
+  color: var(--bfl-blue); background: var(--bfl-blue-soft);
+}
+.bfl-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.bfl-badge.success { color: var(--bfl-success); background: var(--bfl-success-soft); }
+.bfl-badge.warning { color: var(--bfl-warning); background: var(--bfl-warning-soft); }
+.bfl-badge.error { color: var(--bfl-error); background: var(--bfl-error-soft); }
+.bfl-badge.neutral { color: var(--bfl-muted); background: #EEF2F7; }
+
+/* ------------------------------------------------------------------ tables */
+.bfl-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.bfl-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.bfl-table th {
+  padding: 9px 12px; border-bottom: 1px solid var(--bfl-border);
+  color: var(--bfl-muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; text-align: left;
+  background: var(--bfl-bg);
+}
+.bfl-table td { padding: 11px 12px; border-bottom: 1px solid var(--bfl-border); color: var(--bfl-text); vertical-align: middle; }
+.bfl-table tbody tr:last-child td { border-bottom: 0; }
+.bfl-table tbody tr:hover { background: #F8FBFF; }
+.bfl-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.bfl-table .primary-text { font-weight: 650; }
+.bfl-table .bfl-progress { min-width: 110px; }
+.bfl-table-sort { border: 0; background: none; padding: 0; color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; }
+.bfl-table-sort:hover { color: var(--bfl-blue); }
+
+/* ------------------------------------------------------------------ states */
+.bfl-empty, .bfl-error-state {
+  display: grid; justify-items: center; gap: 6px; padding: 34px 18px; text-align: center;
+  color: var(--bfl-muted);
+}
+.bfl-empty svg, .bfl-error-state svg { width: 34px; height: 34px; fill: none; stroke: #B6C4D8; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.bfl-empty b, .bfl-error-state b { color: var(--bfl-text); font-size: 14px; }
+.bfl-empty p, .bfl-error-state p { margin: 0; max-width: 46ch; font-size: 12.5px; }
+.bfl-error-state { color: var(--bfl-error); }
+.bfl-error-state b { color: var(--bfl-error); }
+
+.bfl-skeleton { display: grid; gap: 10px; padding: 8px 0; }
+.bfl-skeleton i {
+  display: block; height: 14px; border-radius: 6px;
+  background: linear-gradient(90deg, #EAF0F8 25%, #F5F8FC 50%, #EAF0F8 75%);
+  background-size: 200% 100%; animation: bfl-shimmer 1.3s infinite;
+}
+.bfl-skeleton i:nth-child(2) { width: 82%; }
+.bfl-skeleton i:nth-child(3) { width: 64%; }
+@keyframes bfl-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .bfl-skeleton i { animation: none; } }
+
+/* ------------------------------------------------------------------ buttons and fields */
+.bfl-btn {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 15px;
+  border: 0; border-radius: var(--bfl-radius-sm); background: var(--bfl-blue); color: #fff;
+  font-size: 13px; font-weight: 650; text-decoration: none; cursor: pointer;
+}
+.bfl-btn:hover { background: var(--bfl-blue-dark); }
+.bfl-btn:disabled { opacity: .55; cursor: not-allowed; }
+.bfl-btn.secondary { border: 1px solid var(--bfl-border); background: var(--bfl-white); color: var(--bfl-blue); }
+.bfl-btn.secondary:hover { background: var(--bfl-blue-soft); }
+.bfl-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+.bfl-field { display: grid; gap: 5px; }
+.bfl-field > span { color: var(--bfl-muted); font-size: 12px; font-weight: 600; }
+.bfl-field input, .bfl-field select {
+  height: 38px; padding: 0 11px; border: 1px solid var(--bfl-border); border-radius: var(--bfl-radius-sm);
+  background: var(--bfl-white); color: var(--bfl-text); font: inherit; font-size: 13px;
+}
+.bfl-field input:focus, .bfl-field select:focus { outline: 2px solid var(--bfl-blue); outline-offset: 1px; border-color: var(--bfl-blue); }
+
+.bfl-note { padding: 11px 14px; border: 1px solid var(--bfl-border); border-left: 3px solid var(--bfl-blue); border-radius: var(--bfl-radius-sm); background: var(--bfl-blue-soft); color: var(--bfl-text); font-size: 12.5px; }
+.bfl-note.warning { border-left-color: var(--bfl-warning); background: var(--bfl-warning-soft); }
+.bfl-note p { margin: 0 0 4px; }
+.bfl-note p:last-child { margin-bottom: 0; }
+
+/* role identification chip, used in the shared shells */
+.bfl-role-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px;
+  border-radius: 99px; background: var(--bfl-blue-soft); color: var(--bfl-blue);
+  font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; white-space: nowrap;
+}
+
+/* focus visibility everywhere the system is used */
+.bfl-panel a:focus-visible, .bfl-metrics a:focus-visible, button.bfl-metric:focus-visible,
+.bfl-btn:focus-visible, .bfl-table-sort:focus-visible {
+  outline: 2px solid var(--bfl-blue); outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .bfl-panel { padding: 14px; }
+  .bfl-metrics { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .bfl-metric-value { font-size: 18px; }
+}
+
+/* ------------------------------------------------------------------ dark theme
+   The same components under html[data-theme="dark"] (js/theme-init.js). Blue stays the
+   identity; surfaces and text follow the project's dark palette (css/dark.css). */
+html[data-theme="dark"] {
+  --bfl-blue: #6ea3ff;
+  --bfl-blue-dark: #9dbfff;
+  --bfl-blue-soft: #1d2a44;
+  --bfl-white: #1f1b17;
+  --bfl-bg: #14110e;
+  --bfl-text: #f5efe8;
+  --bfl-muted: #b8aea2;
+  --bfl-border: #3a342d;
+  --bfl-success: #5ec38a;
+  --bfl-success-soft: #1d3326;
+  --bfl-warning: #e0a23a;
+  --bfl-warning-soft: #3a2c10;
+  --bfl-error: #ff8f85;
+  --bfl-error-soft: #3d1f1c;
+  --bfl-shadow: 0 2px 4px rgba(0, 0, 0, .4), 0 10px 26px rgba(0, 0, 0, .45);
+}
+html[data-theme="dark"] .bfl-table tbody tr:hover { background: #2a2520; }
+html[data-theme="dark"] .bfl-badge.neutral { background: #332d27; }
+html[data-theme="dark"] .bfl-skeleton i {
+  background: linear-gradient(90deg, #2a2520 25%, #342e28 50%, #2a2520 75%);
+  background-size: 200% 100%;
+}
+html[data-theme="dark"] .bfl-progress { background: #2a2520; }
+html[data-theme="dark"] .bfl-btn.secondary { background: var(--bfl-white); }
+html[data-theme="dark"] .bfl-btn.secondary:hover { background: #2a2520; }
+
+/* ------------------------------------------------------------------ hero stat cards
+   The big "Total Sales This Month / Target / Remaining" cards at the top of each role
+   dashboard: a quiet label, a big figure, and one line of context (a delta, a percentage,
+   or a hint). */
+.bfl-hero-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 14px; margin: 0 0 18px; }
+.bfl-hero {
+  display: block; padding: 17px 18px 15px;
+  background: var(--bfl-white); border: 1px solid var(--bfl-border);
+  border-radius: var(--bfl-radius); box-shadow: var(--bfl-shadow);
+}
+.bfl-hero-label { display: block; color: var(--bfl-muted); font-size: 11.5px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
+.bfl-hero-value { display: block; margin-top: 5px; color: var(--bfl-text); font-size: 25px; font-weight: 760; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.bfl-hero-sub { display: block; margin-top: 5px; color: var(--bfl-muted); font-size: 12.5px; }
+.bfl-hero .bfl-progress { margin-top: 10px; }
+a.bfl-hero { color: inherit; text-decoration: none; }
+a.bfl-hero:hover { border-color: var(--bfl-blue); }
+a.bfl-hero:focus-visible { outline: 2px solid var(--bfl-blue); outline-offset: 2px; }
+
+/* a delta line on a hero card: "+12% from last month" — up is good news, down is bad news */
+.bfl-delta { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 650; }
+.bfl-delta::before { font-size: 9px; line-height: 1; }
+.bfl-delta.up { color: var(--bfl-success); }
+.bfl-delta.up::before { content: "▲"; }
+.bfl-delta.down { color: var(--bfl-error); }
+.bfl-delta.down::before { content: "▼"; }
+.bfl-delta.flat { color: var(--bfl-muted); font-weight: 500; }
+.bfl-delta.flat::before { content: ""; }
+
+/* ------------------------------------------------------------------ status pills
+   Like .bfl-badge but without the leading dot — for order states inside tables. */
+.bfl-pill {
+  display: inline-flex; align-items: center; min-height: 22px; padding: 1px 10px;
+  border-radius: 99px; font-size: 11.5px; font-weight: 680; white-space: nowrap;
+  color: var(--bfl-blue); background: var(--bfl-blue-soft);
+}
+.bfl-pill.success { color: var(--bfl-success); background: var(--bfl-success-soft); }
+.bfl-pill.warning { color: var(--bfl-warning); background: var(--bfl-warning-soft); }
+.bfl-pill.error { color: var(--bfl-error); background: var(--bfl-error-soft); }
+.bfl-pill.neutral { color: var(--bfl-muted); background: #EEF2F7; }
+html[data-theme="dark"] .bfl-pill.neutral { background: #332d27; }
+
+/* ------------------------------------------------------------------ two-column split
+   A wide panel next to a narrow one (Stock Overview beside Expiry Alerts). */
+.bfl-split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; align-items: start; margin-bottom: 18px; }
+@media (max-width: 900px) { .bfl-split { grid-template-columns: minmax(0, 1fr); } }
+
+/* a truncating cell label, for long product names in narrow panels */
+.bfl-ellipsis { display: block; max-width: 24ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ------------------------------------------------------------------ alert rows
+   The "Expiry Alerts" list: a tone dot, the product and how long is left, and the
+   action link on the right. */
+.bfl-alert-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.bfl-alert-row {
+  display: flex; align-items: center; gap: 11px; padding: 10px 0; min-width: 0;
+  border-bottom: 1px solid var(--bfl-border);
+}
+.bfl-alert-row:last-child { border-bottom: 0; }
+.bfl-alert-dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--bfl-blue); }
+.bfl-alert-dot.warning { background: var(--bfl-warning); }
+.bfl-alert-dot.error { background: var(--bfl-error); }
+.bfl-alert-dot.success { background: var(--bfl-success); }
+.bfl-alert-text { min-width: 0; flex: 1; }
+.bfl-alert-text b { display: block; color: var(--bfl-text); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bfl-alert-text span { display: block; margin-top: 1px; color: var(--bfl-muted); font-size: 12px; }
+.bfl-alert-act { flex: none; font-size: 12.5px; font-weight: 650; color: var(--bfl-blue); text-decoration: none; }
+.bfl-alert-act:hover { text-decoration: underline; }
+
+/* an inline progress bar with its percentage beside it, for compact tables */
+.bfl-progress-cell { display: flex; align-items: center; gap: 9px; min-width: 130px; }
+.bfl-progress-cell .bfl-progress { flex: 1; min-width: 60px; }
+.bfl-progress-cell > span { flex: none; color: var(--bfl-muted); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+/* a small heading that splits a long dashboard into named zones */
+.bfl-zone { margin: 22px 0 12px; color: var(--bfl-muted); font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+
+@media (max-width: 640px) {
+  .bfl-hero-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .bfl-hero { padding: 13px 14px 12px; }
+  .bfl-hero-value { font-size: 20px; }
+}
