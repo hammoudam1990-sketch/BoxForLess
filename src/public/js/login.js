@@ -147,6 +147,25 @@ form.addEventListener('submit', async (event) => {
       throw new Error('Too many sign-in attempts. Please wait 15 minutes and try again.');
     }
 
+    // Fallback: if the user entered a customer access code in the password or identifier field, verify via /api/catalog/access.
+    for (const candidateCode of [password.value.trim(), value]) {
+      const normalized = candidateCode.replace(/[\s-]+/g, '');
+      if (/^[A-Za-z0-9]{8}$/.test(normalized)) {
+        const codeRes = await fetch('/api/catalog/access', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: candidateCode }),
+        });
+        if (codeRes.ok) {
+          const codeData = await codeRes.json();
+          showMessage(`Signed in as ${codeData.customer?.name || 'Customer'}. Opening your catalogue…`, 'success');
+          navigating = true;
+          location.assign(nextPath('customer'));
+          return;
+        }
+      }
+    }
+
     const accountData = await accountRes.json().catch(() => ({}));
     throw new Error(accountData.error || 'The Customer ID, work email or password is not correct.');
   } catch (error) {

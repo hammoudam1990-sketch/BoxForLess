@@ -39,6 +39,7 @@ import { todayString } from '../domain/expiry-list.js';
 import { getSiteSettings } from '../domain/site-settings.js';
 import { enterAccessCode, accessStatus, exitAccess } from './customer-access.js';
 import { backupDatabase } from '../db/backup.js';
+import { bootstrapDatabase } from '../db/bootstrap.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -202,6 +203,7 @@ export function createApp(db) {
 // Start only when run directly.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const db = openDatabase(config.dbPath);
+  bootstrapDatabase(db);
   const app = createApp(db);
   const { host, port } = config;
 

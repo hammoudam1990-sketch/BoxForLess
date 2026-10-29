@@ -3,8 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import openDatabase from '../src/db/connection.js';
 import { createApp } from '../src/server/index.js';
-import { createPreview, confirmImport } from '../src/import/service.js';
-import { seedFeaturedProductImages } from '../src/domain/images.js';
+import { bootstrapDatabase } from '../src/db/bootstrap.js';
 import config from '../src/config.js';
 
 let appInstance = null;
@@ -38,29 +37,7 @@ function initializeApp() {
   }
 
   const db = openDatabase(dbPath);
-
-  // Self-healing bootstrap: if brand new /tmp database with 0 products, seed from sample fixture
-  try {
-    const prodCount = db.prepare('SELECT COUNT(*) AS c FROM products').get()?.c || 0;
-    if (prodCount === 0) {
-      const candidates = [
-        path.resolve(process.cwd(), 'fixtures', 'sample-products.xlsx'),
-        path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'sample-products.xlsx'),
-      ];
-      for (const cand of candidates) {
-        if (fs.existsSync(cand)) {
-          const { batchId, preview } = createPreview(db, cand, 'sample-products.xlsx');
-          if (preview.ok) {
-            confirmImport(db, batchId);
-          }
-          break;
-        }
-      }
-    }
-    seedFeaturedProductImages(db);
-  } catch (err) {
-    console.warn('[vercel] Auto-seed products note:', err.message);
-  }
+  bootstrapDatabase(db);
 
   appInstance = createApp(db);
   return appInstance;

@@ -38,12 +38,16 @@ try {
   }
 
   if (!existingStaff.has('kwame@boxforless.com')) {
-    addStaff.run('Kwame Asante', 'kwame@boxforless.com', 'SALES_REP', 'rep-1', 'scrypt:rep:kwame123');
+    addStaff.run('Kwame Asante', 'kwame@boxforless.com', 'SALES_REP', 'rep-1', adminPassHash);
     console.log('Added staff: Kwame Asante (rep-1)');
+  } else {
+    db.prepare('UPDATE staff_users SET password_hash = ?, is_active = 1 WHERE email = ?').run(adminPassHash, 'kwame@boxforless.com');
   }
   if (!existingStaff.has('efua@boxforless.com')) {
-    addStaff.run('Efua Owusu', 'efua@boxforless.com', 'SALES_REP', 'rep-2', 'scrypt:rep:efua123');
+    addStaff.run('Efua Owusu', 'efua@boxforless.com', 'SALES_REP', 'rep-2', adminPassHash);
     console.log('Added staff: Efua Owusu (rep-2)');
+  } else {
+    db.prepare('UPDATE staff_users SET password_hash = ?, is_active = 1 WHERE email = ?').run(adminPassHash, 'efua@boxforless.com');
   }
 
   // 2. Real Customers

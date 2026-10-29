@@ -63,8 +63,26 @@ $('customerForm').addEventListener('submit', (e) => {
   const password = $('cPassword').value;
   if (!id || !password) { say('Enter your customer ID and password.'); return; }
   busy($('cSubmit'), async () => {
-    const r = await post('/api/auth/customer/login', { id, password });
-    location.assign(safeNext(r.home));
+    try {
+      const r = await post('/api/auth/customer/login', { id, password });
+      location.assign(safeNext(r.home));
+    } catch (err) {
+      // Fallback: if the user entered an 8-character access code (e.g. 2N4Y-RNWP) in the password or ID field,
+      // try signing in with the access code endpoint (/api/catalog/access).
+      for (const candidate of [password.trim(), id]) {
+        const normalized = candidate.replace(/[\s-]+/g, '');
+        if (/^[A-Za-z0-9]{8}$/.test(normalized)) {
+          try {
+            await post('/api/catalog/access', { code: candidate });
+            location.assign(safeNext('/catalog'));
+            return;
+          } catch {
+            // Fall through and throw the original login error if the access code is not valid
+          }
+        }
+      }
+      throw err;
+    }
   });
 });
 
