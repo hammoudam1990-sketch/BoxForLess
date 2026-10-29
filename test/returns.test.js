@@ -105,10 +105,11 @@ test('5. a refused discount ("return expected") closes as Returned once the lot 
   const db = freshDb();
   const sheet = visitSheet(db, 'rep-1', CUST, { today: TODAY });
   const lot = sheet.lots.find((l) => l.barcode === YOGHURT);
-  recordVisit(db, 'rep-1', CUST, [{ key: lot.key, cartonsOnShelf: 5, outcome: 'RETURN_EXPECTED' }], { today: TODAY });
+  recordVisit(db, 'rep-1', CUST, [{ key: lot.key, cartonsOnShelf: 5, outcome: 'RETURN_EXPECTED', returnReason: 'Customer refused the lot' }], { today: TODAY });
   assert.equal(rec(db).state, ShelfState.RETURN_EXPECTED);
   assert.equal(listReturns(db, TODAY).expected.length, 1, 'the warehouse can see it coming');
   assert.equal(listReturns(db, TODAY).expected[0].cartons, 5);
+  assert.equal(listReturns(db, TODAY).expected[0].returnReason, 'Customer refused the lot');
   returnLot(db, { cartons: 5 });
   assert.equal(rec(db).state, ShelfState.CLOSED_RETURNED);
   assert.equal(listReturns(db, TODAY).expected.length, 0, 'it has arrived');

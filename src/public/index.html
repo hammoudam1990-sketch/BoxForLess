@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/css/extras.css" />
   <link rel="stylesheet" href="/css/dark.css" />
   <link rel="stylesheet" href="/css/admin.css" />
+  <link rel="stylesheet" href="/css/dashboard-pro.css" />
   <link rel="stylesheet" href="/css/print.css" media="print" />
 </head>
 <body class="adm">
@@ -41,6 +42,8 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>Product Visibility</a>
 
       <p class="adm-label">Products &amp; Inventory</p>
+      <a href="#/warehouse" data-nav="warehouse">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l9-5 9 5v12H3z"/><path d="M7 20v-8h10v8M7 15h10"/></svg>Warehouse Home</a>
       <a href="#/products" data-nav="products">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4-8-4zM4 7v10l8 4 8-4V7M12 11v10"/></svg>Products</a>
       <a href="#/categories" data-nav="categories">
@@ -57,6 +60,8 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>Sync health</a>
       <a href="#/returns" data-nav="returns">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Returns <span id="returnsBadge" class="badge hidden">0</span></a>
+      <a href="#/visits" data-nav="visits">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Shop visits</a>
       <a href="#/reports" data-nav="reports">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Monthly reports</a>
       <a href="#/visibility" data-nav="visibility">
@@ -128,7 +133,7 @@
         <div class="adm-user">
           <button id="userBtn" class="adm-user-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="userMenu">
             <span class="adm-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21a8.5 8.5 0 0 1 17 0z"/></svg></span>
-            <span><b id="staffName">Staff</b><small>Staff account</small></span>
+            <span><b id="staffName">Staff</b><small id="staffRole">Staff account</small></span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
           </button>
           <div id="userMenu" class="adm-user-menu" role="menu" hidden>

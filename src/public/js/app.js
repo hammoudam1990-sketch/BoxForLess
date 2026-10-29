@@ -18,6 +18,8 @@ import { renderReturns } from './returns.js';
 import { renderHealth } from './health.js';
 import { renderRepCustomers } from './rep-customers.js';
 import { renderWorkspacePage, renderCategories } from './workspace.js';
+import { renderWarehouseHome } from './warehouse.js';
+import { renderVisits } from './visits.js';
 
 const view = document.getElementById('view');
 const side = document.getElementById('side');
@@ -29,10 +31,10 @@ const menuToggle = document.getElementById('menuToggle');
 // person can use. null = everything.
 const ROLE_NAV = {
   ADMIN: null,
-  SALES_MANAGER: ['dashboard', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health', 'workspace', 'workspace-data-quality'],
-  WAREHOUSE: ['dashboard', 'products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-data-quality'],
+  SALES_MANAGER: ['dashboard', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
+  WAREHOUSE: ['warehouse', 'dashboard', 'products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-data-quality'],
 };
-const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/dashboard', WAREHOUSE: '#/products' };
+const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/access', WAREHOUSE: '#/warehouse' };
 let me = { role: 'ADMIN', name: 'Staff' };
 const allowed = (name) => !ROLE_NAV[me.role] || ROLE_NAV[me.role].includes(name);
 const canSee = (name) => (ROLE_NAV[me.role] || []).includes(name) || !ROLE_NAV[me.role];
@@ -58,10 +60,10 @@ async function loadMe() {
     SALES_REP: 'Sales Representative',
   };
   const who = document.getElementById('staffName');
-  if (who) {
-    const roleLabel = ROLE_TITLE[me.role] || me.role;
-    who.textContent = me.name && me.name !== roleLabel ? `${me.name} · ${roleLabel}` : roleLabel;
-  }
+  const roleLabel = ROLE_TITLE[me.role] || me.role;
+  if (who) who.textContent = me.role === 'ADMIN' ? 'Administrator' : me.name;
+  const roleEl = document.getElementById('staffRole');
+  if (roleEl) roleEl.textContent = roleLabel;
   return true;
 }
 
@@ -177,6 +179,7 @@ async function route() {
   view.innerHTML = LOADING;
   try {
     if (path === 'dashboard' || !path) { setActiveNav('dashboard'); await renderDashboard(view); }
+    else if (path === 'warehouse') { setActiveNav('warehouse'); await renderWarehouseHome(view); }
     else if (path === 'products' && arg) { setActiveNav('products'); await renderProductDetail(view, arg); }
     else if (path === 'products') { setActiveNav('products'); await renderProducts(view); }
     else if (path === 'imports' && arg) { setActiveNav('imports'); await renderImportDetail(view, arg); }
@@ -190,6 +193,7 @@ async function route() {
     else if (path === 'rep-customers') { setActiveNav('rep-customers'); await renderRepCustomers(view); }
     else if (path === 'health') { setActiveNav('health'); await renderHealth(view); }
     else if (path === 'returns') { setActiveNav('returns'); await renderReturns(view); }
+    else if (path === 'visits') { setActiveNav('visits'); await renderVisits(view); }
     else if (path === 'reports') { setActiveNav('reports'); await renderReports(view); }
     else if (path === 'visibility') { setActiveNav('visibility'); await renderVisibility(view); }
     else if (path === 'payments') { setActiveNav('payments'); await renderPayments(view); }

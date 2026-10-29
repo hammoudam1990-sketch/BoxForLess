@@ -10,6 +10,10 @@ import { api, toast } from './api.js';
 import { h, setChildren, svg } from './lib/dom.js';
 import { debounce, createLatest } from './lib/util.js';
 import { createOrderView } from './rep-order.js';
+import { targetBadge } from './target-progress.js';
+import {
+  formatGhs, monthLabel, hasTarget, achievementPct, remainingTarget, overTargetBy, targetStatus,
+} from './lib/targets.js';
 
 const ICONS = {
   store: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
@@ -21,6 +25,7 @@ const ICONS = {
   map: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
   chat: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   phone: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  chart: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>',
 };
 
 const app = document.getElementById('app');
@@ -146,14 +151,44 @@ const totals = h('p', { class: 'rep-totals', role: 'status' });
 const listBox = h('div');
 
 // "My month": a sales rep's own customers and figures, nothing company-wide (shown to reps only)
+const monthHero = h('div', { class: 'bfl-hero-grid rep-hero hidden', 'aria-label': 'My target and sales this month' });
 const monthCard = h('div', { class: 'card rep-month hidden' });
+const recentOrdersCard = h('div', { class: 'card rep-month hidden' });
 const repBroadcastBox = h('div', { class: 'rep-broadcast-banner hidden' });
 
+/** "Good morning" / "Good afternoon" / "Good evening" for the local hour. */
+const greeting = (now = new Date()) => {
+  const hour = now.getHours();
+  return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+};
+const repGreeting = h('h1', null, 'My visits');
+
+/** Scroll to a section of the page (no jump for reduced-motion users, nothing when hidden). */
+const scrollToEl = (el) => {
+  if (el.classList.contains('hidden')) return;
+  const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+};
+
+// quick actions into the rep's day: a new order, the orders already placed, the route, the figures
+const quickActions = h('div', { class: 'rep-quick hidden', role: 'group', 'aria-label': 'Quick actions' },
+  h('button', { type: 'button', class: 'rep-quick-btn', onClick: () => showTab('order') },
+    h('span', { class: 'rep-quick-ic' }, svg(ICONS.package)), h('b', null, 'New order'), h('span', { class: 'rep-quick-sub' }, 'for a customer')),
+  h('button', { type: 'button', class: 'rep-quick-btn', onClick: () => { showTab('order'); orders.showMine(); } },
+    h('span', { class: 'rep-quick-ic' }, svg(ICONS.check)), h('b', null, 'My orders'), h('span', { class: 'rep-quick-sub' }, 'already placed')),
+  h('button', { type: 'button', class: 'rep-quick-btn', onClick: () => scrollToEl(searchBar) },
+    h('span', { class: 'rep-quick-ic' }, svg(ICONS.map)), h('b', null, 'My visits'), h('span', { class: 'rep-quick-sub' }, 'today\'s route')),
+  h('button', { type: 'button', class: 'rep-quick-btn', onClick: () => scrollToEl(monthCard) },
+    h('span', { class: 'rep-quick-ic' }, svg(ICONS.chart)), h('b', null, 'My month'), h('span', { class: 'rep-quick-sub' }, 'target & sales')));
+
 const listView = h('section', { 'aria-label': 'My visits' },
-  h('h1', null, 'My visits'),
-  h('p', { class: 'rep-header-sub' }, 'Live Database Connection · Real-time shelf inventory & customer records'),
+  repGreeting,
+  h('p', { class: 'rep-header-sub' }, 'Here\'s your sales performance — live figures from Odoo'),
   repBroadcastBox,
+  monthHero,
   monthCard,
+  quickActions,
+  recentOrdersCard,
   h('div', { class: 'card rep-as', id: 'repAs' },
     h('div', { class: 'rep-as-head' }, 'Visiting as'),
     h('div', { class: 'rep-as-select-wrap' }, repSelect),
@@ -177,7 +212,11 @@ function showTab(which) {
   const order = which === 'order';
   visitsTab.classList.toggle('active', !order); visitsTab.setAttribute('aria-selected', String(!order));
   orderTab.classList.toggle('active', order); orderTab.setAttribute('aria-selected', String(order));
-  if (order) { listView.classList.add('hidden'); sheetView.classList.add('hidden'); orders.open(); } else { orders.close(); showList(); }
+  if (order) { listView.classList.add('hidden'); sheetView.classList.add('hidden'); orders.open(); } else {
+    orders.close(); showList();
+    // back from the order screens: the month figures and recent orders may have moved on the server
+    if (!tabs.classList.contains('hidden')) { loadMyMonth(); loadRecentOrders(); }
+  }
 }
 
 setChildren(app, tabs, listView, sheetView, orders.el);
@@ -488,6 +527,10 @@ function lotCard(lot, index) {
     type: 'text', autocomplete: 'off', id: `cn-${index}`, placeholder: 'Name of the person who agreed',
   });
   const agreed = h('input', { type: 'checkbox', id: `ag-${index}` });
+  const returnReason = h('textarea', {
+    id: `rr-${index}`, rows: '2', maxlength: '300',
+    placeholder: 'Why is the customer returning it? (e.g. too close to expiry, damaged cartons)',
+  });
 
   // Quick preset discount buttons
   const presetChip = (val) => h('button', {
@@ -519,27 +562,25 @@ function lotCard(lot, index) {
       : 'This is only a proposal. The Sales Manager approves it before it counts.'));
 
   const returnReasonSelect = h('select', {
-    id: `rr-${index}`,
+    id: `rr-sel-${index}`,
     onChange: () => {
-      returnNoteRow.classList.toggle('hidden', returnReasonSelect.value !== 'OTHER');
+      if (returnReasonSelect.value && returnReasonSelect.value !== 'OTHER') {
+        returnReason.value = returnReasonSelect.options[returnReasonSelect.selectedIndex].text;
+      } else if (returnReasonSelect.value === 'OTHER') {
+        returnReason.value = '';
+        returnReason.focus();
+      }
     },
   },
-    h('option', { value: '' }, 'Choose reason for return…'),
+    h('option', { value: '' }, 'Quick select reason (or type below)…'),
     h('option', { value: 'EXPIRED' }, 'Approaching expiry / Expired'),
     h('option', { value: 'DAMAGED' }, 'Damaged packaging / cartons'),
     h('option', { value: 'OTHER' }, 'Other reason (specify below)'));
 
-  const returnNoteInput = h('input', {
-    type: 'text', id: `rn-${index}`, maxlength: '300', placeholder: 'Describe the reason for return…',
-  });
-  const returnNoteRow = h('label', { for: `rn-${index}`, class: 'hidden' },
-    'Return reason details (required for Other)',
-    returnNoteInput);
-
   const returnBox = h('div', { class: 'rep-extra hidden' },
-    h('label', { for: `rr-${index}` }, 'Reason for return (required)', returnReasonSelect),
-    returnNoteRow,
-    h('p', { class: 'rep-note' }, 'Recorded for reference and tracking on the Returns & Approvals screens.'));
+    h('label', { for: `rr-sel-${index}` }, 'Return category', returnReasonSelect),
+    h('label', { for: `rr-${index}` }, 'Reason for the return (required)', returnReason),
+    h('p', { class: 'rep-note' }, 'The warehouse and your Sales Manager see this reason with the expected return.'));
 
   const extra = h('div', { class: 'rep-extra hidden' }, cartonsRow);
 
@@ -585,8 +626,8 @@ function lotCard(lot, index) {
       h('legend', null, 'What did you find on the shelf?'),
       radios.map((r) => r.el)),
     extra,
-    discountBox,
-    returnBox);
+    returnBox,
+    discountBox);
 
   return {
     el,
@@ -595,16 +636,15 @@ function lotCard(lot, index) {
       const o = value();
       const out = { key: lot.key, outcome: o };
       if (o === 'DISCOUNT_AGREED' || o === 'RETURN_EXPECTED') out.cartonsOnShelf = Number(cartons.value);
+      if (o === 'RETURN_EXPECTED') {
+        out.returnReason = returnReason.value.trim() || returnReasonSelect.value;
+      }
       if (o === 'DISCOUNT_AGREED') {
         Object.assign(out, {
           discountPct: pct.value === '' ? null : Number(pct.value),
           contactName: contact.value,
           agreed: agreed.checked,
         });
-      }
-      if (o === 'RETURN_EXPECTED') {
-        out.returnReason = returnReasonSelect.value;
-        out.returnNote = returnNoteInput.value.trim();
       }
       return out;
     },
@@ -626,50 +666,113 @@ function done(shop, res) {
 
 let currentStaffRole = null;
 
-function renderMonthCard(m, repLabel = '') {
-  const money = (n) => `GHS ${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const monthName = new Date(`${m.month}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-  const rem = m.remainingTarget !== undefined ? m.remainingTarget : (m.target !== null ? Math.max(0, m.target - m.netSales) : null);
-  const pct = m.vsTarget !== null && m.vsTarget !== undefined ? Math.min(100, Math.max(0, Math.round(m.vsTarget))) : 0;
-  const fig = (label, value, highlight = false) => h('div', {
-    class: 'rep-fig',
-    style: highlight ? 'border:1px solid #fdba74;background:#fff7ed;border-radius:8px;padding:8px;' : '',
-  }, h('div', { class: 'rep-fig-k' }, label), h('div', { class: 'rep-fig-v' }, value));
+// ---- My month: target, eligible sales, recent orders -----------------------------------------
+// The figures are the server's: net sales are Odoo invoices less credit notes, the target is the
+// Sales Manager's. A new order counts only once it is invoiced in Odoo — never at placement.
+const fig = (label, value) => h('div', { class: 'rep-fig' }, h('div', { class: 'rep-fig-k' }, label), h('div', { class: 'rep-fig-v' }, value));
 
+const heroCard = (label, value, sub) => h('div', { class: 'bfl-hero' },
+  h('span', { class: 'bfl-hero-label' }, label),
+  h('b', { class: 'bfl-hero-value' }, value),
+  h('span', { class: 'bfl-hero-sub' }, sub));
+
+function renderMonthSummary(m, repLabel = '') {
+  const target = hasTarget(m.target) ? Number(m.target) : null;
+  const sales = Number(m.netSales) || 0;
+  const pct = achievementPct(target, sales);
+  const remaining = remainingTarget(target, sales);
+  const over = overTargetBy(target, sales);
+  const status = targetStatus(target, sales);
+  const reached = status === 'REACHED' || status === 'EXCEEDED';
+
+  // the three hero cards: My Target / My Sales / Remaining
+  setChildren(monthHero,
+    heroCard('Monthly Target', target ? formatGhs(target) : 'Not set',
+      target ? 'Set by Sales Manager' : 'Ask Sales Manager to set one'),
+    heroCard('Sales Achieved', formatGhs(sales),
+      target ? `${pct.toFixed(0)}% of target achieved` : 'Invoiced sales this month'),
+    heroCard('Remaining Balance', target ? formatGhs(remaining) : '—',
+      over > 0 ? `Above target by ${formatGhs(over)}` : target ? 'Still to go this month' : 'No target set'));
+  monthHero.classList.remove('hidden');
+
+  // the detail panel: the achievement bar, then customers, collections and the call list
   setChildren(monthCard,
-    h('div', { style: 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;' },
-      h('h2', { style: 'margin:0;' }, `${repLabel ? `${repLabel} — ` : 'My month — '}${monthName}`),
-      m.target !== null
-        ? h('span', { class: `rep-pill ${rem === 0 ? 'ok' : 'warn'}` }, rem === 0 ? 'Target Achieved' : `${m.vsTarget ?? 0}% of target`)
-        : null),
+    h('div', { class: 'rep-month-head' },
+      h('h2', null, `${repLabel ? `${repLabel} — ` : 'My month — '}${monthLabel(m.month)}${m.monthToDate ? ' (so far)' : ''}`),
+      targetBadge(m.target, m.netSales)),
+    target ? h('div', null,
+      h('div', {
+        class: `bfl-progress${reached ? ' reached' : status === 'BEHIND' ? ' behind' : ''}`,
+        role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100',
+        'aria-valuenow': String(Math.min(100, Math.round(pct))),
+        'aria-label': `Target achievement ${pct.toFixed(1)} percent`,
+      }, h('i', { style: { width: `${Math.min(100, pct)}%` } })),
+      h('p', { class: 'rep-note' }, 'Orders count towards the target once they are invoiced in Odoo.'))
+      : h('p', { class: 'rep-note' }, 'No monthly target is set yet — the Sales Manager sets it.'),
     h('div', { class: 'rep-figs' },
-      fig('Monthly Target', m.target === null ? 'Not set' : money(m.target)),
-      fig('Sales Achieved', money(m.netSales)),
-      fig('Remaining Target Balance', rem === null ? '—' : rem === 0 ? 'GHS 0.00 (Met!)' : money(rem), rem !== null && rem > 0),
-      fig('Collections', money(m.collections)),
-      fig('Active Customers', `${m.activeCustomers} of ${m.customers}`)),
-    m.target !== null
-      ? h('div', { style: 'margin:10px 0 6px;' },
-          h('div', { style: 'display:flex;justify-content:space-between;font-size:12px;color:#475569;margin-bottom:4px;' },
-            h('span', null, `Target progress: ${money(m.netSales)} / ${money(m.target)}`),
-            h('strong', null, `${m.vsTarget ?? 0}%`)),
-          h('div', { class: 'rep-progress-bar-bg' },
-            h('div', { class: 'rep-progress-bar-fill', style: { width: `${pct}%`, background: rem === 0 ? '#16a34a' : '#2563eb' } })))
-      : null,
+      fig('Active customers', `${m.activeCustomers} of ${m.customers}`),
+      fig('Collections', formatGhs(m.collections))),
     m.dormant && m.dormant.length ? h('div', null,
       h('p', { class: 'rep-note' }, 'Call these customers: no invoice for 30 days or more.'),
       h('ul', { class: 'rep-dormant' }, m.dormant.slice(0, 6).map((d) => h('li', null, `${d.customer} — ${d.days} days`)))) : null,
-    h('p', { class: 'rep-note' }, '● Live Database: Monthly target, sales achieved & remaining balance.'));
+    h('p', { class: 'rep-note' }, '● Live Database: Verified sales & collections figures.'));
   monthCard.classList.remove('hidden');
+}
+
+function loadMyMonth() {
+  return api.myMonth().then((m) => renderMonthSummary(m)).catch(() => { /* works without figures */ });
 }
 
 function loadRepMonthSummary() {
   if (currentStaffRole === 'SALES_REP') {
-    api.myMonth().then((m) => renderMonthCard(m)).catch(() => {});
+    loadMyMonth();
   } else if (currentStaffRole === 'ADMIN' || currentStaffRole === 'SALES_MANAGER') {
     const picked = reps.find((r) => r.id === repId);
-    api.repSummary(repId).then((m) => renderMonthCard(m, picked ? picked.name : 'Sales Rep')).catch(() => {});
+    api.repSummary(repId).then((m) => renderMonthSummary(m, picked ? picked.name : 'Sales Rep')).catch(() => {});
   }
+}
+
+// order states from Odoo, mapped to a pill tone (green done, amber waiting, red cancelled)
+const ORDER_TONE = {
+  Received: 'neutral',
+  'Waiting for approval': 'warning',
+  Approved: '',
+  Dispatched: '',
+  Invoiced: 'success',
+  Paid: 'success',
+  Cancelled: 'error',
+};
+
+/** "Today" / "Yesterday" / "3 Feb" for an order's placed-at timestamp. */
+const placedText = (iso) => {
+  const d = new Date(iso);
+  if (!iso || Number.isNaN(d.getTime())) return '—';
+  const startOf = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((startOf(new Date()) - startOf(d)) / 86400000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+};
+
+function loadRecentOrders() {
+  return fetch('/api/rep-orders/mine', { headers: { Accept: 'application/json' } })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+    .then(({ orders }) => {
+      setChildren(recentOrdersCard,
+        h('h2', null, 'Recent orders you placed'),
+        orders.length ? h('div', { class: 'bfl-table-wrap' }, h('table', { class: 'bfl-table rep-orders-table' },
+          h('thead', null, h('tr', null,
+            h('th', null, 'Customer'), h('th', { class: 'num' }, 'Cartons'), h('th', null, 'Status'), h('th', null, 'Placed'))),
+          h('tbody', null, orders.slice(0, 5).map((o) => h('tr', null,
+            h('td', { class: 'primary-text' }, o.customer),
+            h('td', { class: 'num' }, String(o.cartons)),
+            h('td', null, h('span', { class: `bfl-pill ${ORDER_TONE[o.status] || ''}`.trim() }, o.status)),
+            h('td', null, placedText(o.placedAt)))))))
+          : h('p', { class: 'rep-note' }, 'No orders placed yet — tap New order to place one.'),
+        h('p', { class: 'rep-note' }, 'An order counts towards your target once it is invoiced in Odoo.'));
+      recentOrdersCard.classList.remove('hidden');
+    })
+    .catch(() => { /* the order list is a bonus; the page works without it */ });
 }
 
 // ---- Startup --------------------------------------------------------------------------------
@@ -720,10 +823,15 @@ function loadRepMonthSummary() {
       }
       if (me.staff.role === 'SALES_REP') {
         tabs.classList.remove('hidden');
+        quickActions.classList.remove('hidden');
+        repGreeting.textContent = `${greeting()}, ${reps[0].name.split(' ')[0]}`;
+        loadMyMonth();
+        loadRecentOrders();
         const sub = document.querySelector('.brand-sub');
         if (sub) sub.textContent = `Sales Representative · ${reps[0].name}`;
+      } else {
+        loadRepMonthSummary();
       }
-      loadRepMonthSummary();
     }
   } catch { /* works without this */ }
 
@@ -734,8 +842,7 @@ function loadRepMonthSummary() {
       if (siteConfig.salesRep.portalTitle) {
         const titleEl = document.querySelector('.brand-title');
         if (titleEl) titleEl.textContent = siteConfig.salesRep.portalTitle;
-        const h1El = listView.querySelector('h1');
-        if (h1El) h1El.textContent = siteConfig.salesRep.portalTitle;
+        if (repGreeting.textContent === 'My visits') repGreeting.textContent = siteConfig.salesRep.portalTitle;
       }
       if (siteConfig.salesRep.portalSubtitle) {
         const subEl = document.querySelector('.brand-sub');

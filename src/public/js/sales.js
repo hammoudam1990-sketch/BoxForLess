@@ -1,4 +1,5 @@
 import { esc, num } from './api.js';
+import { renderTeamPerformance, renderSalesTargets, mountSalesOverview } from './sales-targets.js';
 
 const view = document.getElementById('view');
 const sidebar = document.getElementById('smSidebar');
@@ -24,6 +25,22 @@ const icon = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${I
 const dateTime = (ts) => ts
   ? new Date(ts).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   : '—';
+
+/** "Good morning" / "Good afternoon" / "Good evening" for the local hour. */
+const greeting = (now = new Date()) => {
+  const hour = now.getHours();
+  return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+};
+
+/** "2 hours ago" style relative time for the activity feed. */
+function agoText(ts) {
+  const s = Math.max(0, (Date.now() - new Date(ts).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 7 * 86400) return `${Math.floor(s / 86400)}d ago`;
+  return new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
 
 function statusLabel(status) {
   if (status === 'SUBMITTED') return '<span class="sm-status pending">Pending</span>';
@@ -181,8 +198,22 @@ async function renderDashboard(days) {
   const today = new Date();
 
   view.innerHTML = `
-    ${pageHead('Sales Manager Dashboard', `Overview of requests, customers and product availability · ${today.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`,
+    ${pageHead(`${greeting(today)}, Sales Manager`, `Here's your sales performance overview · ${today.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`,
       `<label class="sr-only" for="smRange">Dashboard date range</label><select class="sm-select" id="smRange">${[7, 14, 30, 90].map((n) => `<option value="${n}"${n === data.days ? ' selected' : ''}>Last ${n} days</option>`).join('')}</select><button class="sm-btn" id="smDownload" type="button">${icon('download')}Download report</button>`)}
+
+    <div id="smSalesOverview"></div>
+
+    <section class="sm-panel">
+      <div class="sm-panel-head"><div><h2>Recent Activity</h2><p>The latest customer requests as they come in</p></div></div>
+      ${data.recent.length ? `<ul class="sm-activity">${data.recent.slice(0, 6).map((r) => `<li>
+        <span class="sm-activity-dot ${r.status === 'ACCEPTED' ? 'ok' : r.status === 'DELETED' ? 'err' : 'pending'}" aria-hidden="true"></span>
+        <span class="sm-activity-text"><b>${esc(r.customer)}</b> requested ${num(r.cartons ?? r.lines)} cartons <span class="sm-muted">(${esc(r.reference || `REQ-${r.id}`)})</span></span>
+        <span class="sm-activity-when">${agoText(r.submittedAt)}</span>
+      </li>`).join('')}</ul>` : emptyState('No activity yet', 'New customer requests will appear here as they arrive.')}
+    </section>
+
+    <p class="bfl-zone">Requests &amp; stock</p>
+
     <section class="sm-kpis" aria-label="Key metrics">
       <button class="sm-kpi-card" type="button" data-route-to="requests?status=all">
         <span class="sm-kpi-icon">${icon('requests')}</span><span class="sm-kpi-copy"><span class="sm-kpi-label">Total Requests Today</span><b class="sm-kpi-value">${num(data.today.requests)}</b><span class="sm-kpi-sub"><span class="sm-kpi-delta">${num(data.today.cartons)} cartons requested</span></span></span><span class="sm-kpi-arrow">›</span>
@@ -215,6 +246,7 @@ async function renderDashboard(days) {
     </section>`;
 
   document.getElementById('smRange').addEventListener('change', (event) => loadRoute(`/dashboard?days=${event.target.value}`));
+  mountSalesOverview(document.getElementById('smSalesOverview'));
   document.getElementById('smDownload').addEventListener('click', () => {
     csvDownload(`sales-summary-${today.toISOString().slice(0, 10)}.csv`, [
       ['Measure', 'Today', `Last ${data.days} days`],
@@ -384,6 +416,8 @@ async function renderRoute() {
     else if (key === 'customers') await renderCustomers(route);
     else if (key === 'customer' && route.parts[1]) await renderCustomerDetail(route.parts[1]);
     else if (key === 'imports') await renderImports();
+    else if (key === 'team') await renderTeamPerformance(view, route, { pageHead });
+    else if (key === 'targets') await renderSalesTargets(view, route, { pageHead });
     else if (key === 'settings') renderSettings();
     else navigate('dashboard');
   } catch (error) {
