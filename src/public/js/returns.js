@@ -37,7 +37,7 @@ export async function renderReturns(view) {
   const noDone = h('p', { class: 'muted hidden' }, 'No return has been classified yet.');
 
   setChildren(view,
-    h('h1', null, 'Returns to classify'),
+    h('h1', null, 'Sales Rep Returns'),
     h('div', { class: 'notice' },
       h('b', null, 'Returns are handled in Odoo. '),
       'BFL reads them and records the reason. Returned cartons come off the customer\'s shelf record and the matching shop alert closes as Returned. ',

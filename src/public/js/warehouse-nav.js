@@ -22,7 +22,7 @@ export function buildWarehouseNav() {
       h('p', { class: 'adm-label' }, 'More tools'),
       link('#/imports', 'imports', 'upload', 'Stock Imports'),
       link('#/changes', 'changes', 'review', 'Change Review', 'reviewBadge'),
-      link('#/returns', 'returns', 'returns', 'Returns', 'returnsBadge'),
+      link('#/returns', 'returns', 'returns', 'Sales Rep Returns', 'returnsBadge'),
       link('scan.html', 'scan', 'scan', 'Scan'),
       link('#/health', 'health', 'activity', 'Sync Health'),
       link('#/workspace/data-quality', 'workspace-data-quality', 'shieldCheck', 'Data Quality')),

@@ -1125,3 +1125,20 @@ html[data-theme="dark"] .sb-mock-act-btn { background: #0f172a; border-color: #3
 .pd-error { margin: 0; color: #b42323; font-weight: 600; }
 .pd-history-title { margin: 4px 0 0; font-weight: 700; }
 .pd-history-list { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
+
+/* ---------- Pay Due search, order due dates, brand autocomplete, rep assignment ---------- */
+.exp-wrap th.num, .exp-wrap td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.exp-wrap th { vertical-align: bottom; }
+.pay-search { width: 100%; max-width: 420px; min-height: 44px; }
+.pay-due-list { display: grid; gap: 10px; }
+.pay-due-item { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.pay-due-head { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; }
+.pay-due-panel { margin-top: 12px; }
+@media (max-width: 640px) { .pay-due-head { grid-template-columns: 1fr; } }
+.ac-wrap { position: relative; }
+.ac-list { position: absolute; z-index: 30; left: 0; right: 0; top: 100%; margin: 4px 0 0; padding: 4px; list-style: none; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 24px rgba(16,61,115,.16); max-height: 240px; overflow-y: auto; }
+.ac-list li { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 15px; }
+.ac-list li[aria-selected="true"], .ac-list li:hover { background: #e8eff8; }
+.ac-list li.ac-none { color: var(--muted); cursor: default; }
+.exp-rep-assign { display: grid; gap: 6px; min-width: 190px; }
+.exp-rep-assign select { max-width: 100%; }

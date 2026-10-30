@@ -21,7 +21,7 @@ export async function renderApprovals(view) {
   const counts = h('p', { class: 'muted', role: 'status' });
 
   setChildren(view,
-    h('h1', null, 'Approvals'),
+    h('h1', null, 'Customer Discount'),
     h('div', { class: 'notice exp-banner' }, h('b', null, 'Shelf discounts & credit notes. '),
       'Review and decide on shelf discounts proposed by sales reps, track Finance credit note tasks, and monitor expected returns.'),
     counts,

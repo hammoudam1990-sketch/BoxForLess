@@ -19,6 +19,58 @@ async function post(url, body) {
   return data;
 }
 
+// Brand suggestions come from the first word of the product names already served by /api/products
+// (brand rules match the start of the product name). Loaded once, on first focus.
+let brandCache = null;
+async function loadBrands() {
+  if (brandCache) return brandCache;
+  const r = await api.products({ limit: 1000 }).catch(() => ({ items: [] }));
+  const counts = new Map();
+  for (const p of r.items || []) {
+    const w = String(p.name || '').trim().split(/\s+/)[0];
+    if (w && w.length > 1) counts.set(w.toUpperCase(), (counts.get(w.toUpperCase()) || 0) + 1);
+  }
+  brandCache = [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  return brandCache;
+}
+
+function attachBrandAutocomplete(input, list) {
+  let items = [];
+  let active = -1;
+  const close = () => { list.classList.add('hidden'); input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); active = -1; };
+  const setActive = (i) => {
+    active = i;
+    [...list.children].forEach((li, n) => li.setAttribute('aria-selected', String(n === i)));
+    const li = list.children[i];
+    if (li) { input.setAttribute('aria-activedescendant', li.id); li.scrollIntoView({ block: 'nearest' }); }
+  };
+  const choose = (name) => { input.value = name; close(); input.focus(); };
+  async function open() {
+    const all = await loadBrands();
+    const q = input.value.trim().toUpperCase();
+    items = all.filter(([b]) => !q || b.startsWith(q) || b.includes(q)).sort((a, b) => (b[0].startsWith(q) - a[0].startsWith(q)) || a[0].localeCompare(b[0])).slice(0, 12);
+    setChildren(list, items.length
+      ? items.map(([b, n], i) => h('li', {
+        id: `brandOpt${i}`, role: 'option', 'aria-selected': 'false',
+        onMousedown: (e) => { e.preventDefault(); choose(b); },
+      }, b, h('span', { class: 'muted' }, `  ${n} product${n === 1 ? '' : 's'}`)))
+      : [h('li', { class: 'ac-none', role: 'option', 'aria-disabled': 'true', 'aria-selected': 'false' }, brandCache.length ? 'No matching brand. You can still type your own.' : 'No brands to suggest yet.')]);
+    list.classList.remove('hidden');
+    input.setAttribute('aria-expanded', 'true');
+    active = -1;
+  }
+  input.addEventListener('focus', open);
+  input.addEventListener('input', open);
+  input.addEventListener('blur', close);
+  input.addEventListener('keydown', (e) => {
+    const isOpen = !list.classList.contains('hidden');
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (!isOpen) { open(); return; } if (items.length) setActive((active + 1) % items.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (isOpen && items.length) setActive((active - 1 + items.length) % items.length); }
+    else if (e.key === 'Enter' && isOpen && active >= 0) { e.preventDefault(); choose(items[active][0]); }
+    else if (e.key === 'Escape' && isOpen) { e.preventDefault(); close(); }
+  });
+}
+
 export async function renderVisibility(view) {
   let data = await fetch('/api/visibility').then((r) => (r.ok ? r.json() : Promise.reject(new Error('Could not load the rules.'))));
 
@@ -33,7 +85,10 @@ export async function renderVisibility(view) {
   const catSel = h('select', { 'aria-label': 'Category' }, categoryOptions());
   const prodSearch = h('input', { type: 'search', placeholder: 'Find a product by name or barcode…', 'aria-label': 'Find a product', onInput: debounce(findProducts, 250) });
   const prodPick = h('select', { 'aria-label': 'Product' }, h('option', { value: '' }, 'Search above, then choose…'));
-  const brand = h('input', { type: 'text', maxlength: '60', placeholder: 'e.g. ABIDO', 'aria-label': 'Brand' });
+  const brand = h('input', { type: 'text', maxlength: '60', placeholder: 'e.g. ABIDO', 'aria-label': 'Brand', autocomplete: 'off', role: 'combobox', 'aria-autocomplete': 'list', 'aria-expanded': 'false', 'aria-controls': 'brandSuggest' });
+  const brandList = h('ul', { class: 'ac-list hidden', id: 'brandSuggest', role: 'listbox' });
+  const brandBox = h('div', { class: 'ac-wrap' }, brand, brandList);
+  attachBrandAutocomplete(brand, brandList);
   const problem = h('p', { class: 'reg-problem', role: 'status' });
   const addBtn = h('button', { type: 'button', onClick: add }, 'Hide it');
 
@@ -42,7 +97,7 @@ export async function renderVisibility(view) {
   const custField = field('Customer', custSearch, custPick);
   const catField = field('Category (and everything under it)', catSel);
   const prodField = field('Product', prodSearch, prodPick);
-  const brandField = field('Brand', brand, h('span', { class: 'muted team-hint' }, 'Matches products whose name is, or starts with, this word.'));
+  const brandField = field('Brand', brandBox, h('span', { class: 'muted team-hint' }, 'Matches products whose name is, or starts with, this word.'));
 
   const rulesBody = h('tbody');
   const noRules = h('p', { class: 'muted hidden' }, 'No rules yet: every customer sees every active product.');

@@ -10,6 +10,7 @@
 // its fields has focus.
 import { api, toast } from './api.js';
 import { h, setChildren } from './lib/dom.js';
+import { mountPaymentDue } from './payment-due.js';
 
 const money = (n) => `GHS ${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dayText = (iso) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—');
@@ -36,7 +37,40 @@ export async function renderPayments(view) {
   const invoices = h('tbody');
   const reminders = h('div', { class: 'pay-reminders' });
   const schedules = h('tbody');
-  const noInvoices = h('p', { class: 'muted hidden' }, 'No open invoices. Invoices appear here once Odoo posts them (on the Sample Odoo screen for now).');
+  const noInvoicesText = 'No open invoices. Invoices appear here once Odoo posts them (on the Sample Odoo screen for now).';
+  const noInvoices = h('p', { class: 'muted hidden' }, noInvoicesText);
+  const invSearch = h('input', {
+    type: 'search', class: 'pay-search', placeholder: 'Search customer, invoice number, date or amount…', 'aria-label': 'Search open invoices',
+    onInput: () => paintInvoices(),
+  });
+  const dueList = h('div', { class: 'pay-due-list' });
+  const dueCard = h('div', { class: 'card' },
+    h('h2', null, 'Order payment due dates'),
+    h('p', { class: 'muted' }, 'Credit orders still without a due date. Choose a date for an order, then save. Changing a date later needs a reason. The date is kept in BFL and is not sent to Odoo.'),
+    dueList);
+  async function loadDue() {
+    let r;
+    try { r = await api.ordersAwaitingDueDate(); } catch (e) {
+      if (e.status === 403) { dueCard.classList.add('hidden'); return; }
+      setChildren(dueList, h('p', { class: 'pd-error' }, `Could not load orders: ${e.message}`)); return;
+    }
+    setChildren(dueList, r.items.length ? r.items.map((o) => {
+      const panel = h('div', { class: 'pay-due-panel hidden' });
+      const btn = h('button', { type: 'button', class: 'secondary', 'aria-expanded': 'false' }, 'Set due date');
+      btn.addEventListener('click', () => {
+        const open = panel.classList.toggle('hidden') === false;
+        btn.setAttribute('aria-expanded', String(open));
+        btn.textContent = open ? 'Close' : 'Set due date';
+        if (open && !panel.children.length) mountPaymentDue(panel, o.requestId);
+      });
+      return h('div', { class: 'pay-due-item' },
+        h('div', { class: 'pay-due-head' },
+          h('div', null, h('b', null, o.customer), h('div', { class: 'muted' }, `${o.reference}${o.odooNumber ? ` · ${o.odooNumber}` : ''} · placed ${dayText(String(o.placedAt || '').slice(0, 10))}`)),
+          h('div', { class: 'num' }, o.amount === null || o.amount === undefined ? '—' : money(o.amount)),
+          btn),
+        panel);
+    }) : h('p', { class: 'muted' }, 'Every credit order has a due date.'));
+  }
   const noReminders = h('p', { class: 'muted hidden' }, 'No reminders yet. They are composed the day before a payment day, on it, and every 7 days while an invoice stays unpaid.');
   const runBtn = h('button', { type: 'button', class: 'secondary', onClick: run }, 'Check for reminders now');
   const followUp20dBtn = h('button', { type: 'button', onClick: runFollowUp20d }, 'Generate 20+ Day Follow-Up Reminders');
@@ -66,11 +100,13 @@ export async function renderPayments(view) {
       h('div', { style: 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;' },
         h('h2', { style: 'margin:0;' }, 'Open invoices & 20-Day Follow-Up'),
         filter20dBtn),
+      h('div', { class: 'controls' }, invSearch),
       h('div', { class: 'exp-wrap' },
         h('table', null,
-          h('thead', null, h('tr', null, ['Customer', 'Invoice', 'Invoiced', 'Still due', 'Pay by', 'Where it stands / Follow-up', 'Schedule', 'Last reminder'].map((t) => h('th', null, t)))),
+          h('thead', null, h('tr', null, ['Customer', 'Invoice', 'Invoiced', 'Still due', 'Pay by', 'Where it stands / Follow-up', 'Schedule', 'Last reminder'].map((t) => h('th', { class: t === 'Still due' ? 'num' : null }, t)))),
           invoices)),
       noInvoices),
+    dueCard,
     h('div', { class: 'card' },
       h('h2', null, 'Reminders'),
       h('p', { class: 'muted' }, 'No email, SMS or WhatsApp provider is connected yet. Copy a message, send it yourself, then tap Mark sent. Every reminder stays in this log.'),
@@ -94,7 +130,7 @@ export async function renderPayments(view) {
     return h('tr', i.unsettled20d ? { style: 'background:rgba(254, 242, 242, 0.55);' } : null,
       h('td', null, h('b', null, i.customer)),
       h('td', null, i.number),
-      h('td', { class: 'muted' }, i.invoiceDate ? `${dayText(i.invoiceDate)} (${i.daysSinceInvoice}d ago)` : '—'),
+      h('td', { class: 'muted' }, dayText(i.invoiceDate)),
       h('td', { class: 'num' }, money(i.amountDue)),
       h('td', null, dayText(i.payBy)),
       h('td', null,
@@ -105,8 +141,13 @@ export async function renderPayments(view) {
   }
 
   function paintInvoices() {
-    const list = onlyUnsettled20d ? allInvoicesCache.filter((i) => i.unsettled20d) : allInvoicesCache;
+    const q = invSearch.value.trim().toLowerCase();
+    const hay = (i) => [i.customer, i.number, dayText(i.invoiceDate), dayText(i.payBy), i.amountDue, i.schedule].join(' ').toLowerCase();
+    const list = allInvoicesCache
+      .filter((i) => !onlyUnsettled20d || i.unsettled20d)
+      .filter((i) => !q || hay(i).includes(q));
     setChildren(invoices, list.map(invoiceRow));
+    noInvoices.textContent = q ? `No invoice matches “${invSearch.value.trim()}”.` : noInvoicesText;
     noInvoices.classList.toggle('hidden', list.length > 0);
   }
 
@@ -193,4 +234,5 @@ export async function renderPayments(view) {
   }
 
   await load();
+  loadDue();
 }

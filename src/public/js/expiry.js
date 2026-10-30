@@ -38,13 +38,15 @@ export async function renderExpiry(view) {
   // a link may open the list already filtered: #/expiry?band=EXPIRED, or several bands: ?band=CRITICAL,WARNING
   const bandParam = String(new URLSearchParams(location.hash.split('?')[1] || '').get('band') || '').toUpperCase()
     .split(',').filter((b) => BANDS.some(([code]) => code === b)).join(',');
-  const state = { band: bandParam, category: '', location: '', owner: '', status: '', q: '', within60d: false };
+  const state = { band: bandParam, category: '', location: '', status: '', q: '', within60d: false };
   const latest = createLatest();
   // only the Sales Manager (or the administrator) sets the discount customers are offered on a lot
   const me = await fetch('/api/auth/me').then((r) => r.json()).catch(() => ({}));
   const canDiscount = ['ADMIN', 'SALES_MANAGER'].includes(me.staff?.role);
   let data = null;
-
+  const repNames = canDiscount
+    ? await api.shelfReps().then((r) => (r.reps || []).map((x) => x.name).filter(Boolean)).catch(() => [])
+    : [];
   // ---- the parts that are built once -------------------------------------------------
   const tiles = new Map();   // band code -> { button, count, value }
   const tileRow = h('div', { class: 'exp-tiles', role: 'group', 'aria-label': 'Filter by expiry band' });
@@ -89,7 +91,6 @@ export async function renderExpiry(view) {
       if ( data ) paint();
     },
   }, '1–2 Months Left (≤ 60d)');
-  const ownerSel = h('select', { 'aria-label': 'Owner', onChange: () => { state.owner = ownerSel.value; load(); } });
   const statusSel = select([['', 'Any status'], ...STATUSES], '', {
     'aria-label': 'Status', onChange: () => { state.status = statusSel.value; load(); },
   });
@@ -121,12 +122,12 @@ export async function renderExpiry(view) {
     checkBox,
     minBox,
     h('div', { class: 'card' },
-      h('div', { class: 'controls exp-controls' }, search, locationSel, twoMonthBtn, bandSel, categorySel, ownerSel, statusSel, csvBtn),
+      h('div', { class: 'controls exp-controls' }, search, locationSel, twoMonthBtn, bandSel, categorySel, statusSel, csvBtn),
       h('div', { class: 'exp-count' }, count),
       h('div', { class: 'exp-wrap' },
         h('table', { class: 'exp-table' },
           h('thead', null, h('tr', null, [
-            'Product', 'Lot', 'Expires', 'Days left', 'Band', 'Cartons', 'Location', 'Value at risk', 'Action', 'Owner', 'Decide by', 'Status', 'Customer discount',
+            'Product', 'Lot', 'Expires', 'Days left', 'Band', 'Cartons', 'Location', 'Value at risk', 'Action', 'Assigned sales rep', 'Decide by', 'Status', 'Customer discount',
           ].map((t, i) => h('th', { class: i === 3 || i === 5 || i === 7 ? 'num' : null }, t)))),
           tbody),
         emptyNote)),
@@ -218,7 +219,6 @@ export async function renderExpiry(view) {
 
   function paintOptions() {
     fill(categorySel, [['', 'All categories'], ...data.options.categories.map((c) => [c, c])], state.category);
-    fill(ownerSel, [['', 'Any owner'], ['__none__', 'No owner yet'], ...data.options.owners.map((o) => [o, o])], state.owner);
   }
 
   function paintCheck() {
@@ -254,10 +254,20 @@ export async function renderExpiry(view) {
     };
 
     const actionSel = select(ACTIONS, r.action || '', { 'aria-label': `Action for ${label}`, onChange: (e) => save('action', e.target.value, e.target) });
-    const ownerIn = h('input', {
-      type: 'text', maxlength: '60', placeholder: 'Owner', value: r.owner || '', 'aria-label': `Owner of ${label}`,
-      onChange: (e) => save('owner', e.target.value, e.target),
-    });
+    // Assign the lot to one named sales rep, saved through the existing decision save (the `owner` field holds the rep's name).
+    const repSel = h('select', { 'aria-label': `Sales rep for ${label}` },
+      h('option', { value: '' }, 'Choose a sales rep…'),
+      repNames.map((n) => h('option', { value: n, selected: n === r.owner }, n)));
+    if (r.owner && !repNames.includes(r.owner)) repSel.appendChild(h('option', { value: r.owner, selected: true }, r.owner));
+    const repNow = h('div', { class: 'muted' });
+    const paintRep = () => { repNow.textContent = r.owner ? `Assigned to ${r.owner}` : 'Not assigned'; repSel.value = r.owner || ''; };
+    const assignBtn = h('button', { type: 'button', class: 'secondary', onClick: async (e) => {
+      if (!repSel.value) { toast('Choose a sales rep first.', 'err'); return; }
+      await save('owner', repSel.value, e.currentTarget); paintRep();
+    } }, 'Assign');
+    paintRep();
+    const repCell = !canDiscount ? h('span', { class: r.owner ? '' : 'muted' }, r.owner || 'Not assigned')
+      : h('div', { class: 'exp-rep-assign' }, repSel, assignBtn, repNow);
     const dateIn = h('input', {
       type: 'date', value: r.decideBy || '', 'aria-label': `Decide by, ${label}`,
       onChange: (e) => save('decideBy', e.target.value, e.target),
@@ -319,7 +329,7 @@ export async function renderExpiry(view) {
       h('td', null, locCell),
       h('td', { class: 'num' }, money(r.valueAtRisk) || h('span', { class: 'muted' }, 'no price')),
       h('td', null, r.actionable ? actionSel : h('span', { class: 'muted' }, '—')),
-      h('td', null, r.actionable ? ownerIn : h('span', { class: 'muted' }, '—')),
+      h('td', null, r.actionable ? repCell : h('span', { class: 'muted' }, '—')),
       h('td', null, r.actionable ? [dateIn, overdue] : h('span', { class: 'muted' }, '—')),
       h('td', null, r.actionable ? statusSelect : h('span', { class: 'muted' }, '—')),
       h('td', null, discCell));
