@@ -285,12 +285,13 @@ function salesReport(db, month, todayStr) {
   for (const id of customersInvoiced(db, r.start, r.end)) { const rp = repOf(`BFL:${id}`); activeBy.set(rp, (activeBy.get(rp) || 0) + 1); }
   sections.push(section('sales_by_rep', 'Sales by rep', 'Net sales, active customers, collections and shop visits per rep, each against target. A rep is the customer\'s salesperson in Odoo.',
     'Odoo invoices and payments; BFL visits; targets in BFL', 'Coaching and follow-up',
-    [col('rep', 'Rep'), col('netSales', 'Net sales', 'ghs'), col('target', 'Target', 'ghs'), col('vsTarget', 'vs target', 'pct'), col('active', 'Active customers', 'int'), col('collections', 'Collections', 'ghs'), col('visits', 'Shop visits', 'int')],
+    [col('rep', 'Rep'), col('netSales', 'Net sales', 'ghs'), col('target', 'Target', 'ghs'), col('remainingTarget', 'Remaining balance', 'ghs'), col('vsTarget', 'vs target', 'pct'), col('active', 'Active customers', 'int'), col('collections', 'Collections', 'ghs'), col('visits', 'Shop visits', 'int')],
     [...reps].sort().map((rp) => {
       const mine = [...now.entries()].filter(([k]) => repOf(k) === rp);
       const sales = money(mine.reduce((s, [, o]) => s + net(o), 0));
       const t = getTarget(db, 'REP', rp, 'net_sales', month);
-      return { rep: rp, netSales: sales, target: t, vsTarget: t ? pct(sales, t) : null, active: activeBy.get(rp) || 0, collections: money(mine.reduce((s, [, o]) => s + o.collections, 0)), visits: visits.get(rp) || 0 };
+      const rem = t !== null ? Math.max(0, money(t - sales)) : null;
+      return { rep: rp, netSales: sales, target: t, remainingTarget: rem, vsTarget: t ? pct(sales, t) : null, active: activeBy.get(rp) || 0, collections: money(mine.reduce((s, [, o]) => s + o.collections, 0)), visits: visits.get(rp) || 0 };
     }).filter((x) => x.netSales || x.active || x.visits || x.collections || x.target)));
 
   // 2. top 20 customers
@@ -584,8 +585,9 @@ export function repMonth(db, repName, month, todayStr) {
   const shopCredits = db.prepare("SELECT COALESCE(SUM(amount),0) s FROM odoo_credit_notes WHERE customer_kind = 'SHELF' AND rep_name = ? AND issued_on BETWEEN ? AND ?").get(repName, r.start, r.end).s;
   const total = money(sales.reduce((s, x) => s + x.s, 0) - credits - shopCredits);
   const target = getTarget(db, 'REP', repName, 'net_sales', month);
+  const remainingTarget = target !== null ? Math.max(0, money(target - total)) : null;
   return {
-    month, rep: repName, monthToDate: r.end >= todayStr, netSales: total, target, vsTarget: target ? pct(total, target) : null,
+    month, rep: repName, monthToDate: r.end >= todayStr, netSales: total, target, remainingTarget, vsTarget: target ? pct(total, target) : null,
     activeCustomers: sales.length, customers: mine.length, collections: money(pay),
     dormant: lastInv.map((x) => ({ x, days: r.endDay - toDay(x.last) })).filter((x) => x.days >= 30).sort((a, b) => b.days - a.days)
       .map(({ x, days }) => ({ customer: mine.find((c) => c.id === x.id)?.name, lastInvoice: x.last, days })),

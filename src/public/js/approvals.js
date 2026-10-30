@@ -49,15 +49,19 @@ export async function renderApprovals(view) {
     setChildren(overdueBox, table(['Rep', 'Lots waiting for a visit', 'Overdue'],
       d.overdueByRep.map((r) => [r.rep, String(r.openAlerts), r.overdue ? h('span', { class: 'pill err' }, String(r.overdue)) : '0'])));
     setChildren(returnsBox, d.returnsExpected.length
-      ? table(['Customer', 'Product', 'Lot', 'Expires', 'Cartons', 'Rep'],
-        d.returnsExpected.map((r) => [r.customer, r.productName, r.lotName, date(r.expiryDate), String(r.cartonsOnShelf), r.rep]))
+      ? table(['Customer', 'Product', 'Lot', 'Expires', 'Cartons', 'Return reason', 'Rep'],
+        d.returnsExpected.map((r) => [
+          r.customer, r.productName, r.lotName, date(r.expiryDate), String(r.cartonsOnShelf),
+          r.returnReason ? `${r.returnReason}${r.returnNote ? ` (${r.returnNote})` : ''}` : 'Expired',
+          r.rep,
+        ]))
       : h('p', { class: 'muted' }, 'None.'));
     setChildren(decidedBox, d.decided.length
       ? table(['Customer', 'Product', 'Discount', 'Outcome'],
         d.decided.map((r) => [r.customer, r.productName, `${r.discountPct}%`,
-          r.approvalStatus === 'REJECTED'
-            ? h('span', null, h('span', { class: 'pill err' }, 'Turned down'), ` ${r.reason}`)
-            : h('span', null, h('span', { class: 'pill ok' }, 'Approved'), ` credit note ${r.creditNoteRef}`)]))
+        r.approvalStatus === 'REJECTED'
+          ? h('span', null, h('span', { class: 'pill err' }, 'Turned down'), ` ${r.reason}`)
+          : h('span', null, h('span', { class: 'pill ok' }, 'Approved'), ` credit note ${r.creditNoteRef}`)]))
       : h('p', { class: 'muted' }, 'Nothing decided yet.'));
   }
 
@@ -73,7 +77,11 @@ export async function renderApprovals(view) {
   }
 
   function lotRow(l) {
-    const pct = h('input', { type: 'number', min: '1', max: '90', step: '1', inputmode: 'decimal', placeholder: '%', value: l.discountPct ?? '', class: 'exp-disc-in', 'aria-label': `Discount percent for ${l.productName}, lot ${l.lotName}` });
+    const pct = h('input', {
+      type: 'number', min: '1', max: '90', step: '1', inputmode: 'decimal', placeholder: '%', value: l.discountPct ?? '', class: 'exp-disc-in',
+      'aria-label': `Discount percent for ${l.productName}, lot ${l.lotName}`,
+      onKeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); save(pct.value.trim() === '' ? null : pct.value.trim(), set); } },
+    });
     const remove = h('button', { type: 'button', class: 'ghost' + (l.discountPct ? '' : ' hidden'), onClick: (e) => save(null, e.currentTarget) }, 'Remove');
     async function save(value, control) {
       control.disabled = true;
@@ -82,7 +90,9 @@ export async function renderApprovals(view) {
         l.discountPct = r.lot.discountPct;
         pct.value = l.discountPct ?? '';
         remove.classList.toggle('hidden', !l.discountPct);
-        toast(value === null ? 'Discount removed' : 'Discount saved: reps will see it on the visit', 'ok');
+        try { localStorage.setItem('bfl.discounts.updated', String(Date.now())); } catch { }
+        try { const bc = new BroadcastChannel('bfl_discounts'); bc.postMessage({ type: 'discount_updated', at: Date.now() }); bc.close(); } catch { }
+        toast(value === null ? 'Discount removed' : 'Discount saved: live for reps & customers', 'ok');
       } catch (e) { toast(e.message, 'err'); } finally { control.disabled = false; }
     }
     const set = h('button', { type: 'button', class: 'secondary', onClick: (e) => save(pct.value.trim() === '' ? null : pct.value.trim(), e.currentTarget) }, 'Set');
@@ -100,10 +110,12 @@ export async function renderApprovals(view) {
   function pendingItem(p) {
     const reason = h('input', { type: 'text', maxlength: '300', placeholder: 'Reason for the rep', 'aria-label': `Reason for turning down the discount on ${p.productName}`, class: 'hidden' });
     const approve = h('button', { type: 'button', onClick: () => act(p.id, { decision: 'APPROVE' }, approve) }, 'Approve');
-    const reject = h('button', { type: 'button', class: 'ghost', onClick: () => {
-      if (reason.classList.contains('hidden')) { reason.classList.remove('hidden'); reason.focus(); reject.textContent = 'Confirm turn down'; return; }
-      act(p.id, { decision: 'REJECT', reason: reason.value }, reject);
-    } }, 'Turn down');
+    const reject = h('button', {
+      type: 'button', class: 'ghost', onClick: () => {
+        if (reason.classList.contains('hidden')) { reason.classList.remove('hidden'); reason.focus(); reject.textContent = 'Confirm turn down'; return; }
+        act(p.id, { decision: 'REJECT', reason: reason.value }, reject);
+      }
+    }, 'Turn down');
     return h('div', { class: 'appr-item' },
       h('div', null,
         h('b', null, `${p.discountPct}% off `), `${p.productName} · lot ${p.lotName}`,
@@ -116,10 +128,12 @@ export async function renderApprovals(view) {
 
   function financeItem(p) {
     const ref = h('input', { type: 'text', maxlength: '60', placeholder: 'Credit note number', 'aria-label': `Credit note number for ${p.customer}, ${p.productName}` });
-    const save = h('button', { type: 'button', onClick: async () => {
-      save.disabled = true;
-      try { await api.shelfCreditNote(p.id, ref.value); toast('Credit note recorded', 'ok'); await load(); } catch (e) { toast(e.message, 'err'); save.disabled = false; }
-    } }, 'Credit note issued');
+    const save = h('button', {
+      type: 'button', onClick: async () => {
+        save.disabled = true;
+        try { await api.shelfCreditNote(p.id, ref.value); toast('Credit note recorded', 'ok'); await load(); } catch (e) { toast(e.message, 'err'); save.disabled = false; }
+      }
+    }, 'Credit note issued');
     return h('div', { class: 'appr-item' },
       h('div', null, h('b', null, `${p.discountPct}% credit `), `${p.customer} · ${p.productName} · lot ${p.lotName}`,
         h('div', { class: 'muted' }, `${plural(p.cartonsOnShelf, 'carton')} · order ${p.salesOrder} · ${p.preApproved ? `approved at once (within your ${p.offeredPct}% discount)` : 'approved'}`)),

@@ -156,6 +156,7 @@ function tableHtml(items) {
       <td class="num">${num(p.on_hand)}</td>
       <td class="num">${num(p.free_to_use)}</td>
       <td class="num">${num(p.incoming)}</td>
+      <td class="num">${p.max_order_ctn ? `<span class="pill warn">Max ${num(p.max_order_ctn)} ctn</span>` : '<span class="muted">No limit</span>'}</td>
       <td class="num">${num(p.outgoing)}</td>
       <td class="num">${num(p.forecasted)}</td>
       <td>${p.is_active ? stockPill(p.stock_status) : '<span class="pill muted">Inactive</span>'}</td>
@@ -164,7 +165,7 @@ function tableHtml(items) {
   return `<table>
     <thead><tr>
       <th>Photo</th><th>Barcode</th><th>Product Name</th><th>UoM</th>
-      <th class="num">On Hand</th><th class="num">Free To Use</th><th class="num">Incoming</th>
+      <th class="num">On Hand</th><th class="num">Free To Use</th><th class="num">Incoming (Upcoming)</th><th class="num">Order Limit</th>
       <th class="num">Outgoing</th><th class="num">Forecasted</th><th>Status</th><th>Data Quality</th>
     </tr></thead><tbody>${rows}</tbody></table>`;
 }
@@ -205,6 +206,19 @@ export async function renderProductDetail(view, id) {
           <div class="k">Outgoing</div><div>${num(p.outgoing)}</div>
           <div class="k">Forecasted</div><div>${num(p.forecasted)}</div>
         </div>
+        <div class="section-title" style="margin-top:16px">Purchasing Limitation &amp; Upcoming Stock Controls</div>
+        <div class="controls" style="margin-top:8px;gap:12px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <span>Max Order Limit (CTN/order):</span>
+            <input type="number" id="prodLimitInput" min="0" step="1" value="${p.max_order_ctn || ''}" placeholder="No limit" style="width:100px" />
+            <button type="button" class="secondary" id="saveProdLimitBtn">Save Limit</button>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <span>Upcoming / Incoming Stock (CTN):</span>
+            <input type="number" id="prodIncomingInput" min="0" step="1" value="${p.incoming || 0}" style="width:100px" />
+            <button type="button" class="secondary" id="saveProdIncomingBtn">Save Incoming</button>
+          </label>
+        </div>
       </div>
       <div class="card" style="flex:1 1 220px">
         <div id="productPhotoManager"></div>
@@ -222,6 +236,26 @@ export async function renderProductDetail(view, id) {
     </div>`;
 
   mountPhoto(view.querySelector('#productPhotoManager'), p, { uploadOnly: true, title: 'Primary Image' });
+
+  view.querySelector('#saveProdLimitBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const val = view.querySelector('#prodLimitInput').value.trim();
+    btn.disabled = true;
+    try {
+      const r = await api.setProductOrderLimit(p.id, val === '' ? 0 : Number(val));
+      toast(r.maxOrderCtn ? `Order limit set to ${r.maxOrderCtn} cartons/order` : 'Order limit cleared', 'ok');
+    } catch (err) { toast(err.message, 'err'); } finally { btn.disabled = false; }
+  });
+
+  view.querySelector('#saveProdIncomingBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const val = view.querySelector('#prodIncomingInput').value.trim();
+    btn.disabled = true;
+    try {
+      const r = await api.setProductUpcoming(p.id, val === '' ? 0 : Number(val));
+      toast(r.incoming > 0 ? `Upcoming stock set to ${r.incoming} cartons (visible in Upcoming Products)` : 'Upcoming stock cleared', 'ok');
+    } catch (err) { toast(err.message, 'err'); } finally { btn.disabled = false; }
+  });
 }
 
 function importHistTable(batches) {

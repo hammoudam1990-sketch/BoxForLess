@@ -7,7 +7,7 @@ import { h } from '../lib/dom.js';
 import { reveal } from '../lib/util.js';
 import { doodle, doodleFor } from './doodles.js';
 import { bindCartControl } from './qty.js';
-import { onPrices, priceOf, wantPrice, formatPrice, offerOf } from './prices.js';
+import { onPrices, priceOf, wantPrice, formatPrice, offerOf, limitOf } from './prices.js';
 
 const NO_IMAGE_TEXT = 'No product image available';
 
@@ -32,18 +32,51 @@ export function productImage(image, name, { eager = false } = {}) {
 /**
  * "GHS 55.86 / carton" for the signed-in customer, from their own price class; an empty element
  * (nothing at all) for anyone else. Built once and updated in place when the session or the prices change.
+ * When the product has an active discount offer, shows the discounted price alongside the crossed-out original price.
  */
 export function createPriceLine(barcode, scope) {
   const el = h('div', { class: 'p-price hidden' });
   const paint = () => {
-    const price = priceOf(barcode);
-    el.replaceChildren(...(price === null ? [] : [h('b', {}, formatPrice(price)), h('span', {}, ' / carton')]));
-    el.classList.toggle('hidden', price === null);
+    const o = offerOf(barcode);
+    const price = priceOf(barcode) ?? (o ? o.price : null);
+    if (price === null && (!o || o.discountedPrice === null)) {
+      el.replaceChildren();
+      el.classList.add('hidden');
+      return;
+    }
+    if (o && o.discountedPrice !== null) {
+      el.replaceChildren(
+        h('b', { style: { color: '#b42318' } }, formatPrice(o.discountedPrice)),
+        h('span', {}, ' / carton '),
+        price !== null ? h('s', { class: 'c-offer-was', style: { marginLeft: '4px', opacity: '0.65', fontSize: '0.9em' } }, formatPrice(price)) : null,
+      );
+    } else {
+      el.replaceChildren(h('b', {}, formatPrice(price)), h('span', {}, ' / carton'));
+    }
+    el.classList.remove('hidden');
   };
   scope.add(onPrices(paint));
   paint();
   wantPrice(barcode);
   return el;
+}
+
+/**
+ * Prominent discount badge overlaid on the product picture when an offer is active.
+ */
+export function createDiscountBadge(barcode, scope) {
+  const badge = h('span', {
+    class: 'c-offer-badge hidden',
+    style: { position: 'absolute', top: '10px', left: '10px', zIndex: '2', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' },
+  });
+  const paint = () => {
+    const o = offerOf(barcode);
+    badge.classList.toggle('hidden', !o);
+    badge.textContent = o ? `${o.discountPct}% OFF` : '';
+  };
+  scope.add(onPrices(paint));
+  paint();
+  return badge;
 }
 
 /**
@@ -69,6 +102,24 @@ export function createOfferLine(barcode, scope) {
 }
 
 /**
+ * Per-product purchasing limit badge ("Limit: max 25 cartons / order") when configured.
+ */
+export function createLimitLine(barcode, scope) {
+  const el = h('div', {
+    class: 'c-limit hidden',
+    style: { fontSize: '11.5px', fontWeight: '600', color: '#9a3412', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '6px', padding: '2px 7px', marginTop: '4px', display: 'inline-block' },
+  });
+  const paint = () => {
+    const lim = limitOf(barcode);
+    el.classList.toggle('hidden', !lim);
+    el.textContent = lim ? `Order limit: max ${lim} ctn / order` : '';
+  };
+  scope.add(onPrices(paint));
+  paint();
+  return el;
+}
+
+/**
  * One product tile, after the Oct 2026 customer mockup: a picture (or the drawing of what kind
  * of thing it is), the stock pill, name, category, price per carton, any discounted offer, and the
  * cart control. `scope` collects its cart and price subscriptions.
@@ -80,7 +131,8 @@ export function createProductCard(product, scope) {
 
   const card = h('div', { class: 'p-card' },
     h('a', { class: 'p-card-link', href },
-      h('div', { class: 'p-card-pic' },
+      h('div', { class: 'p-card-pic', style: { position: 'relative' } },
+        createDiscountBadge(product.id, scope),
         product.image ? productImage(product.image, product.name)
           : doodle(doodleFor(product), { size: 'lg', className: 'p-card-doodle' }),
         product.pack ? h('span', { class: 'p-card-pack' }, product.pack) : null),
@@ -89,6 +141,7 @@ export function createProductCard(product, scope) {
         h('div', { class: 'p-card-name' }, product.name),
         product.category ? h('div', { class: 'p-card-cat' }, product.category.name) : null,
         createPriceLine(product.id, scope),
+        createLimitLine(product.id, scope),
         createOfferLine(product.id, scope))),
     actions);
   reveal(card);

@@ -63,7 +63,7 @@ product or customer data remain admin-only.
 
 ### Import the Odoo export
 
-**Via the UI:** open http://localhost:3000 → **Imports** → drop the `.xlsx` →
+**Via the UI:** open c → **Imports** → drop the `.xlsx` →
 review the preview → **Confirm Import**.
 
 **Via the CLI:**

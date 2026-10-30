@@ -11,10 +11,11 @@
 import { h, toggleHidden } from '../lib/dom.js';
 import { getJSON } from './http.js';
 
-const state = { signedIn: false, name: null, source: null, available: false, prices: new Map(), offers: new Map() };
+const state = { signedIn: false, name: null, source: null, available: false, prices: new Map(), offers: new Map(), limits: new Map() };
 const listeners = new Set();
 const wanted = new Set();
 let timer = null;
+let limitsLoaded = false;
 
 const emit = () => { for (const fn of [...listeners]) fn(); };
 
@@ -32,6 +33,18 @@ export const priceOf = (barcode) => (state.signedIn && state.prices.has(String(b
 /** The discounted near-expiry offer on a product for this customer, or null. */
 export const offerOf = (barcode) => (state.signedIn ? state.offers.get(String(barcode)) || null : null);
 export const offerList = () => (state.signedIn ? [...state.offers.values()] : []);
+
+/** Per-product purchasing limitation (max cartons per order), or null. */
+export const limitOf = (barcode) => state.limits.get(String(barcode)) || null;
+
+export async function refreshLimits() {
+  try {
+    const r = await getJSON('/api/catalog/limits');
+    state.limits = new Map(Object.entries(r.limits || {}).map(([k, v]) => [String(k), Number(v)]));
+    limitsLoaded = true;
+    emit();
+  } catch { /* ignore */ }
+}
 
 /**
  * What a line comes to, with the offer applied: the first maxCartons cartons of the offer at the discounted
@@ -52,11 +65,32 @@ export async function refreshOffers() {
   try {
     const r = await getJSON('/api/catalog/offers');
     if (state.name !== who) return;
-    state.offers = new Map(r.offers.map((o) => [o.barcode, o]));
+    state.offers = new Map((r.offers || []).map((o) => [String(o.barcode), o]));
+    for (const o of state.offers.values()) wantPrice(o.barcode);
     emit();
   } catch (e) {
     if (e.status === 401) setSession(null);
   }
+}
+
+// Live sync: when a discount is added/changed on the staff Expiry or Approvals screen in another tab,
+// or when the customer focuses back on this tab, immediately refresh offers so the discount appears at once.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'bfl.discounts.updated' && state.signedIn) refreshOffers();
+  });
+  window.addEventListener('focus', () => {
+    if (state.signedIn) refreshOffers();
+  });
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && state.signedIn) refreshOffers();
+    });
+  }
+  try {
+    const bc = new BroadcastChannel('bfl_discounts');
+    bc.addEventListener('message', () => { if (state.signedIn) refreshOffers(); });
+  } catch { /* BroadcastChannel unsupported */ }
 }
 
 export const formatPrice = (n) => `GHS ${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -77,6 +111,7 @@ export function setSession(customer) {
 
 /** Ask the server who is signed in (once at start, and after a sign-in). */
 export async function refreshSession() {
+  if (!limitsLoaded) refreshLimits();
   try {
     const s = await getJSON('/api/catalog/access');
     setSession(s.authenticated ? s.customer : null);

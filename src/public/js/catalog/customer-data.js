@@ -6,7 +6,7 @@
 // account page opens. Until Odoo is connected the server fills them from the Sample Odoo stand-in, and the pages
 // say so (SAMPLE_NOTE).
 import { getJSON } from './http.js';
-import { setSession } from './prices.js';
+import { setSession, refreshOffers } from './prices.js';
 
 export const SAMPLE_NOTE = 'Sample figures: Odoo is not connected yet, so orders, invoices and balances come from a stand-in for Odoo.';
 
@@ -59,6 +59,8 @@ export async function loadCustomerData() {
     getJSON('/api/catalog/profile').catch(() => null),
   ]);
   const customer = {
+    customerId: profile?.customerId || null,
+    customerClass: profile?.customerClass || null,
     company: profile?.name || access.customer.name,
     address: profile?.deliveryAddress || access.customer.deliveryAddress || '',
     phone: profile?.phone || '',
@@ -70,6 +72,7 @@ export async function loadCustomerData() {
   customer.type = account && account.type === 'CASH' ? 'cash' : 'credit';
   state = { customer, account, orders: (orders.orders || []).map(shapeOrder) };
   setSession({ name: customer.company });
+  refreshOffers();
   return state;
 }
 

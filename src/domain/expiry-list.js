@@ -38,6 +38,9 @@ function buildRows(db, today, settings, lots) {
     return {
       key: lotKey(lot),
       ...row,
+      stockHolder: lot.stockHolder || (lot.location === 'SHOP' ? 'SHOP' : 'WAREHOUSE'),
+      shopName: lot.shopName || null,
+      withinTwoMonths: row.daysLeft !== null && row.daysLeft >= 0 && row.daysLeft <= 60,
       actionable,
       // the discount customers are offered on this lot (set by the Sales Manager), and whether the product is in the
       // customer catalogue at all (a lot whose product is not there cannot be offered, whatever its discount)
@@ -57,14 +60,20 @@ function buildRows(db, today, settings, lots) {
 function matches(row, f) {
   if (f.bands?.length && !f.bands.includes(row.band)) return false;
   if (f.category && !isUnderCategory(row.categoryPath, f.category)) return false;
-  if (f.location && row.location !== f.location) return false;
+  if (f.location) {
+    if (f.location === 'WAREHOUSE') {
+      if (row.stockHolder !== 'WAREHOUSE' && row.location === 'SHOP') return false;
+    } else if (row.location !== f.location) {
+      return false;
+    }
+  }
   if (f.status && row.status !== f.status) return false;
   if (f.owner) {
     if (f.owner === '__none__') { if (row.owner || !row.actionable) return false; }
     else if ((row.owner || '').toLowerCase() !== f.owner.toLowerCase()) return false;
   }
   if (f.q) {
-    const hay = `${row.productName} ${row.barcode} ${row.lotName}`.toLowerCase();
+    const hay = `${row.productName} ${row.barcode} ${row.lotName} ${row.shopName || ''}`.toLowerCase();
     if (!hay.includes(f.q.toLowerCase())) return false;
   }
   return true;
@@ -74,7 +83,7 @@ function matches(row, f) {
 export function parseFilters(query = {}) {
   const bands = String(query.band || '').split(',').map((s) => s.trim().toUpperCase())
     .filter((b) => Object.values(ExpiryBand).includes(b));
-  const location = ['MAIN', 'CLEARANCE'].includes(String(query.location || '').toUpperCase())
+  const location = ['MAIN', 'CLEARANCE', 'WAREHOUSE', 'SHOP'].includes(String(query.location || '').toUpperCase())
     ? String(query.location).toUpperCase() : '';
   const status = Object.values(ExpiryStatus).includes(String(query.status || '').toUpperCase())
     ? String(query.status).toUpperCase() : '';
@@ -94,7 +103,7 @@ export function parseFilters(query = {}) {
  * @param {{today?:string, filters?:object, loader?:Function, settings?:object}} [opts]
  */
 export function buildExpiryList(db, { today = todayString(), filters = {}, loader = loadLots, settings = sampleSettings() } = {}) {
-  const { source, lots } = loader(today);
+  const { source, lots } = loader(today, db);
   const all = buildRows(db, today, settings, lots);
   const rows = all.filter((r) => matches(r, filters));
 
@@ -135,11 +144,11 @@ export function buildExpiryList(db, { today = todayString(), filters = {}, loade
  */
 export function saveLotDecision(db, key, input, opts = {}) {
   const { today = todayString(), loader = loadLots, settings = sampleSettings() } = opts;
-  const row = buildRows(db, today, settings, loader(today).lots).find((r) => r.key === key);
+  const row = buildRows(db, today, settings, loader(today, db).lots).find((r) => r.key === key);
   if (!row) throw new ExpiryActionError('That lot is not on the expiry list.');
   if (!row.actionable) throw new ExpiryActionError('That lot is not close to expiry, so it has no decision to record.');
   saveAction(db, key, input);
-  return buildRows(db, today, settings, loader(today).lots).find((r) => r.key === key);
+  return buildRows(db, today, settings, loader(today, db).lots).find((r) => r.key === key);
 }
 
 /**
@@ -148,7 +157,7 @@ export function saveLotDecision(db, key, input, opts = {}) {
  */
 export function saveLotClearanceDiscount(db, key, pct, by, opts = {}) {
   const { today = todayString(), loader = loadLots, settings = sampleSettings() } = opts;
-  const row = buildRows(db, today, settings, loader(today).lots).find((r) => r.key === key);
+  const row = buildRows(db, today, settings, loader(today, db).lots).find((r) => r.key === key);
   if (!row) throw new ExpiryActionError('That lot is not on the expiry list.');
   if (pct === null || pct === undefined || pct === '') removeLotDiscount(db, DiscountKind.CLEARANCE, key, by);
   else {
@@ -156,7 +165,7 @@ export function saveLotClearanceDiscount(db, key, pct, by, opts = {}) {
     if (row.band === ExpiryBand.EXPIRED) throw new ExpiryActionError('That lot has expired and cannot be sold.');
     setLotDiscount(db, DiscountKind.CLEARANCE, key, pct, by);
   }
-  return buildRows(db, today, settings, loader(today).lots).find((r) => r.key === key);
+  return buildRows(db, today, settings, loader(today, db).lots).find((r) => r.key === key);
 }
 
 // ---------------------------------------------------------------------------

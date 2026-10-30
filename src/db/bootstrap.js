@@ -8,6 +8,7 @@ import { ROOT } from '../config.js';
 import { createPreview, confirmImport } from '../import/service.js';
 import { seedFeaturedProductImages, FEATURED_PHOTO_PRODUCTS } from '../domain/images.js';
 import { fileUncategorised, refileGuessedNonFood } from '../domain/category-guess.js';
+import { ensureCategoryPath } from '../domain/categories.js';
 import { hashPassword } from '../domain/passwords.js';
 import { seedHistory, historyLoaded } from '../domain/sample-history.js';
 import { recomputeFinance } from '../domain/sample-odoo.js';
@@ -54,6 +55,51 @@ export function bootstrapDatabase(db) {
     //     SPICES & SEASONINGS): moved to their NON-FOOD category, each move logged, never one Odoo categorised.
     refileGuessedNonFood(db, { keep: FEATURED_PHOTO_PRODUCTS.map((p) => p.barcode), now: now.toISOString() });
 
+    // 2a. Ensure every lot in fixtures/expiry-sample.json is present in `products` so every row on the
+    // Expiry List (#/expiry) is in the catalogue (`inCatalogue = true`) and immediately discountable
+    const expirySamplePath = path.join(ROOT, 'fixtures', 'expiry-sample.json');
+    if (fs.existsSync(expirySamplePath)) {
+      const { lots = [] } = JSON.parse(fs.readFileSync(expirySamplePath, 'utf8'));
+      const findProd = db.prepare('SELECT id, free_to_use, on_hand FROM products WHERE barcode = ?');
+      const insSampleProd = db.prepare(`
+        INSERT INTO products (barcode, name, box_uom, odoo_category_path, category_id, free_to_use, on_hand, forecasted, incoming, outgoing, is_active, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 1, ?, ?)
+      `);
+      const updSampleStock = db.prepare('UPDATE products SET is_active = 1, free_to_use = MAX(free_to_use, ?), on_hand = MAX(on_hand, ?) WHERE id = ?');
+      for (const l of lots) {
+        if (!l.barcode || !l.productName) continue;
+        const needCtn = Math.max(Number(l.cartons) || 20, 40);
+        const existingProd = findProd.get(l.barcode);
+        if (!existingProd) {
+          const catPath = l.categoryPath || 'FOOD / CANNED FOOD';
+          const leafId = ensureCategoryPath(db, catPath, { now: now.toISOString() });
+          const packMatch = /\*\s*(\d+)/.exec(l.productName);
+          const uom = packMatch ? `CTN${packMatch[1]}` : 'CTN';
+          insSampleProd.run(l.barcode, l.productName, uom, catPath, leafId, needCtn, needCtn, needCtn, now.toISOString(), now.toISOString());
+        } else if ((existingProd.free_to_use || 0) < needCtn) {
+          updSampleStock.run(needCtn, needCtn, existingProd.id);
+        }
+      }
+    }
+
+    // 2b. Ensure every active product has a valid Odoo category path & category_id so category filters and reports work
+    const uncategorised = db.prepare('SELECT id, name FROM products WHERE odoo_category_path IS NULL OR category_id IS NULL').all();
+    if (uncategorised.length > 0) {
+      const updCat = db.prepare('UPDATE products SET odoo_category_path = ?, category_id = ? WHERE id = ?');
+      for (const p of uncategorised) {
+        const upper = String(p.name || '').toUpperCase();
+        let catPath = 'FOOD / SPICES & SEASONINGS';
+        if (upper.includes('LAZIZA') || upper.includes('MALT')) catPath = 'DRINKS & BEVERAGES / MALT DRINKS';
+        else if (upper.includes('LUNA') || upper.includes('COFFEE')) catPath = 'DRINKS & BEVERAGES / READY TO DRINK COFFEE';
+        else if (upper.includes('PICKLE') || upper.includes('TURNIP') || upper.includes('AL AMIR')) catPath = 'FOOD / PICKLES & CONDIMENTS';
+        else if (upper.includes('BEANS') || upper.includes('CHTOURA') || upper.includes('CANNED')) catPath = 'FOOD / CANNED & PRESERVED FOODS';
+        else if (upper.includes('SEED') || upper.includes('WHOLE')) catPath = 'FOOD / SPICES & SEASONINGS / WHOLE SPICES';
+        else if (upper.includes('POWDER') || upper.includes('GROUND')) catPath = 'FOOD / SPICES & SEASONINGS / GROUND SPICES';
+        const leafId = ensureCategoryPath(db, catPath, { now: now.toISOString() });
+        updCat.run(catPath, leafId, p.id);
+      }
+    }
+
     // 3. Ensure default staff accounts for ALL roles (ADMIN, SALES_MANAGER, WAREHOUSE, SALES_REP) exist
     const defaultPassHash = hashPassword('Admin123456!');
     const staffSeeds = [
@@ -83,16 +129,16 @@ export function bootstrapDatabase(db) {
 
     // 4. Ensure default customer accounts exist with price classes, contact details, and rep assignments
     const customerSeeds = [
-      { odoo_ref: '4101', name: 'Adom Supermarket', contact: 'Ama Serwaa', phone: '0244101001', email: 'orders@adomsupermarket.gh', address: 'Spintex Road, Accra', pricelist: 'CLASS A (GHS)', rep: 'Kwame Asante', repId: 'rep-1' },
-      { odoo_ref: '4102', name: 'Akwaaba Mini Mart', contact: 'Kojo Antwi', phone: '0204102002', email: 'buying@akwaabamart.gh', address: 'Oxford St, Osu, Accra', pricelist: 'CLASS A (GHS)', rep: 'Kwame Asante', repId: 'rep-1' },
-      { odoo_ref: '4103', name: 'Baah & Sons Provisions', contact: 'Yaw Baah', phone: '0274103003', email: 'baahprovisions@gmail.com', address: 'Kaneshie Market, Accra', pricelist: 'CLASS B (GHS)', rep: 'Kwame Asante', repId: 'rep-1' },
-      { odoo_ref: '4104', name: 'Cantonments Fresh Market', contact: 'Abena Osei', phone: '0554104004', email: 'supply@cantonmentsfresh.gh', address: 'Cantonments, Accra', pricelist: 'CLASS A (GHS)', rep: 'Kwame Asante', repId: 'rep-1' },
-      { odoo_ref: '4105', name: 'Dzorwulu Grocery', contact: 'Nana Yaw', phone: '0244105005', email: 'dzorwulugrocery@gmail.com', address: 'Dzorwulu, Accra', pricelist: 'CLASS B (GHS)', rep: 'Kwame Asante', repId: 'rep-1' },
-      { odoo_ref: '4106', name: 'East Legon Stores', contact: 'Esi Mansa', phone: '0504106006', email: 'orders@eastlegonstores.gh', address: 'East Legon, Accra', pricelist: 'CLASS A (GHS)', rep: 'Kwame Asante', repId: 'rep-1' },
-      { odoo_ref: '4107', name: "Fiifi's Corner Shop", contact: 'Fiifi Quansah', phone: '0244107007', email: 'fiificornershop@gmail.com', address: 'Tema Community 1', pricelist: 'CLASS C (GHS)', rep: 'Efua Owusu', repId: 'rep-2' },
-      { odoo_ref: '4108', name: 'Golden Gate Mart', contact: 'Kwesi Arthur', phone: '0204108008', email: 'goldengatemart@gmail.com', address: 'Madina Zongo Junction', pricelist: 'CLASS B (GHS)', rep: 'Efua Owusu', repId: 'rep-2' },
-      { odoo_ref: '4109', name: 'Haatso Wholesale', contact: 'Akua Danso', phone: '0274109009', email: 'haatsowholesale@gmail.com', address: 'Haatso Supermarket St', pricelist: 'SHOPRITE (GHS)', rep: 'Efua Owusu', repId: 'rep-2' },
-      { odoo_ref: '4110', name: 'Jubilee Minimarket', contact: 'Baffour Gyan', phone: '0554110010', email: 'jubileeminimarket@gmail.com', address: 'Lapaz New Market', pricelist: 'CLASS B (GHS)', rep: 'Efua Owusu', repId: 'rep-2' },
+      { odoo_ref: '4101', name: 'Adom Supermarket', contact: 'Ama Serwaa', phone: '0244101001', email: 'orders@adomsupermarket.gh', address: 'Spintex Road, Accra', pricelist: 'CLASS A (GHS)', rep: 'Kwame Asante', repId: 'rep-1', code: 'ADWM4282' },
+      { odoo_ref: '4102', name: 'Akwaaba Mini Mart', contact: 'Kojo Antwi', phone: '0204102002', email: 'buying@akwaabamart.gh', address: 'Oxford St, Osu, Accra', pricelist: 'CLASS A (GHS)', rep: 'Kwame Asante', repId: 'rep-1', code: 'AKWA4283' },
+      { odoo_ref: '4103', name: 'Baah & Sons Provisions', contact: 'Yaw Baah', phone: '0274103003', email: 'baahprovisions@gmail.com', address: 'Kaneshie Market, Accra', pricelist: 'CLASS B (GHS)', rep: 'Kwame Asante', repId: 'rep-1', code: 'BAAH4284' },
+      { odoo_ref: '4104', name: 'Cantonments Fresh Market', contact: 'Abena Osei', phone: '0554104004', email: 'supply@cantonmentsfresh.gh', address: 'Cantonments, Accra', pricelist: 'CLASS A (GHS)', rep: 'Kwame Asante', repId: 'rep-1', code: 'CANT4285' },
+      { odoo_ref: '4105', name: 'Dzorwulu Grocery', contact: 'Nana Yaw', phone: '0244105005', email: 'dzorwulugrocery@gmail.com', address: 'Dzorwulu, Accra', pricelist: 'CLASS B (GHS)', rep: 'Kwame Asante', repId: 'rep-1', code: 'DZWR4286' },
+      { odoo_ref: '4106', name: 'East Legon Stores', contact: 'Esi Mansa', phone: '0504106006', email: 'orders@eastlegonstores.gh', address: 'East Legon, Accra', pricelist: 'CLASS A (GHS)', rep: 'Kwame Asante', repId: 'rep-1', code: 'ELEG4287' },
+      { odoo_ref: '4107', name: "Fiifi's Corner Shop", contact: 'Fiifi Quansah', phone: '0244107007', email: 'fiificornershop@gmail.com', address: 'Tema Community 1', pricelist: 'CLASS C (GHS)', rep: 'Efua Owusu', repId: 'rep-2', code: 'FEEF4288' },
+      { odoo_ref: '4108', name: 'Golden Gate Mart', contact: 'Kwesi Arthur', phone: '0204108008', email: 'goldengatemart@gmail.com', address: 'Madina Zongo Junction', pricelist: 'CLASS B (GHS)', rep: 'Efua Owusu', repId: 'rep-2', code: 'GWKD4289' },
+      { odoo_ref: '4109', name: 'Haatso Wholesale', contact: 'Akua Danso', phone: '0274109009', email: 'haatsowholesale@gmail.com', address: 'Haatso Supermarket St', pricelist: 'SHOPRITE (GHS)', rep: 'Efua Owusu', repId: 'rep-2', code: 'HAAT4292' },
+      { odoo_ref: '4110', name: 'Jubilee Minimarket', contact: 'Baffour Gyan', phone: '0554110010', email: 'jubileeminimarket@gmail.com', address: 'Lapaz New Market', pricelist: 'CLASS B (GHS)', rep: 'Efua Owusu', repId: 'rep-2', code: 'JWBE4293' },
     ];
 
     const insertCust = db.prepare(`
@@ -106,7 +152,7 @@ export function bootstrapDatabase(db) {
     } else {
       db.prepare(`
         UPDATE customers
-           SET pricelist = COALESCE(pricelist, 'CLASS A (GHS)'),
+           SET pricelist = CASE WHEN pricelist IS NULL OR pricelist = 'CASH ACCOUNT (GHS)' THEN 'CLASS A (GHS)' ELSE pricelist END,
                customer_type = COALESCE(customer_type, 'CREDIT'),
                phone = COALESCE(phone, '0241987650'),
                email = COALESCE(email, 'accrasupermart@ghana.com'),
@@ -124,7 +170,7 @@ export function bootstrapDatabase(db) {
         UPDATE customers
            SET password_hash = COALESCE(password_hash, ?),
                password_set_at = COALESCE(password_set_at, datetime('now')),
-               pricelist = COALESCE(pricelist, 'CLASS A (GHS)'),
+               pricelist = CASE WHEN pricelist IS NULL OR pricelist = 'CASH ACCOUNT (GHS)' THEN 'CLASS A (GHS)' ELSE pricelist END,
                customer_type = COALESCE(customer_type, 'CREDIT'),
                delivery_address = COALESCE(delivery_address, 'Ring Road Central, Accra'),
                salesperson = COALESCE(salesperson, 'Kwame Asante')
@@ -141,6 +187,7 @@ export function bootstrapDatabase(db) {
           UPDATE customers
              SET password_hash = COALESCE(password_hash, ?),
                  password_set_at = COALESCE(password_set_at, datetime('now')),
+                 access_code = CASE WHEN access_code IS NULL OR access_code GLOB '*[01IO]*' THEN ? ELSE access_code END,
                  pricelist = COALESCE(pricelist, ?),
                  customer_type = COALESCE(customer_type, 'CREDIT'),
                  phone = COALESCE(phone, ?),
@@ -148,9 +195,9 @@ export function bootstrapDatabase(db) {
                  delivery_address = COALESCE(delivery_address, ?),
                  salesperson = COALESCE(salesperson, ?)
            WHERE id = ?
-        `).run(defaultPassHash, c.pricelist, c.phone, c.email, c.address, c.rep, id);
+        `).run(defaultPassHash, c.code, c.pricelist, c.phone, c.email, c.address, c.rep, id);
       } else {
-        const res = insertCust.run(c.odoo_ref, c.name, c.phone, c.email, c.address, c.rep, c.pricelist, null, defaultPassHash, now.toISOString());
+        const res = insertCust.run(c.odoo_ref, c.name, c.phone, c.email, c.address, c.rep, c.pricelist, c.code, defaultPassHash, now.toISOString());
         id = Number(res.lastInsertRowid);
       }
       db.prepare(`
@@ -278,14 +325,37 @@ export function bootstrapDatabase(db) {
       setTarget(db, { scope: 'REP', scopeValue: 'Efua Owusu', measure: 'active_customers', month: 'DEFAULT', value: 4 }, 'system', now);
     }
 
-    // 9. Ensure at least one active clearance discount offer exists on an expiring warehouse lot
-    const discCount = db.prepare('SELECT COUNT(*) AS c FROM lot_discounts').get()?.c || 0;
-    if (discCount === 0) {
-      setLotDiscount(db, DiscountKind.CLEARANCE, '5283001117266|LOT-SP-2408|MAIN', 15, 'Ama Boateng (Sales Manager)', now);
-      setLotDiscount(db, DiscountKind.CLEARANCE, '5283001109209|LOT-CL-2411|MAIN', 20, 'Ama Boateng (Sales Manager)', now);
+    // 9. Ensure valid clearance discount offers exist on expiring warehouse lots
+    db.prepare("UPDATE lot_discounts SET is_active = 0 WHERE lot_key LIKE '%|%|%'").run();
+    const validDiscCount = db.prepare("SELECT COUNT(*) AS c FROM lot_discounts WHERE is_active = 1 AND lot_key NOT LIKE '%|%|%'").get()?.c || 0;
+    if (validDiscCount === 0) {
+      setLotDiscount(db, DiscountKind.CLEARANCE, '5285001401116|LOT-101', 20, 'Ama Boateng (Sales Manager)', now);
+      setLotDiscount(db, DiscountKind.CLEARANCE, '5283001117266|SAMPLE-0018', 15, 'Ama Boateng (Sales Manager)', now);
+      setLotDiscount(db, DiscountKind.CLEARANCE, '5283001109209|SAMPLE-0019', 20, 'Ama Boateng (Sales Manager)', now);
     }
 
-    // 10. Generate due/overdue payment reminders from open invoices
+    // 10. Ensure Upcoming Products (incoming > 0) and Product Purchasing Limitations (product_order_limits) are seeded
+    const upcomingCount = db.prepare('SELECT COUNT(*) AS c FROM products WHERE is_active = 1 AND incoming > 0').get()?.c || 0;
+    if (upcomingCount === 0 && products.length >= 6) {
+      const upStmt = db.prepare('UPDATE products SET incoming = 48 WHERE id = ?');
+      for (const p of products.slice(2, 6)) upStmt.run(p.id);
+    }
+    const limitCount = db.prepare('SELECT COUNT(*) AS c FROM product_order_limits WHERE max_order_ctn > 0').get()?.c || 0;
+    if (limitCount === 0 && products.length >= 2) {
+      db.prepare("INSERT OR IGNORE INTO product_order_limits (barcode, max_order_ctn, updated_at) VALUES (?, 25, datetime('now'))").run(products[0].barcode);
+      db.prepare("INSERT OR IGNORE INTO product_order_limits (barcode, max_order_ctn, updated_at) VALUES (?, 30, datetime('now'))").run(products[1].barcode);
+    }
+
+    // 11. Ensure at least one open invoice is 20+ days unsettled for credit follow-up tracking
+    const unsettled20Count = db.prepare("SELECT COUNT(*) AS c FROM odoo_invoices WHERE state = 'OPEN' AND amount_due > 0 AND invoice_date <= ?").get(dateOffset(-20))?.c || 0;
+    if (unsettled20Count === 0) {
+      const firstOpen = db.prepare("SELECT id FROM odoo_invoices WHERE state = 'OPEN' AND amount_due > 0 ORDER BY id LIMIT 1").get();
+      if (firstOpen) {
+        db.prepare('UPDATE odoo_invoices SET invoice_date = ?, due_date = ? WHERE id = ?').run(dateOffset(-24), dateOffset(-4), firstOpen.id);
+      }
+    }
+
+    // 12. Generate due/overdue payment reminders from open invoices
     runReminders(db, todayIso, now);
   } catch (err) {
     console.warn('[bootstrap] Non-fatal seed warning:', err.message);

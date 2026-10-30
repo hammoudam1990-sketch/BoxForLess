@@ -5,7 +5,8 @@
 import { h, setChildren } from '../lib/dom.js';
 import { createScope } from '../lib/util.js';
 import { getJSON } from './http.js';
-import { availabilityPill, productImage, createPriceLine, createOfferLine } from './cards.js';
+import { availabilityPill, productImage, createPriceLine, createOfferLine, createDiscountBadge } from './cards.js';
+import { refreshOffers } from './prices.js';
 import { bindRequestControl } from './qty.js';
 import { doodle, doodleFor } from './doodles.js';
 
@@ -22,6 +23,7 @@ export function mountDetail(container, id) {
     h('div', { class: 'sk-lines' }, h('i'), h('i'), h('i'), h('i')));
 
   function load() {
+    refreshOffers();
     setChildren(container, loading());
     getJSON(`/api/catalog/products/${encodeURIComponent(id)}`).then((p) => {
       if (!alive) return;
@@ -56,7 +58,8 @@ function render(p, scope) {
   // beside the facts. Almost nothing has a photo, and half a blank screen reads as a broken page.
   return h('div', { class: 'c-detail' },
     h('div', { class: `c-detail-grid${p.image ? '' : ' c-detail-grid-noimg'}` },
-      p.image ? h('div', { class: 'c-hero' },
+      p.image ? h('div', { class: 'c-hero', style: { position: 'relative' } },
+        createDiscountBadge(p.id, scope),
         h('span', { class: 'c-mark', 'aria-hidden': 'true' }, '↗'),
         productImage(p.image, p.name, { eager: true })) : null,
       h('div', {},

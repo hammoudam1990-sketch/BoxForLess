@@ -317,4 +317,37 @@ export function categoryFacets(db, { view = 'full', viewer = null } = {}) {
     .sort((a, b) => a.path.localeCompare(b.path));
 }
 
-export default { searchCatalog, getCatalogProduct, toCatalogProduct, catalogFacets, categoryFacets };
+/**
+ * Upcoming products ("Arriving Soon"): active products with incoming stock > 0,
+ * serialized through toCatalogProduct so no raw incoming quantity ever leaks.
+ */
+export function upcomingCatalogProducts(db, thresholds = config.stock, viewer = null) {
+  const hidden = hiddenClause(db, viewer);
+  const rows = db.prepare(
+    `SELECT p.name, p.barcode, p.box_uom, p.primary_image_id, p.odoo_category_path, p.updated_at,
+            p.${thresholds.availabilityField}
+     FROM products p
+     WHERE p.is_active = 1 AND p.incoming > 0${hidden ? ` AND ${hidden.sql}` : ''}
+     ORDER BY p.name COLLATE NOCASE ASC
+     LIMIT 12`
+  ).all(...(hidden ? hidden.params : []));
+  return rows.map((r) => toCatalogProduct(r, thresholds));
+}
+
+/**
+ * Per-product purchasing limitations (max cartons per order), keyed by public barcode.
+ */
+export function productOrderLimits(db, viewer = null) {
+  const hidden = hiddenClause(db, viewer);
+  const rows = db.prepare(
+    `SELECT l.barcode, l.max_order_ctn
+     FROM product_order_limits l
+     JOIN products p ON p.barcode = l.barcode
+     WHERE p.is_active = 1 AND l.max_order_ctn > 0${hidden ? ` AND ${hidden.sql}` : ''}`
+  ).all(...(hidden ? hidden.params : []));
+  const out = {};
+  for (const r of rows) out[String(r.barcode)] = Number(r.max_order_ctn);
+  return out;
+}
+
+export default { searchCatalog, getCatalogProduct, toCatalogProduct, catalogFacets, categoryFacets, upcomingCatalogProducts, productOrderLimits };

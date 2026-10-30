@@ -421,11 +421,25 @@ export function applyMigrations(db) {
   // an invoice line for clearance cartons names its lot and carries the discount given (GHS), as Odoo's invoice line would
   addColumns(db, 'odoo_invoice_lines', { lot_name: 'TEXT' });
 
-  // what the Sales Manager had offered on a shelf lot when the rep visited (a discount within it is approved at once)
-  addColumns(db, 'shelf_visit_lines', { offered_pct: 'REAL' });
+  // what the Sales Manager had offered on a shelf lot when the rep visited (a discount within it is approved at once),
+  // plus the return reason & note when a rep records a return expected
+  addColumns(db, 'shelf_visit_lines', {
+    offered_pct: 'REAL',
+    return_reason: 'TEXT',
+    return_note: 'TEXT',
+  });
+  addColumns(db, 'rep_visit_lines', {
+    return_reason: 'TEXT',
+    return_note: 'TEXT',
+  });
 
-  // why the customer would not keep the lot, when the visit outcome is "return expected"
-  addColumns(db, 'shelf_visit_lines', { return_reason: 'TEXT' });
+  // optional per-product purchasing limitation (max cartons per order), kept in its own table so products schema stays untouched
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS product_order_limits (
+      barcode       TEXT PRIMARY KEY,
+      max_order_ctn INTEGER NOT NULL,
+      updated_at    TEXT NOT NULL
+    )`);
 
   // Which rep owns a sample shop (the Sales Manager can change the sample list). '' = nobody.
   db.exec(`

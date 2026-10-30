@@ -115,7 +115,12 @@ export function openInvoices(db, customerId, today) {
     .all(Number(customerId))
     .map((i) => {
       const pay = i.set_due ? toDay(i.set_due) : paymentDayFor(i.invoice_date, i.due_date, schedule);
-      return { id: i.id, number: i.number, amountDue: i.amount_due, payDay: pay, payBy: formatDay(pay), daysToPay: pay - today, setBySalesManager: Boolean(i.set_due) };
+      const ageDays = today - toDay(i.invoice_date);
+      return {
+        id: i.id, number: i.number, amountDue: i.amount_due, invoiceDate: i.invoice_date,
+        payDay: pay, payBy: formatDay(pay), daysToPay: pay - today,
+        daysSinceInvoice: ageDays, unsettled20d: ageDays >= 20, setBySalesManager: Boolean(i.set_due),
+      };
     });
 }
 
@@ -174,6 +179,44 @@ export function runReminders(db, todayStr, now = new Date()) {
   return created;
 }
 
+/**
+ * Generate follow-up reminders specifically for credit customers who have not settled
+ * their open invoices within 20+ days of the invoice/order date.
+ */
+export function runUnsettled20dFollowUps(db, todayStr, now = new Date()) {
+  const today = toDay(todayStr);
+  const created = [];
+  const customers = db.prepare(`SELECT DISTINCT c.id, c.name, c.email, c.phone FROM customers c
+                                  JOIN odoo_invoices i ON i.customer_id = c.id
+                                 WHERE c.customer_type = 'CREDIT' AND c.is_active = 1 AND i.state = 'OPEN' AND i.amount_due > 0`).all();
+  for (const c of customers) {
+    const schedule = getSchedule(db, c.id);
+    const unsettled = openInvoices(db, c.id, today).filter((i) => i.unsettled20d);
+    if (!unsettled.length) continue;
+    if (db.prepare("SELECT 1 FROM payment_reminders WHERE customer_id = ? AND remind_on = ? AND subject LIKE '%20%'").get(c.id, todayStr)) continue;
+
+    const lines = unsettled.map((i) => `  ${i.number} — ${gh(i.amountDue)} — invoiced ${i.daysSinceInvoice} days ago (pay by ${prettyDay(i.payDay)})`);
+    const total = money(unsettled.reduce((s, i) => s + i.amountDue, 0));
+    const subject = '20-day unsettled payment follow-up — Box for Less';
+    const body = [
+      `Hello ${c.name},`, '',
+      'Our records show the following invoice(s) have remained unsettled for 20 days or more since order/invoice date:', '',
+      ...lines, '',
+      `Total 20+ day outstanding balance: ${gh(total)}.`,
+      schedule.kind === ScheduleKind.DUE_DATE ? null : `Your scheduled payment day is: ${describeSchedule(schedule).toLowerCase()}.`,
+      '',
+      'Kindly arrange settlement or contact Box for Less if payment has already been made.',
+    ].filter((l) => l !== null).join('\n');
+
+    const to = String(c.email || '').includes('@') ? c.email : (c.phone || null);
+    const status = to ? ReminderStatus.PENDING : ReminderStatus.NO_CONTACT;
+    const id = Number(db.prepare(`INSERT INTO payment_reminders (customer_id, remind_on, kind, to_address, subject, body, invoice_count, total_due, status, created_at)
+                                  VALUES (?,?,?,?,?,?,?,?,?,?)`).run(c.id, todayStr, ReminderKind.OVERDUE, to, subject, body, unsettled.length, total, status, now.toISOString()).lastInsertRowid);
+    created.push({ id, customerId: c.id, kind: ReminderKind.OVERDUE, status, unsettledCount: unsettled.length });
+  }
+  return created;
+}
+
 /** A person marks a reminder as sent (by email, SMS or WhatsApp). */
 export function markReminderSent(db, id, by = null, now = new Date()) {
   const r = db.prepare('SELECT id, status FROM payment_reminders WHERE id = ?').get(Number(id));
@@ -193,7 +236,9 @@ export function paymentsOverview(db, todayStr) {
     const last = db.prepare('SELECT remind_on, status FROM payment_reminders WHERE customer_id = ? ORDER BY remind_on DESC, id DESC LIMIT 1').get(r.customer_id);
     for (const i of openInvoices(db, r.customer_id, today)) {
       invoices.push({
-        customerId: r.customer_id, customer: r.customer, number: i.number, amountDue: i.amountDue, payBy: i.payBy, daysToPay: i.daysToPay,
+        customerId: r.customer_id, customer: r.customer, number: i.number, amountDue: i.amountDue,
+        invoiceDate: i.invoiceDate, daysSinceInvoice: i.daysSinceInvoice, unsettled20d: i.unsettled20d,
+        payBy: i.payBy, daysToPay: i.daysToPay,
         bucket: i.daysToPay < 0 ? 'OVERDUE' : i.daysToPay <= 6 ? 'THIS_WEEK' : 'LATER',
         schedule: describeSchedule(schedule), lastReminder: last ? last.remind_on : null,
       });
@@ -201,6 +246,7 @@ export function paymentsOverview(db, todayStr) {
   }
   invoices.sort((a, b) => a.daysToPay - b.daysToPay || a.customer.localeCompare(b.customer));
   const sum = (bucket) => ({ count: invoices.filter((i) => i.bucket === bucket).length, amount: money(invoices.filter((i) => i.bucket === bucket).reduce((s, i) => s + i.amountDue, 0)) });
+  const unsettled20 = invoices.filter((i) => i.unsettled20d);
 
   const credit = db.prepare(`SELECT c.id, c.name FROM customers c WHERE c.customer_type = 'CREDIT' AND c.is_active = 1
                                AND (EXISTS (SELECT 1 FROM odoo_invoices i WHERE i.customer_id = c.id) OR EXISTS (SELECT 1 FROM payment_schedules s WHERE s.customer_id = c.id))
@@ -211,6 +257,7 @@ export function paymentsOverview(db, todayStr) {
     today: todayStr,
     summary: {
       overdue: sum('OVERDUE'), thisWeek: sum('THIS_WEEK'), later: sum('LATER'),
+      unsettled20d: { count: unsettled20.length, amount: money(unsettled20.reduce((s, i) => s + i.amountDue, 0)) },
       remindersWaiting: reminders.filter((r) => r.status === 'PENDING').length,
       remindersSent: reminders.filter((r) => r.status === 'SENT').length,
     },

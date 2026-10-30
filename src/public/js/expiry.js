@@ -38,7 +38,7 @@ export async function renderExpiry(view) {
   // a link may open the list already filtered: #/expiry?band=EXPIRED, or several bands: ?band=CRITICAL,WARNING
   const bandParam = String(new URLSearchParams(location.hash.split('?')[1] || '').get('band') || '').toUpperCase()
     .split(',').filter((b) => BANDS.some(([code]) => code === b)).join(',');
-  const state = { band: bandParam, category: '', location: '', owner: '', status: '', q: '' };
+  const state = { band: bandParam, category: '', location: '', owner: '', status: '', q: '', within60d: false };
   const latest = createLatest();
   // only the Sales Manager (or the administrator) sets the discount customers are offered on a lot
   const me = await fetch('/api/auth/me').then((r) => r.json()).catch(() => ({}));
@@ -62,16 +62,33 @@ export async function renderExpiry(view) {
   const summaryLine = h('p', { class: 'muted exp-summary', role: 'status' });
   const checkBox = h('details', { class: 'card exp-check' });
   const search = h('input', {
-    type: 'search', placeholder: 'Search product, barcode or lot…', 'aria-label': 'Search lots',
+    type: 'search', placeholder: 'Search product, barcode, lot or shop…', 'aria-label': 'Search lots',
     onInput: debounce(() => { state.q = search.value.trim(); load(); }, 250),
   });
   const bandSel = select([['', 'All bands'], ...BANDS.map(([c, l]) => [c, l])], '', {
     'aria-label': 'Band', onChange: () => setBand(bandSel.value),
   });
   const categorySel = h('select', { 'aria-label': 'Category', onChange: () => { state.category = categorySel.value; load(); } });
-  const locationSel = select([['', 'All locations'], ['MAIN', 'Main warehouse'], ['CLEARANCE', 'Clearance']], '', {
-    'aria-label': 'Location', onChange: () => { state.location = locationSel.value; load(); },
+  const locationSel = select([
+    ['', 'All stock (Warehouse & Shop)'],
+    ['WAREHOUSE', 'Warehouse stock only'],
+    ['MAIN', 'Main warehouse'],
+    ['CLEARANCE', 'Clearance warehouse'],
+    ['SHOP', 'Customer shop stock'],
+  ], '', {
+    'aria-label': 'Stock location (Warehouse vs Shop)', onChange: () => { state.location = locationSel.value; load(); },
   });
+  const twoMonthBtn = h('button', {
+    type: 'button',
+    class: 'secondary',
+    'aria-pressed': 'false',
+    onClick: () => {
+      state.within60d = !state.within60d;
+      twoMonthBtn.setAttribute('aria-pressed', String(state.within60d));
+      twoMonthBtn.className = state.within60d ? 'primary' : 'secondary';
+      if ( data ) paint();
+    },
+  }, '1–2 Months Left (≤ 60d)');
   const ownerSel = h('select', { 'aria-label': 'Owner', onChange: () => { state.owner = ownerSel.value; load(); } });
   const statusSel = select([['', 'Any status'], ...STATUSES], '', {
     'aria-label': 'Status', onChange: () => { state.status = statusSel.value; load(); },
@@ -97,14 +114,14 @@ export async function renderExpiry(view) {
   setChildren(view,
     h('h1', null, 'Expiry list'),
     h('div', { class: 'notice exp-banner' },
-      h('b', null, 'Warehouse & shelf expiry tracking. '),
-      'Monitor dated lots across warehouse and customer locations, assign actions and owners, and configure clearance discounts.'),
+      h('b', null, 'Warehouse & Customer Shop Expiry Management. '),
+      'Distinguishes internal warehouse stock (Main / Clearance) from stock supplied to customer shops, highlights lots within 1–2 months (≤ 60 days) of expiry, and applies live customer catalogue discounts.'),
     tileRow,
     summaryLine,
     checkBox,
     minBox,
     h('div', { class: 'card' },
-      h('div', { class: 'controls exp-controls' }, search, bandSel, categorySel, locationSel, ownerSel, statusSel, csvBtn),
+      h('div', { class: 'controls exp-controls' }, search, locationSel, twoMonthBtn, bandSel, categorySel, ownerSel, statusSel, csvBtn),
       h('div', { class: 'exp-count' }, count),
       h('div', { class: 'exp-wrap' },
         h('table', { class: 'exp-table' },
@@ -151,7 +168,7 @@ export async function renderExpiry(view) {
   }
 
   function query() {
-    return Object.fromEntries(Object.entries(state).filter(([, v]) => v !== ''));
+    return Object.fromEntries(Object.entries(state).filter(([k, v]) => k !== 'within60d' && v !== ''));
   }
 
   async function load() {
@@ -172,11 +189,14 @@ export async function renderExpiry(view) {
     paintSummary();
     paintOptions();
     paintCheck();
-    setChildren(tbody, data.rows.map(rowEl));
-    emptyNote.classList.toggle('hidden', data.rows.length > 0);
-    count.textContent = data.shown === data.summary.lots
-      ? `${plural(data.shown, 'lot')}`
-      : `${data.shown} of ${plural(data.summary.lots, 'lot')}`;
+    const visibleRows = state.within60d
+      ? data.rows.filter((r) => r.daysLeft !== null && r.daysLeft >= 0 && r.daysLeft <= 60)
+      : data.rows;
+    setChildren(tbody, visibleRows.map(rowEl));
+    emptyNote.classList.toggle('hidden', visibleRows.length > 0);
+    count.textContent = visibleRows.length === data.summary.lots
+      ? `${plural(visibleRows.length, 'lot')}`
+      : `${visibleRows.length} of ${plural(data.summary.lots, 'lot')}`;
     for (const [code, t] of tiles) t.button.setAttribute('aria-pressed', String(state.band.split(',').includes(code)));
     if (bandSel.value !== state.band) bandSel.value = BANDS.some(([c]) => c === state.band) ? state.band : '';
   }
@@ -248,6 +268,7 @@ export async function renderExpiry(view) {
     const discIn = h('input', {
       type: 'number', min: '1', max: '90', step: '1', inputmode: 'decimal', placeholder: '%', value: r.discountPct ?? '',
       'aria-label': `Customer discount percent for ${label}`, class: 'exp-disc-in',
+      onKeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); saveDisc(discIn.value.trim() === '' ? null : discIn.value.trim(), setBtn); } },
     });
     const discNote = h('div', { class: 'muted exp-disc-note' });
     const paintDisc = () => {
@@ -255,13 +276,18 @@ export async function renderExpiry(view) {
       removeBtn.classList.toggle('hidden', r.discountPct === null || r.discountPct === undefined);
       discNote.textContent = r.discountPct && !r.inCatalogue ? 'This product is not in the customer catalogue, so customers cannot see this offer.' : (r.discountPct ? 'On offer to customers' : '');
     };
+    const notifyDiscountChanged = () => {
+      try { localStorage.setItem('bfl.discounts.updated', String(Date.now())); } catch {}
+      try { const bc = new BroadcastChannel('bfl_discounts'); bc.postMessage({ type: 'discount_updated', at: Date.now() }); bc.close(); } catch {}
+    };
     const saveDisc = async (pct, control) => {
       control.disabled = true;
       try {
         const { row } = await api.setExpiryDiscount(r.key, pct);
         Object.assign(r, row);
         paintDisc();
-        toast(pct === null ? 'Discount removed' : 'Discount saved', 'ok');
+        notifyDiscountChanged();
+        toast(pct === null ? 'Discount removed' : 'Discount saved — now live on the customer catalogue', 'ok');
       } catch (e) { toast(e.message, 'err'); paintDisc(); } finally { control.disabled = false; }
     };
     const setBtn = h('button', { type: 'button', class: 'secondary', onClick: (e) => saveDisc(discIn.value.trim() === '' ? null : discIn.value.trim(), e.currentTarget) }, 'Set');
@@ -271,14 +297,26 @@ export async function renderExpiry(view) {
       : canDiscount ? h('div', { class: 'exp-disc' }, discIn, ' %', setBtn, removeBtn, discNote)
         : (r.discountPct ? h('span', { class: 'pill info' }, `${r.discountPct}% off`) : h('span', { class: 'muted' }, 'none'));
 
+    const isWithin60 = r.daysLeft !== null && r.daysLeft >= 0 && r.daysLeft <= 60;
+    const windowBadge = isWithin60
+      ? h('div', null, h('span', { class: `pill ${r.daysLeft <= 30 ? 'err' : 'warn'}` }, r.daysLeft <= 30 ? '≤ 1 mo left' : '1–2 mo left'))
+      : null;
+    const locCell = r.location === 'SHOP'
+      ? h('div', null, h('span', { class: 'pill warn' }, 'Shop stock'), r.shopName ? h('div', { class: 'muted' }, r.shopName) : null)
+      : r.location === 'CLEARANCE'
+        ? h('div', null, h('span', { class: 'pill info' }, 'Clearance'), h('div', { class: 'muted' }, 'Warehouse'))
+        : h('div', null, h('span', { class: 'pill ok' }, 'Main'), h('div', { class: 'muted' }, 'Warehouse'));
+
     const tr = h('tr', { class: `${r.band === 'EXPIRED' ? 'row-expired' : ''}${r.needsAction ? ' needs-action' : ''}` },
       h('td', null, h('b', null, r.productName), h('div', { class: 'muted' }, r.barcode)),
       h('td', null, r.lotName),
       h('td', null, r.expiryDate || '—'),
-      h('td', { class: `num${r.daysLeft !== null && r.daysLeft < 0 ? ' days-neg' : ''}` }, r.daysLeft === null ? '—' : r.daysLeft.toLocaleString()),
+      h('td', { class: `num${r.daysLeft !== null && r.daysLeft < 0 ? ' days-neg' : ''}` },
+        r.daysLeft === null ? '—' : r.daysLeft.toLocaleString(),
+        windowBadge),
       h('td', null, h('span', { class: `pill ${tone.tone}` }, tone.label)),
       h('td', { class: 'num' }, r.cartons.toLocaleString()),
-      h('td', null, r.location === 'CLEARANCE' ? h('span', { class: 'pill info' }, 'Clearance') : 'Main'),
+      h('td', null, locCell),
       h('td', { class: 'num' }, money(r.valueAtRisk) || h('span', { class: 'muted' }, 'no price')),
       h('td', null, r.actionable ? actionSel : h('span', { class: 'muted' }, '—')),
       h('td', null, r.actionable ? ownerIn : h('span', { class: 'muted' }, '—')),

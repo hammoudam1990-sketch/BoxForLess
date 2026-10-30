@@ -106,4 +106,15 @@ router.get('/my', (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// manager view of a selected sales rep's monthly target, achieved sales, and remaining balance
+router.get('/rep-summary', (req, res, next) => {
+  try {
+    if (!['ADMIN', 'SALES_MANAGER'].includes(req.staff?.role)) return deny(res);
+    const reps = listReps(todayString(), req.db);
+    const rep = reps.find((r) => r.id === req.query.repId || r.name === req.query.rep) || reps[0];
+    if (!rep) return res.status(404).json({ error: 'Sales rep not found.' });
+    res.json(repMonth(req.db, rep.name, monthParam(req.query.month), todayString()));
+  } catch (e) { next(e); }
+});
+
 export default router;

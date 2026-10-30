@@ -86,7 +86,14 @@ export async function renderReturns(view) {
       h('td', null, h('b', null, r.customer)), h('td', null, r.rep || '—'), h('td', null, r.brokenAgreement.product), h('td', null, r.brokenAgreement.lot || '—'),
       h('td', { class: 'num' }, `${r.brokenAgreement.discountPct}%`), h('td', null, r.brokenAgreement.agreedBy), h('td', null, day(r.brokenAgreement.agreedOn)), h('td', null, r.brokenAgreement.creditNoteGiven || 'none yet'))));
     toggleHidden(brokenCard, d.brokenAgreements.length === 0);
-    setChildren(expected, d.expected.map((r) => h('tr', null, h('td', null, h('b', null, r.customer)), h('td', null, r.rep || '—'), h('td', null, r.product), h('td', null, r.lot), h('td', { class: 'num' }, String(r.cartons)), h('td', null, day(r.expiryDate)), h('td', null, r.returnReason || '—'))));
+    setChildren(expected, d.expected.map((r) => h('tr', null,
+      h('td', null, h('b', null, r.customer)),
+      h('td', null, r.rep || '—'),
+      h('td', null, r.product),
+      h('td', null, r.lot),
+      h('td', { class: 'num' }, String(r.cartons)),
+      h('td', null, day(r.expiryDate)),
+      h('td', null, r.returnReason ? `${r.returnReason}${r.returnNote ? ` — ${r.returnNote}` : ''}` : '—'))));
     toggleHidden(expectedCard, d.expected.length === 0);
     setChildren(done, d.classified.slice(0, 40).map(returnCard));
     toggleHidden(noDone, d.classified.length > 0);

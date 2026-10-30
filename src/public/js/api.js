@@ -151,6 +151,23 @@ export const api = {
     return fetch(`/api/requests/customers/codes?${q}`).then(handle);
   },
   issueCustomerCode: (id) => fetch(`/api/requests/customers/${id}/code`, { method: 'POST' }).then(handle),
+  setCustomerClassification: (id, body) =>
+    fetch(`/api/requests/customers/${id}/classification`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    }).then(handle),
+
+  setProductOrderLimit: (id, maxOrderCtn) =>
+    fetch(`/api/products/${id}/order-limit`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ maxOrderCtn }),
+    }).then(handle),
+  setProductUpcoming: (id, incoming) =>
+    fetch(`/api/products/${id}/upcoming`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ incoming }),
+    }).then(handle),
+  runFollowUp20d: () =>
+    fetch('/api/payments/follow-up-20d', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    }).then(handle),
 
   // Warehouse expiry list (S03) — staff only; sample data until the Odoo lot sync exists.
   expiry: (params = {}) => fetch(`/api/expiry?${new URLSearchParams(params)}`).then(handle),
@@ -191,6 +208,7 @@ export const api = {
   reportTargets: () => fetch('/api/reports/targets').then(handle),
   setReportTarget: (body) => fetch('/api/reports/targets', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(handle),
   myMonth: () => fetch('/api/reports/my').then(handle),
+  repSummary: (repId) => fetch(`/api/reports/rep-summary?repId=${encodeURIComponent(repId || '')}`).then(handle),
   // Returns to classify (S04).
   returns: () => fetch('/api/returns').then(handle),
   returnsAlert: () => fetch('/api/returns/alert').then(handle),

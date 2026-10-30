@@ -28,7 +28,7 @@ import { pricesForCustomer } from '../../domain/prices.js';
 import { clearanceOffersFor } from '../../domain/lot-discounts.js';
 import { listOrdersFor, accountFor, checkCredit } from '../../domain/orders.js';
 import { invoicePdf, statementPdf, statementCsv, DocumentError } from '../../domain/customer-documents.js';
-import { resetCustomerPassword, setOdooCustomerId, CustomerAuthError } from '../../domain/customer-auth.js';
+import { resetCustomerPassword, setOdooCustomerId, setCustomerClassification, CustomerAuthError } from '../../domain/customer-auth.js';
 import { issueAccessCode, listCustomerCodes, formatAccessCode } from '../../domain/access-codes.js';
 import { lanAddresses } from '../net.js';
 import config from '../../config.js';
@@ -152,11 +152,11 @@ customerRouter.get('/statement.csv', requireCustomer, (req, res, next) => {
   } catch (e) { sendDocumentError(e, res, next); }
 });
 
-// GET /api/catalog/profile — MY contact & account profile for the Settings screen (no internal id, code, or price class).
+// GET /api/catalog/profile — MY contact & account profile for the Settings screen.
 customerRouter.get('/profile', requireCustomer, (req, res, next) => {
   try {
     const row = req.db.prepare(
-      'SELECT name, phone, email, delivery_address, salesperson, customer_type FROM customers WHERE id = ? AND is_active = 1'
+      'SELECT odoo_customer_ref, name, phone, email, delivery_address, salesperson, customer_type, pricelist FROM customers WHERE id = ? AND is_active = 1'
     ).get(req.customer.id);
     if (!row) return res.status(404).json({ error: 'Customer not found.' });
     let assignedSalesRep = null;
@@ -175,6 +175,8 @@ customerRouter.get('/profile', requireCustomer, (req, res, next) => {
       }
     }
     res.json({
+      customerId: row.odoo_customer_ref || null,
+      customerClass: row.pricelist ? String(row.pricelist).replace(/\s*\(GHS\)/i, '').trim() : null,
       name: row.name,
       phone: row.phone || null,
       email: row.email || null,
@@ -326,6 +328,14 @@ staffRouter.post('/customers/:id/code', (req, res, next) => {
 // A customer's Odoo ID — what they sign in with. A stand-in for the Odoo sync, which will set it.
 staffRouter.put('/customers/:id/odoo-id', (req, res, next) => {
   try { res.json(setOdooCustomerId(req.db, req.params.id, req.body?.odooId)); } catch (e) {
+    if (e instanceof CustomerAuthError) return res.status(e.status).json({ error: e.message, code: e.code });
+    next(e);
+  }
+});
+
+// Update a customer's assigned Customer Class (pricelist) and Customer Type (CREDIT | CASH) on the backend.
+staffRouter.put('/customers/:id/classification', (req, res, next) => {
+  try { res.json(setCustomerClassification(req.db, req.params.id, req.body || {})); } catch (e) {
     if (e instanceof CustomerAuthError) return res.status(e.status).json({ error: e.message, code: e.code });
     next(e);
   }

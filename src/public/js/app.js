@@ -27,6 +27,7 @@ import {
 } from './sales-manager.js';
 import { buildSalesNav } from './sales-nav.js';
 import { renderVisits } from './visits.js';
+import { renderTeamPerformance, renderSalesTargets } from './sales-targets.js';
 
 const view = document.getElementById('view');
 const side = document.getElementById('side');
@@ -38,11 +39,11 @@ const menuToggle = document.getElementById('menuToggle');
 // person can use. null = everything.
 const ROLE_NAV = {
   ADMIN: null,
-  SALES_MANAGER: ['sales', 'performance', 'targets', 'orders', 'customers', 'notifications', 'sales-settings', 'search', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'customer-returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
+  SALES_MANAGER: ['dashboard', 'sales', 'performance', 'targets', 'team-performance', 'sales-targets', 'orders', 'customers', 'notifications', 'sales-settings', 'search', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'customer-returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
   WAREHOUSE: ['warehouse', 'inventory', 'movements', 'notifications', 'products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-settings', 'workspace-data-quality'],
 };
 const ROLE_TITLE = { ADMIN: 'Administrator', SALES_MANAGER: 'Sales Manager', SALES_REP: 'Sales rep', WAREHOUSE: 'Warehouse Manager' };
-const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/sales', WAREHOUSE: '#/warehouse' };
+const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/dashboard', WAREHOUSE: '#/warehouse' };
 let me = { role: 'ADMIN', name: 'Staff' };
 const allowed = (name) => !ROLE_NAV[me.role] || ROLE_NAV[me.role].includes(name);
 const canSee = (name) => (ROLE_NAV[me.role] || []).includes(name) || !ROLE_NAV[me.role];
@@ -66,11 +67,15 @@ async function loadMe() {
     document.getElementById('mainNav')?.replaceWith(buildSalesNav());
     document.body.classList.add('role-sales');
     document.getElementById('bellLink')?.setAttribute('href', '#/notifications');
-    document.getElementById('brandHome')?.setAttribute('href', '#/sales');
+    document.getElementById('brandHome')?.setAttribute('href', '#/dashboard');
     const box = document.getElementById('gsearch');
     if (box) { box.placeholder = 'Search orders, customers, products…'; box.setAttribute('aria-label', 'Search orders, customers, products and sales reps'); }
   }
-  document.querySelectorAll('[data-nav]').forEach((a) => { if (a.dataset.nav === 'dashboard' ? me.role !== 'ADMIN' : !canSee(a.dataset.nav)) a.classList.add('hidden'); });
+  document.querySelectorAll('[data-nav]').forEach((a) => {
+    if (a.dataset.nav === 'dashboard'
+      ? !['ADMIN', 'SALES_MANAGER'].includes(me.role)
+      : !canSee(a.dataset.nav)) a.classList.add('hidden');
+  });
   // a heading with nothing visible under it (a role that sees none of those screens) is hidden too
   document.querySelectorAll('.adm-nav .adm-label, #side .adm-label').forEach((label) => {
     let el = label.nextElementSibling; let any = false;
@@ -78,9 +83,10 @@ async function loadMe() {
     label.classList.toggle('hidden', !any);
   });
   const who = document.getElementById('staffName');
+  const roleLabel = ROLE_TITLE[me.role] || me.role;
   if (who) who.textContent = me.role === 'ADMIN' ? 'Administrator' : me.name;
   const roleEl = document.getElementById('staffRole');
-  if (roleEl) roleEl.textContent = ROLE_TITLE[me.role] || 'Staff account';
+  if (roleEl) roleEl.textContent = roleLabel;
   return true;
 }
 
@@ -209,15 +215,19 @@ const LOADING = '<div class="card"><div class="sk-lines" role="status" aria-labe
 
 async function route() {
   const hash = location.hash || '#/dashboard';
-  const [routeHash] = hash.split('?');
+  const [routeHash, queryStr = ''] = hash.split('?');
   const [, path, arg] = routeHash.split('/'); // "#", "products", "123"
   // a role is sent to its own start page when it asks for something it cannot use
   const page = path || 'dashboard';
-  if (page === 'dashboard' ? me.role !== 'ADMIN' : !allowed(page)) { location.hash = ROLE_START[me.role] || '#/dashboard'; return; }
+  if (!allowed(page)) { location.hash = ROLE_START[me.role] || '#/dashboard'; return; }
   openSide(false);
   view.innerHTML = LOADING;
+  const routeCtx = { query: new URLSearchParams(queryStr), parts: [path, arg].filter(Boolean) };
+  const pageHead = (title, sub) => `<div class="ad-head" style="margin-bottom:16px"><div><h1>${title}</h1><p>${sub}</p></div></div>`;
   try {
     if (path === 'dashboard' || !path) { setActiveNav('dashboard'); await renderDashboard(view); }
+    else if (path === 'team-performance') { setActiveNav('team-performance'); await renderTeamPerformance(view, routeCtx, { pageHead }); }
+    else if (path === 'sales-targets') { setActiveNav('sales-targets'); await renderSalesTargets(view, routeCtx, { pageHead }); }
     else if (path === 'warehouse') { setActiveNav('warehouse'); await renderWarehouseHome(view); }
     else if (path === 'inventory') { setActiveNav('inventory'); await renderInventoryPage(view); }
     else if (path === 'movements') { setActiveNav('movements'); await renderMovementsPage(view); }
