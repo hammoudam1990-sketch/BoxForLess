@@ -24,7 +24,8 @@ body.adm {
 
 /* ---------------------------------------------------------------- the warehouse sidebar */
 body.adm.role-warehouse, body.adm.role-sales { grid-template-columns: 215px minmax(0, 1fr); }
-.wh-side { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.wh-side { display: flex; flex-direction: column; flex: 1 0 auto; }
+body.adm.role-warehouse .adm-conn, body.adm.role-sales .adm-conn { flex: none; margin-top: 12px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .12); }
 .wh-nav a { gap: 11px; min-height: 40px; font-size: 14.5px; }
 .wh-nav a .lucide { width: 19px; height: 19px; flex: none; stroke-width: 1.8; }
 .wh-nav .wh-nav-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
