@@ -260,11 +260,9 @@ tbody tr:hover { background: #f7f4ee; }
    screen readers and hidden visually. */
 .logo {
   --logo-size: 42px; width: var(--logo-size); height: var(--logo-size);
-  font-size: 0; color: transparent; overflow: hidden;
-  background: #fff url("/img/logo.png") no-repeat;
-  background-size: calc(var(--logo-size) * 2.821) auto;
-  background-position: calc(var(--logo-size) * -1.0875) calc(var(--logo-size) * -0.2958);
-  border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(26, 22, 18, .12);
+  font-size: 0; color: transparent; overflow: hidden; border-radius: 10px;
+  background: #103d73 url("/img/bfl-mark-white.svg") center / 78% no-repeat;
+  border: 0; box-shadow: 0 2px 8px rgba(16, 61, 115, .25);
 }
 
 /* the whole site uses the device's own system font */

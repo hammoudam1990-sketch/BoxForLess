@@ -744,11 +744,9 @@ body {
 /* The Box for Less logo mark, cropped out of img/logo.png (see styles.css). */
 .c-logo {
   --logo-size: 40px; width: var(--logo-size); height: var(--logo-size);
-  font-size: 0; color: transparent; overflow: visible;
-  background: #fff url("/img/logo.png") no-repeat;
-  background-size: calc(var(--logo-size) * 2.821) auto;
-  background-position: calc(var(--logo-size) * -1.0875) calc(var(--logo-size) * -0.2958);
-  border: 1px solid var(--c-line); box-shadow: 0 2px 8px rgba(26, 22, 18, .12);
+  font-size: 0; color: transparent; overflow: visible; border-radius: 10px;
+  background: #103d73 url("/img/bfl-mark-white.svg") center / 78% no-repeat;
+  border: 0; box-shadow: 0 2px 8px rgba(16, 61, 115, .25);
 }
 .c-logo::after { display: none; }
 
