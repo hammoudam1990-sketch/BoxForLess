@@ -66,6 +66,12 @@ export const api = {
     body: JSON.stringify(settings),
   }).then(handle),
   team: () => fetch('/api/team').then(handle),
+  customerReturnRequests: () => fetch('/api/customer-return-requests').then(handle),
+  decideCustomerReturn: (reference, body) => fetch(`/api/customer-return-requests/${encodeURIComponent(reference)}/decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(handle),
   createTeamMember: (data) => fetch('/api/team', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

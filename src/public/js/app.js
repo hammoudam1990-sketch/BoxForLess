@@ -15,6 +15,7 @@ import { renderPayments } from './payments.js';
 import { renderVisibility } from './visibility.js';
 import { renderReports } from './reports.js';
 import { renderReturns } from './returns.js';
+import { renderCustomerReturnRequests } from './customer-return-requests.js';
 import { renderHealth } from './health.js';
 import { renderRepCustomers } from './rep-customers.js';
 import { renderWorkspacePage, renderCategories } from './workspace.js';
@@ -37,7 +38,7 @@ const menuToggle = document.getElementById('menuToggle');
 // person can use. null = everything.
 const ROLE_NAV = {
   ADMIN: null,
-  SALES_MANAGER: ['sales', 'performance', 'targets', 'orders', 'customers', 'notifications', 'sales-settings', 'search', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
+  SALES_MANAGER: ['sales', 'performance', 'targets', 'orders', 'customers', 'notifications', 'sales-settings', 'search', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'customer-returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
   WAREHOUSE: ['warehouse', 'inventory', 'movements', 'notifications', 'products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-settings', 'workspace-data-quality'],
 };
 const ROLE_TITLE = { ADMIN: 'Administrator', SALES_MANAGER: 'Sales Manager', SALES_REP: 'Sales rep', WAREHOUSE: 'Warehouse Manager' };
@@ -241,6 +242,7 @@ async function route() {
     else if (path === 'rep-customers') { setActiveNav('rep-customers'); await renderRepCustomers(view); }
     else if (path === 'health') { setActiveNav('health'); await renderHealth(view); }
     else if (path === 'returns') { setActiveNav('returns'); await renderReturns(view); }
+    else if (path === 'customer-returns') { setActiveNav('customer-returns'); await renderCustomerReturnRequests(view); }
     else if (path === 'visits') { setActiveNav('visits'); await renderVisits(view); }
     else if (path === 'reports') { setActiveNav('reports'); await renderReports(view); }
     else if (path === 'visibility') { setActiveNav('visibility'); await renderVisibility(view); }
@@ -260,7 +262,7 @@ async function route() {
 window.addEventListener('hashchange', route);
 window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('staffLogout')?.addEventListener('click', async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch('/api/staff/logout', { method: 'POST' });
     location.assign('/');
   });
   if (!(await loadMe())) return;

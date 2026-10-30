@@ -33,10 +33,10 @@ function field(id, label, control, ...hint) {
 }
 
 /**
- * Build the tab bar (Home, Products, Cart, Account), the floating cart button and the drawer.
- * Returns { setTab(tab), open() }. `tab` is 'home', 'products', 'account' or '' (elsewhere).
+ * Build the tab bar (Home, Request Return, Cart, Account), the floating cart button and the drawer.
+ * Returns { setTab(tab), open() }. `tab` is 'home', 'products', 'return-requests', 'account' or ''.
  */
-export function mountRequestUI({ onHome, onProducts, onAccount }) {
+export function mountRequestUI({ onHome, onReturnRequests, onAccount }) {
   const drawer = createDrawer();
   const headerRequestButton = document.querySelector('.c-header-request');
   const headerRequestBadge = headerRequestButton?.querySelector('.c-header-request-badge');
@@ -45,13 +45,15 @@ export function mountRequestUI({ onHome, onProducts, onAccount }) {
 
   // ---- the tab bar (phones) ----
   const homeTab = h('button', { type: 'button', class: 'c-tab', onClick: onHome }, icon('home'), h('span', {}, 'Home'));
-  const productsTab = h('button', { type: 'button', class: 'c-tab', onClick: onProducts }, icon('box'), h('span', {}, 'Products'));
+  const returnTab = h('button', {
+    type: 'button', class: 'c-tab', 'aria-label': 'Request a Return', onClick: onReturnRequests,
+  }, icon('box'), h('span', {}, 'Request Return'));
   const accountTab = h('button', { type: 'button', class: 'c-tab', onClick: onAccount }, icon('user'), h('span', {}, 'Account'));
   const tabIcon = h('span', { class: 'c-tab-icon' }, icon('request'));
   const requestTab = h('button', {
     type: 'button', class: 'c-tab', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', onClick: () => drawer.open(),
   }, tabIcon, h('span', {}, REQUEST_LABELS.tab));
-  const tabbar = h('nav', { class: 'c-tabbar', 'aria-label': 'Shop navigation' }, homeTab, productsTab, requestTab, accountTab);
+  const tabbar = h('nav', { class: 'c-tabbar', 'aria-label': 'Shop navigation' }, homeTab, returnTab, requestTab, accountTab);
 
   // ---- the floating button (wider screens) ----
   const fab = h('button', { type: 'button', class: 'c-request-fab', 'aria-haspopup': 'dialog', onClick: () => drawer.open() },
@@ -93,7 +95,7 @@ export function mountRequestUI({ onHome, onProducts, onAccount }) {
 
   return {
     setTab(tab) {
-      for (const [button, name] of [[homeTab, 'home'], [productsTab, 'products'], [accountTab, 'account']]) {
+      for (const [button, name] of [[homeTab, 'home'], [returnTab, 'return-requests'], [accountTab, 'account']]) {
         if (tab === name) button.setAttribute('aria-current', 'page');
         else button.removeAttribute('aria-current');
       }
@@ -367,7 +369,7 @@ function createDrawer() {
   }
 
   async function signOut() {
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    await fetch('/api/catalog/access/exit', { method: 'POST' }).catch(() => {});
     customer = null;
     setSession(null);
     shelfWarnings = {};

@@ -30,6 +30,7 @@ import paymentsRouter from './routes/payments.js';
 import visibilityRouter from './routes/visibility.js';
 import reportsRouter from './routes/reports.js';
 import returnsRouter from './routes/returns.js';
+import { customerReturnRequestsRouter, staffCustomerReturnRequestsRouter } from './routes/customer-return-requests.js';
 import odooRouter from './routes/odoo.js';
 import repsRouter from './routes/reps.js';
 import warehouseRouter from './routes/warehouse.js';
@@ -128,6 +129,9 @@ export function createApp(db) {
   app.use('/api/reports', requireStaff, requireRole('ADMIN', 'SALES_MANAGER', 'WAREHOUSE', 'SALES_REP'), reportsRouter);
   // Returns to classify (S04): the warehouse records the reason; a Sales Manager can read.
   app.use('/api/returns', requireStaff, requireRole('ADMIN', 'WAREHOUSE', { SALES_MANAGER: 'r' }), returnsRouter);
+  // Customer return requests are BFL review records, not Odoo returns. Only
+  // administrators and Sales Managers can review them.
+  app.use('/api/customer-return-requests', requireStaff, requireRole('ADMIN', 'SALES_MANAGER'), staffCustomerReturnRequestsRouter);
   // Sync health (S05): the Odoo connection, the sync jobs and the outbox.
   app.use('/api/odoo', requireStaff, requireRole({ ADMIN: 'rw', SALES_MANAGER: 'rw', WAREHOUSE: 'r' }), odooRouter);
   // Product visibility rules (S02): the Sales Manager and the administrator.
@@ -139,6 +143,7 @@ export function createApp(db) {
   // FIRST so /api/catalog/requests is not shadowed by the catalog router's
   // /products/:id style paths.
   app.use('/api/catalog', requestsCustomerRouter);
+  app.use('/api/catalog/return-requests', customerReturnRequestsRouter);
   app.use('/api/catalog', catalogRouter);
 
   // static frontend

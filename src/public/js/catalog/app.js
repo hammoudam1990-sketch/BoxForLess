@@ -11,12 +11,12 @@ import { mountList, showEverything, patchList, state as listState } from './list
 import { mountDetail } from './detail.js';
 import { mountRequestUI } from './request.js';
 import {
-  mountHome, mountOrders, mountBalance, mountInvoices, mountSettings, mountHelp, mountBrands,
+  mountHome, mountOrders, mountBalance, mountInvoices, mountSettings, mountHelp, mountBrands, mountCustomerReturns,
 } from './pages.js';
 import { REQUEST_LABELS } from './labels.js';
 import { loadCustomerData, currentCustomer, orderList, signOutCustomer } from './customer-data.js';
 
-const ACCOUNT_PAGES = ['home', 'orders', 'balance', 'invoices', 'settings'];
+const ACCOUNT_PAGES = ['home', 'return-requests', 'orders', 'balance', 'invoices', 'settings', 'help'];
 
 const TITLE = 'Box for Less — Wholesale Catalogue';
 
@@ -49,7 +49,7 @@ const brand = (cls, name = 'Box for Less', tagline = 'Bigger boxes. Better value
   h('span', {}, h('b', {}, name), h('small', {}, tagline)));
 
 const PAGE_MOUNTS = {
-  orders: mountOrders, balance: mountBalance, invoices: mountInvoices,
+  'return-requests': mountCustomerReturns, orders: mountOrders, balance: mountBalance, invoices: mountInvoices,
   settings: mountSettings, help: mountHelp, brands: mountBrands,
 };
 
@@ -139,7 +139,7 @@ export async function startCatalog(root) {
   const side = h('aside', { class: 'p-side', id: 'pSide', 'aria-label': 'Shop navigation' },
     h('nav', { class: 'p-nav' },
       navLink('home', 'Home', 'home'),
-      navLink('products', 'Products', 'box'),
+      navLink('return-requests', 'Request a Return', 'box'),
       cartLink,
       navLink('orders', 'Orders', 'orders'),
       navLink('balance', 'Account Balance', 'balance'),
@@ -193,7 +193,7 @@ export async function startCatalog(root) {
 
   const requestUI = mountRequestUI({
     onHome: () => navigate('/catalog'),
-    onProducts: () => goProducts(),
+    onReturnRequests: () => navigate(pageUrl('return-requests')),
     onAccount: () => navigate(pageUrl(account ? 'balance' : 'settings')),
   });
 
@@ -210,7 +210,8 @@ export async function startCatalog(root) {
       else a.removeAttribute('aria-current');
     });
     requestUI.setTab(route.name === 'home' ? 'home' : route.name === 'products' ? 'products'
-      : ['balance', 'orders', 'invoices', 'settings'].includes(route.name) ? 'account' : '');
+      : route.name === 'return-requests' ? 'return-requests'
+        : ['balance', 'orders', 'invoices', 'settings'].includes(route.name) ? 'account' : '');
     const page = h('div', { class: `c-page p-page-${route.name}${route.name === 'products' ? ' c-page-list' : ''}` });
     setChildren(main, page);
     if (route.name === 'detail') {
@@ -235,11 +236,6 @@ export async function startCatalog(root) {
 
   // ---------------------------------------------------------------- actions
   const scrollPageTo = (top) => window.scrollTo({ top, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-
-  function goProducts() {
-    if (route.name !== 'products') navigate(pageUrl('products'));
-    else scrollPageTo(0);
-  }
 
   function goCategories() {
     showEverything();

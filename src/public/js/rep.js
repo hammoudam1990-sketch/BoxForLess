@@ -768,7 +768,7 @@ function loadRecentOrders() {
         nav.textContent = '';
         const out = h('button', {
           type: 'button', class: 'rep-signout',
-          onClick: async () => { await fetch('/api/auth/logout', { method: 'POST' }); location.assign('/'); },
+          onClick: async () => { await fetch('/api/staff/logout', { method: 'POST' }); location.assign('/'); },
         }, 'Sign out');
         nav.append(out);
       }

@@ -9,10 +9,14 @@
 // The session cookie says WHO (account id) and is signed; the ROLE is always read from the database
 // on every request, so switching an account off, or changing its role, takes effect immediately.
 import crypto from 'node:crypto';
-import { StaffRole, ROLE_HOME, ROLE_LABEL, authenticateStaff, getStaffUser } from '../domain/staff-accounts.js';
+import { ACCOUNT_ROLES, StaffRole, ROLE_HOME, ROLE_LABEL, authenticateStaff, getStaffUser } from '../domain/staff-accounts.js';
 import { MAX_PASSWORD_LENGTH } from '../domain/passwords.js';
 
-const COOKIE_NAME = 'bfl_staff_session';
+const LEGACY_COOKIE_NAME = 'bfl_staff_session';
+const ROLE_COOKIES = Object.fromEntries(ACCOUNT_ROLES.map((role) => [
+  role,
+  `bfl_staff_account_${role.toLowerCase()}`,
+]));
 const SESSION_SECONDS = 8 * 60 * 60;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 8;
@@ -25,11 +29,11 @@ function settings() {
   return { username, password, secret };
 }
 
-function cookieValue(req) {
+function cookieValue(req, cookieName) {
   const header = req.headers.cookie || '';
   for (const part of header.split(';')) {
     const [name, ...value] = part.trim().split('=');
-    if (name === COOKIE_NAME) return value.join('=');
+    if (name === cookieName) return value.join('=');
   }
   return '';
 }
@@ -46,21 +50,60 @@ function safeEqual(left, right) {
 
 const isSecure = () => process.env.NODE_ENV === 'production' || process.env.BFL_COOKIE_SECURE === 'true';
 
-function setSession(res, config, session) {
+function setSession(res, config, session, role) {
   const payload = Buffer.from(JSON.stringify({ ...session, exp: Date.now() + SESSION_SECONDS * 1000 })).toString('base64url');
-  res.setHeader('Set-Cookie', `${COOKIE_NAME}=${payload}.${sign(payload, config.secret)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_SECONDS}${isSecure() ? '; Secure' : ''}`);
+  res.setHeader('Set-Cookie', `${ROLE_COOKIES[role]}=${payload}.${sign(payload, config.secret)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_SECONDS}${isSecure() ? '; Secure' : ''}`);
 }
 
-export const clearStaffCookie = () => `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${isSecure() ? '; Secure' : ''}`;
+const clearCookie = (name) => `${name}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${isSecure() ? '; Secure' : ''}`;
+export const clearStaffCookie = (role) => clearCookie(role ? ROLE_COOKIES[role] : LEGACY_COOKIE_NAME);
+export const clearStaffCookies = () => [
+  clearCookie(LEGACY_COOKIE_NAME),
+  ...Object.values(ROLE_COOKIES).map(clearCookie),
+];
 
-/**
- * Who is signed in: { id, name, role, repId, mustChangePassword } or null. Needs `req.db`.
- * The ADMIN has id 0. Anyone else is re-read from the database on every call.
- */
-export function staffIdentity(req) {
-  const config = settings();
-  if (!config) return null;
-  const token = cookieValue(req);
+function explicitRoleHint(req) {
+  const isRole = (value) => ACCOUNT_ROLES.includes(value);
+  const fromUrl = (value) => {
+    try {
+      const url = new URL(value, `${req.protocol}://${req.get('host')}`);
+      if (url.origin !== `${req.protocol}://${req.get('host')}`) return null;
+      const role = url.searchParams.get('role') || url.searchParams.get('accountRole');
+      return isRole(role) ? role : null;
+    } catch { return null; }
+  };
+  const explicitRole = [req.query?.role, req.query?.accountRole].find(isRole) || null;
+  if (explicitRole) return explicitRole;
+  return fromUrl(req.get('referer') || '');
+}
+
+function roleHint(req) {
+  const explicitRole = explicitRoleHint(req);
+  if (explicitRole) return explicitRole;
+  const roleFromPath = (pathname) => {
+    if (pathname === '/sales' || pathname.startsWith('/api/sales-dashboard') || pathname.startsWith('/api/sales/')) {
+      return StaffRole.SALES_MANAGER;
+    }
+    if (pathname === '/rep' || pathname === '/rep.html' || pathname.startsWith('/api/rep/') || pathname.startsWith('/api/rep-orders')) {
+      return StaffRole.SALES_REP;
+    }
+    if (pathname.startsWith('/api/warehouse') || pathname.startsWith('/api/imports') || pathname.startsWith('/api/reviews')) {
+      return StaffRole.WAREHOUSE;
+    }
+    return null;
+  };
+  const pathname = new URL(req.originalUrl, `${req.protocol}://${req.get('host')}`).pathname;
+  const requestRole = roleFromPath(pathname);
+  if (requestRole) return requestRole;
+  try {
+    const referrer = new URL(req.get('referer') || '');
+    if (referrer.origin === `${req.protocol}://${req.get('host')}`) return roleFromPath(referrer.pathname);
+  } catch { /* No usable referrer; inspect the available role cookies below. */ }
+  return null;
+}
+
+function identityFromCookie(req, cookieName, config) {
+  const token = cookieValue(req, cookieName);
   const dot = token.lastIndexOf('.');
   if (dot < 1) return null;
   const payload = token.slice(0, dot);
@@ -68,13 +111,45 @@ export function staffIdentity(req) {
   let session;
   try { session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')); } catch { return null; }
   if (!(Number(session.exp) > Date.now())) return null;
-  // the administrator (a cookie from before roles existed has no `uid` and is the administrator too)
   if (session.uid === undefined || session.uid === 0) {
-    return session.user === config.username ? { id: 0, name: 'Administrator', role: StaffRole.ADMIN, repId: null, mustChangePassword: false } : null;
+    if (session.user !== config.username) return null;
+    return {
+      identity: { id: 0, name: 'Administrator', role: StaffRole.ADMIN, repId: null, mustChangePassword: false },
+      cookieName,
+    };
   }
-  const u = getStaffUser(req.db, session.uid);
-  if (!u) return null;
-  return { id: u.id, name: u.name, role: u.role, repId: u.rep_id, mustChangePassword: Boolean(u.must_change_password) };
+  const user = getStaffUser(req.db, session.uid);
+  if (!user) return null;
+  return {
+    identity: { id: user.id, name: user.name, role: user.role, repId: user.rep_id, mustChangePassword: Boolean(user.must_change_password) },
+    cookieName,
+  };
+}
+
+function staffSession(req) {
+  const config = settings();
+  if (!config) return null;
+  const hint = roleHint(req);
+  const explicitHint = explicitRoleHint(req);
+  const candidates = hint
+    ? [ROLE_COOKIES[hint], ...(explicitHint ? [] : Object.values(ROLE_COOKIES)), LEGACY_COOKIE_NAME]
+    : [...Object.values(ROLE_COOKIES), LEGACY_COOKIE_NAME];
+  for (const cookieName of candidates) {
+    const session = identityFromCookie(req, cookieName, config);
+    if (!session) continue;
+    if (cookieName === LEGACY_COOKIE_NAME && explicitHint
+        && session.identity.role !== hint && session.identity.role !== StaffRole.ADMIN) continue;
+    return session;
+  }
+  return null;
+}
+
+/**
+ * Who is signed in: { id, name, role, repId, mustChangePassword } or null. Needs `req.db`.
+ * The ADMIN has id 0. Anyone else is re-read from the database on every call.
+ */
+export function staffIdentity(req) {
+  return staffSession(req)?.identity || null;
 }
 
 export const hasStaffSession = (req) => Boolean(staffIdentity(req));
@@ -132,14 +207,14 @@ export function staffLogin(req, res) {
     (isEmailAdmin && safeEqual(identifier.toLowerCase(), 'admin'))
   );
   if (adminMatch && safeEqual(password, config.password)) {
-    setSession(res, config, { user: config.username, uid: 0 });
+    setSession(res, config, { user: config.username, uid: 0 }, StaffRole.ADMIN);
     attempts.delete(`ip:${ip}`);
     return res.json({ authenticated: true, role: StaffRole.ADMIN, name: 'Administrator', home: ROLE_HOME.ADMIN, mustChangePassword: false });
   }
 
   const user = authenticateStaff(req.db, identifier, password);
   if (!user) return refuse();
-  setSession(res, config, { user: user.name, uid: user.id });
+  setSession(res, config, { user: user.name, uid: user.id }, user.role);
   attempts.delete(`ip:${ip}`);
   res.json({
     authenticated: true, role: user.role, roleLabel: ROLE_LABEL[user.role], name: user.name, home: ROLE_HOME[user.role],
@@ -147,9 +222,10 @@ export function staffLogin(req, res) {
   });
 }
 
-export function staffLogout(_req, res) {
+export function staffLogout(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('Set-Cookie', clearStaffCookie());
+  const session = staffSession(req);
+  if (session) res.setHeader('Set-Cookie', clearCookie(session.cookieName));
   res.status(204).end();
 }
 
@@ -203,7 +279,10 @@ export function privatePageFor(...roles) {
     const who = staffIdentity(req);
     if (!who) return res.redirect(`/staff/login?next=${encodeURIComponent(req.path)}`);
     if (who.mustChangePassword) return res.redirect('/staff/login?change=1');
-    if (!roles.includes(who.role)) return res.redirect(ROLE_HOME[who.role] || '/');
+    if (!roles.includes(who.role)) {
+      const home = ROLE_HOME[who.role] || '/';
+      return res.redirect(`${home}${home.includes('?') ? '&' : '?'}role=${encodeURIComponent(who.role)}`);
+    }
     next();
   };
 }

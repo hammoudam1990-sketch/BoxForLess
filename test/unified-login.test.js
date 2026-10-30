@@ -57,7 +57,7 @@ after(async () => {
   }
 });
 
-test('one login endpoint identifies each configured staff role and issues only its session', async () => {
+test('one login endpoint identifies each configured staff role without clearing other sessions', async () => {
   for (const role of ['admin', 'sales', 'rep']) {
     const response = await post('/api/auth/login', credentials[role]);
     assert.equal(response.status, 200);
@@ -65,10 +65,9 @@ test('one login endpoint identifies each configured staff role and issues only i
 
     const cookieName = { admin: 'bfl_staff_session', sales: 'bfl_sales_session', rep: 'bfl_rep_session' }[role];
     const cookies = response.headers.getSetCookie();
-    assert.ok(cookies.some((cookie) => cookie.startsWith(`${cookieName}=`) && !cookie.includes('Max-Age=0')));
-    for (const other of ['bfl_staff_session', 'bfl_sales_session', 'bfl_rep_session'].filter((name) => name !== cookieName)) {
-      assert.ok(cookies.some((cookie) => cookie.startsWith(`${other}=`) && cookie.includes('Max-Age=0')));
-    }
+    assert.equal(cookies.length, 1);
+    assert.ok(cookies[0].startsWith(`${cookieName}=`));
+    assert.ok(!cookies[0].includes('Max-Age=0'));
   }
 });
 

@@ -196,7 +196,7 @@ test('staff sign-in validates credentials, issues a protected session and honors
   assert.equal(pageAfterLogout.status, 302);
 });
 
-test('unified login detects the configured team role and clears other role sessions', async () => {
+test('unified login detects the configured team role without clearing other role sessions', async () => {
   const response = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -205,17 +205,20 @@ test('unified login detects the configured team role and clears other role sessi
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { authenticated: true, role: 'admin' });
   const cookies = response.headers.getSetCookie();
-  assert.ok(cookies.some((cookie) => cookie.startsWith('bfl_staff_session=')));
-  assert.ok(cookies.some((cookie) => cookie.startsWith('bfl_sales_session=') && cookie.includes('Max-Age=0')));
-  assert.ok(cookies.some((cookie) => cookie.startsWith('bfl_rep_session=') && cookie.includes('Max-Age=0')));
+  assert.equal(cookies.length, 1);
+  assert.ok(cookies[0].startsWith('bfl_staff_session='));
+  assert.ok(!cookies[0].includes('Max-Age=0'));
 });
 
 test('unified logout clears every team-role cookie', async () => {
   const response = await fetch(`${baseUrl}/api/auth/logout`, { method: 'POST' });
   assert.equal(response.status, 204);
   const cookies = response.headers.getSetCookie();
-  // the staff, sales and rep cookies, and the customer's (the same sign-out serves everyone)
-  assert.equal(cookies.length, 4);
+  assert.equal(cookies.length, 8);
   assert.ok(cookies.every((cookie) => cookie.includes('Max-Age=0')));
-  for (const name of ['bfl_staff_session', 'bfl_sales_session', 'bfl_rep_session']) assert.ok(cookies.some((cookie) => cookie.startsWith(`${name}=`)), name);
+  for (const name of [
+    'bfl_staff_session', 'bfl_staff_account_admin', 'bfl_staff_account_sales_manager',
+    'bfl_staff_account_sales_rep', 'bfl_staff_account_warehouse', 'bfl_customer',
+    'bfl_sales_session', 'bfl_rep_session',
+  ]) assert.ok(cookies.some((cookie) => cookie.startsWith(`${name}=`)), name);
 });

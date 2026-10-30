@@ -303,6 +303,28 @@ export function applyMigrations(db) {
       classified_by TEXT,
       classified_at TEXT NOT NULL
     )`);
+  // Customer-submitted return requests are a separate local workflow from
+  // Odoo's read-copy returns and warehouse classifications. Decisions never
+  // change stock, invoices, or Odoo records.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS customer_return_requests (
+      id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+      reference          TEXT NOT NULL UNIQUE,
+      customer_id        INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+      request_item_id    INTEGER NOT NULL REFERENCES request_items(id) ON DELETE RESTRICT,
+      order_reference    TEXT NOT NULL,
+      barcode            TEXT NOT NULL,
+      product_name       TEXT NOT NULL,
+      cartons            INTEGER NOT NULL CHECK (cartons > 0),
+      reason             TEXT NOT NULL,
+      status             TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','APPROVED','DECLINED')),
+      decline_reason     TEXT,
+      created_at         TEXT NOT NULL,
+      reviewed_at        TEXT,
+      reviewed_by        TEXT
+    )`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_customer_returns_customer ON customer_return_requests(customer_id, created_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS ix_customer_returns_status ON customer_return_requests(status, created_at)');
   db.exec(`
     CREATE TABLE IF NOT EXISTS odoo_credit_notes (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,

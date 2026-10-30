@@ -17,6 +17,7 @@ import {
   ORDER_STATUS, formatGhs, formatDate,
 } from './customer-data.js';
 import { addLinesToCart } from '../cart.js';
+import { postJSON } from './http.js';
 
 /** A figure, or a dash where Odoo has not given us one (a credit limit, say). */
 const money = (n) => (n === null || n === undefined ? '—' : formatGhs(n));
@@ -439,6 +440,17 @@ export function mountSettings(container) {
 }
 
 export function mountHelp(container) {
+  const account = currentCustomer();
+  const rep = account?.salesRep;
+  const repContact = !account
+    ? h('p', {}, 'Sign in to see the Sales Representative assigned to your account.')
+    : rep
+      ? h('div', { class: 'p-support-contact' },
+        h('p', {}, h('b', {}, rep.name)),
+        rep.phone ? h('p', {}, 'Phone: ', h('a', { href: `tel:${rep.phone}` }, rep.phone)) : null,
+        rep.email ? h('p', {}, 'Email: ', h('a', { href: `mailto:${rep.email}` }, rep.email)) : null,
+        !rep.phone && !rep.email ? h('p', { class: 'p-muted' }, 'Your representative is assigned, but their direct contact details are not available here. Please contact the Box for Less office and ask for them by name.') : null)
+      : h('p', {}, 'No Sales Representative is currently assigned to your account. Please contact the Box for Less office for assistance.');
   setChildren(container, h('div', { class: 'p-page' },
     h('div', { class: 'p-page-head' }, h('div', {}, h('h1', {}, 'Help & Support'), h('p', {}, 'How ordering with Box for Less works.'))),
     card('', panelHead('Ordering'),
@@ -449,7 +461,100 @@ export function mountHelp(container) {
     card('', panelHead('Credit accounts'),
       h('p', {}, 'Companies can apply for a credit account. Our Sales Manager sets your credit limit and payment schedule. Cash customers pay on delivery.')),
     card('', panelHead('Contact us'),
-      h('p', {}, 'Speak to your Box for Less sales representative, or call our office during working hours.'))));
+      h('p', {}, 'For account help, contact the Sales Representative assigned to you:'),
+      repContact)));
+  return { destroy() {} };
+}
+
+export function mountCustomerReturns(container) {
+  const account = currentCustomer();
+  if (!account) return needsSignIn(container, 'Request a Return');
+
+  setChildren(container, h('div', { class: 'p-page' },
+    h('div', { class: 'p-page-head' }, h('div', {},
+      h('h1', {}, 'Request a Return'),
+      h('p', {}, 'Choose cartons from a dispatched, invoiced, or paid order and tell us why you would like to return them.'))),
+    card('', h('p', { class: 'p-muted' },
+      'A manager reviews each request. Approval records the decision only; it does not issue a credit or change stock in Odoo. Contact your Sales Representative to arrange next steps.')),
+    card('', panelHead('Request a return'), h('div', { class: 'p-return-items', role: 'status' }, 'Loading eligible purchases…')),
+    card('', panelHead('Your return requests'), h('div', { class: 'p-return-history', role: 'status' }, 'Loading your requests…'))));
+
+  const itemsEl = container.querySelector('.p-return-items');
+  const historyEl = container.querySelector('.p-return-history');
+
+  async function load() {
+    try {
+      const data = await getJSON('/api/catalog/return-requests');
+      renderItems(data.items || []);
+      renderHistory(data.requests || []);
+    } catch (error) {
+      setChildren(itemsEl, h('p', { class: 'p-empty', role: 'alert' }, error.message));
+      setChildren(historyEl, h('p', { class: 'p-empty' }, 'Could not load your return requests.'));
+    }
+  }
+
+  function renderItems(items) {
+    if (!items.length) {
+      setChildren(itemsEl, h('p', { class: 'p-empty' }, 'There are no eligible cartons available to return. Only dispatched, invoiced, or paid orders are shown.'));
+      return;
+    }
+    const quantity = h('input', { type: 'number', min: '1', step: '1', required: true, value: '1', 'aria-label': 'Cartons to return' });
+    const select = h('select', {
+      required: true,
+      'aria-label': 'Purchased product',
+      onChange: () => { quantity.max = String(items[Number(select.value)]?.availableCartons || 1); },
+    },
+      items.map((item, index) => h('option', { value: String(index) },
+        `${item.productName} · ${item.orderReference} · ${item.availableCartons} of ${item.purchasedCartons} cartons available`)));
+    quantity.max = String(items[0].availableCartons);
+    const reason = h('textarea', { required: true, maxlength: '1000', rows: '4', placeholder: 'Tell us why you are requesting this return.', 'aria-label': 'Reason for return' });
+    const message = h('p', { role: 'status', class: 'p-muted', 'aria-live': 'polite' });
+    const submit = h('button', { type: 'submit', class: 'p-btn' }, 'Submit return request');
+    const form = h('form', {
+      class: 'p-return-form',
+      onSubmit: async (event) => {
+        event.preventDefault();
+        const selected = items[Number(select.value)];
+        if (!selected) return;
+        if (!reason.value.trim()) { reason.setCustomValidity('Enter a reason for the return.'); reason.reportValidity(); return; }
+        reason.setCustomValidity('');
+        submit.disabled = true;
+        message.textContent = 'Submitting…';
+        try {
+          await postJSON('/api/catalog/return-requests', {
+            orderReference: selected.orderReference, barcode: selected.barcode,
+            cartons: Number(quantity.value), reason: reason.value,
+          });
+          reason.value = '';
+          message.textContent = 'Your return request has been submitted.';
+          await load();
+        } catch (error) {
+          message.textContent = error.message;
+        } finally { submit.disabled = false; }
+      },
+    },
+    h('label', {}, 'Purchased product', select),
+    h('label', {}, 'Cartons to return', quantity),
+    h('label', {}, 'Reason for return', reason),
+    submit, message);
+    setChildren(itemsEl, form);
+  }
+
+  function renderHistory(requests) {
+    if (!requests.length) {
+      setChildren(historyEl, h('p', { class: 'p-empty' }, 'You have not submitted a return request.'));
+      return;
+    }
+    setChildren(historyEl, requests.map((request) => h('article', { class: 'p-return-history-item' },
+      h('div', {}, h('b', {}, request.productName), h('span', { class: 'p-muted' }, ` · ${request.reference}`)),
+      h('p', {}, `${request.cartons} carton${request.cartons === 1 ? '' : 's'} from order ${request.orderReference}`),
+      h('p', {}, h('b', {}, 'Your reason: '), request.reason),
+      h('p', {}, h('b', {}, 'Status: '), request.status),
+      request.status === 'DECLINED' ? h('p', { class: 'p-return-decline' }, h('b', {}, 'Manager’s reason: '), request.declineReason) : null,
+      h('p', { class: 'p-muted' }, formatDate(request.createdAt)))));
+  }
+
+  load();
   return { destroy() {} };
 }
 

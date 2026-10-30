@@ -159,12 +159,32 @@ customerRouter.get('/profile', requireCustomer, (req, res, next) => {
       'SELECT name, phone, email, delivery_address, salesperson, customer_type FROM customers WHERE id = ? AND is_active = 1'
     ).get(req.customer.id);
     if (!row) return res.status(404).json({ error: 'Customer not found.' });
+    let assignedSalesRep = null;
+    if (row.salesperson) {
+      const staffReps = req.db.prepare(`
+        SELECT email, phone FROM staff_users
+        WHERE role = 'SALES_REP' AND is_active = 1 AND lower(trim(name)) = lower(trim(?))
+      `).all(row.salesperson);
+      if (staffReps.length === 1) assignedSalesRep = staffReps[0];
+      else if (staffReps.length === 0) {
+        const legacyReps = req.db.prepare(`
+          SELECT email, NULL AS phone FROM sales_users
+          WHERE is_active = 1 AND lower(trim(name)) = lower(trim(?))
+        `).all(row.salesperson);
+        if (legacyReps.length === 1) assignedSalesRep = legacyReps[0];
+      }
+    }
     res.json({
       name: row.name,
       phone: row.phone || null,
       email: row.email || null,
       deliveryAddress: row.delivery_address || null,
       salesperson: row.salesperson || null,
+      assignedSalesRep: row.salesperson ? {
+        name: row.salesperson,
+        email: assignedSalesRep?.email || null,
+        phone: assignedSalesRep?.phone || null,
+      } : null,
       customerType: row.customer_type || 'CREDIT',
       viaPassword: req.customer.method === 'password',
     });

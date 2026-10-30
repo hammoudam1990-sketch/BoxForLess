@@ -2,7 +2,7 @@
 //
 //   /catalog                    home (welcome banner, featured products, account column)
 //   /catalog?p=products         the full product list with search and filters
-//   /catalog?p=orders|balance|invoices|settings|help|brands
+//   /catalog?p=return-requests|orders|balance|invoices|settings|help|brands
 //   /catalog/product/:id        one product
 //
 // The server hands every /catalog URL the same page, so the path and ?p= are what the browser
@@ -10,7 +10,7 @@
 // page load on a phone and lets the list keep its filters while a product is open.
 
 const listeners = new Set();
-export const PAGES = ['products', 'orders', 'balance', 'invoices', 'settings', 'help', 'brands'];
+export const PAGES = ['products', 'return-requests', 'orders', 'balance', 'invoices', 'settings', 'help', 'brands'];
 
 /** Move to an in-app URL without reloading the page. */
 export function navigate(href) {

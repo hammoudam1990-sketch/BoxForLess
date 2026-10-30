@@ -133,13 +133,15 @@ form.addEventListener('submit', async (event) => {
       if (account.mustChangePassword) {
         showMessage('Sign-in successful. Choose a new password to continue…', 'success');
         navigating = true;
-        location.assign('/signin.html?role=staff');
+        location.assign(`/signin.html?role=staff&accountRole=${encodeURIComponent(account.role)}`);
         return;
       }
 
       showMessage('Signed in. Opening your workspace…', 'success');
       navigating = true;
-      location.assign(nextPath(account.role === 'SALES_REP' ? 'database-rep' : 'admin'));
+      const destination = new URL(nextPath(account.role === 'SALES_REP' ? 'database-rep' : 'admin'), location.origin);
+      destination.searchParams.set('role', account.role);
+      location.assign(`${destination.pathname}${destination.search}${destination.hash}`);
       return;
     }
 

@@ -43,6 +43,38 @@
   --c-display: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
+.p-return-form {
+  display: grid;
+  gap: 12px;
+  max-width: 640px;
+}
+.p-return-form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 650;
+}
+.p-return-form select,
+.p-return-form input,
+.p-return-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-line);
+  border-radius: 8px;
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font: inherit;
+}
+.p-return-form textarea { resize: vertical; }
+.p-return-history-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--c-line);
+}
+.p-return-history-item:last-child { border-bottom: 0; }
+.p-return-decline { color: #b42318; }
+.p-support-contact a { overflow-wrap: anywhere; }
+
 * { box-sizing: border-box; }
 
 html { -webkit-text-size-adjust: 100%; color-scheme: light; scroll-padding-top: 76px; /* below the sticky header */ }
@@ -397,7 +429,7 @@ body {
 .c-tabbar {
   position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 30;
   max-width: 480px; margin: 0 auto;
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px;
   padding: 6px;
   background: rgba(255, 255, 255, .96);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
@@ -407,8 +439,9 @@ body {
 .c-tab {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   min-height: 56px; padding: 6px 4px; border: 0; border-radius: 999px; background: transparent;
-  color: var(--c-muted); font-size: 18px; font-weight: 600; letter-spacing: .01em; cursor: pointer;
+  color: var(--c-muted); font-size: 12px; line-height: 1.1; font-weight: 600; letter-spacing: .01em; cursor: pointer;
 }
+.c-tab span { text-align: center; }
 .c-tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .c-tab[aria-current="page"] { background: var(--c-ink); color: #fff; }
 .c-tab:not([aria-current="page"]):active { background: var(--c-tile); }

@@ -143,7 +143,9 @@ $('changeForm').addEventListener('submit', (e) => {
   if ($('pNew').value !== $('pNew2').value) { say('The two passwords are not the same.'); return; }
   busy($('pSubmit'), async () => {
     const r = await post('/api/auth/staff/password', { current: oneTime || $('pCurrent').value, next: $('pNew').value });
-    location.assign(r.home || '/index.html');
+    const destination = new URL(r.home || '/index.html', location.origin);
+    if (r.role) destination.searchParams.set('role', r.role);
+    location.assign(`${destination.pathname}${destination.search}${destination.hash}`);
   });
 });
 
@@ -155,7 +157,11 @@ $('changeForm').addEventListener('submit', (e) => {
     const me = await (await fetch('/api/auth/me')).json();
     if (me.staff && me.staff.mustChangePassword) { showChange(); say('Choose your own password to continue.', 'info'); return; }
     if (params.get('switch') === '1') return;
-    if (me.staff) location.assign(safeNext(me.staff.home));
+    if (me.staff) {
+      const destination = new URL(safeNext(me.staff.home), location.origin);
+      destination.searchParams.set('role', me.staff.role);
+      location.assign(`${destination.pathname}${destination.search}${destination.hash}`);
+    }
     else if (me.customer && me.customer.viaPassword) location.assign(safeNext('/catalog'));
   } catch { /* the page still works without this */ }
 })();

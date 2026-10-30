@@ -5,6 +5,8 @@
 // All are signed with BFL_SESSION_SECRET. Credentials come from the host environment; no
 // password is stored in the database. A session for one role is never valid for another.
 import crypto from 'node:crypto';
+import { StaffRole } from '../domain/staff-accounts.js';
+import { clearStaffCookie, staffIdentity } from './staff-auth.js';
 
 const SESSION_SECONDS = 8 * 60 * 60;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -48,16 +50,11 @@ function safeEqual(left, right) {
 
 const isSecure = () => process.env.NODE_ENV === 'production' || process.env.BFL_COOKIE_SECURE === 'true';
 
-function issueSession(res, role, config, now = Date.now(), clearOtherRoles = false) {
+function issueSession(res, role, config, now = Date.now()) {
   const payload = Buffer.from(JSON.stringify({ user: config.username, role, exp: now + SESSION_SECONDS * 1000 })).toString('base64url');
   const secure = isSecure() ? '; Secure' : '';
-  const cookies = clearOtherRoles
-    ? Object.entries(ROLES)
-      .filter(([otherRole]) => otherRole !== role)
-      .map(([, other]) => `${other.cookie}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`)
-    : [];
-  cookies.push(`${ROLES[role].cookie}=${payload}.${sign(payload, config.secret)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_SECONDS}${secure}`);
-  res.setHeader('Set-Cookie', clearOtherRoles ? cookies : cookies[0]);
+  res.setHeader('Set-Cookie',
+    `${ROLES[role].cookie}=${payload}.${sign(payload, config.secret)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_SECONDS}${secure}`);
 }
 
 function recordAttempt(bucket, ip, now) {
@@ -153,7 +150,7 @@ export function unifiedLogin(req, res) {
 
   const [role, config] = matches[0];
   unifiedAttempts.delete(ip);
-  issueSession(res, role, config, now, true);
+  issueSession(res, role, config, now);
   res.json({ authenticated: true, role });
 }
 
@@ -165,10 +162,15 @@ export function unifiedLogout(_req, res) {
   res.status(204).end();
 }
 
-function logout(role) {
-  return (_req, res) => {
+function logout(role, staffRole) {
+  return (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('Set-Cookie', `${ROLES[role].cookie}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${isSecure() ? '; Secure' : ''}`);
+    const cookie = hasSession(req, role)
+      ? `${ROLES[role].cookie}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${isSecure() ? '; Secure' : ''}`
+      : staffIdentity(req)?.role === staffRole
+        ? clearStaffCookie(staffRole)
+        : `${ROLES[role].cookie}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${isSecure() ? '; Secure' : ''}`;
+    res.setHeader('Set-Cookie', cookie);
     res.status(204).end();
   };
 }
@@ -206,14 +208,14 @@ export const requireStaff = guard('admin', 'Please sign in to the staff area.');
 export const hasSalesSession = (req) => hasSession(req, 'sales');
 export const salesSessionStatus = sessionStatus('sales');
 export const salesLogin = login('sales');
-export const salesLogout = logout('sales');
+export const salesLogout = logout('sales', StaffRole.SALES_MANAGER);
 export const requireSales = guard('sales', 'Please sign in to the sales manager dashboard.');
 
 // Sales rep (phone app)
 export const hasRepSession = (req) => hasSession(req, 'rep');
 export const repSessionStatus = sessionStatus('rep');
 export const repLogin = login('rep');
-export const repLogout = logout('rep');
+export const repLogout = logout('rep', StaffRole.SALES_REP);
 export const requireRep = guard('rep', 'Please sign in to the sales rep app.');
 
 export default {

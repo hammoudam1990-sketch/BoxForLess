@@ -64,6 +64,7 @@ export async function loadCustomerData() {
     phone: profile?.phone || '',
     email: profile?.email || '',
     contact: profile?.salesperson ? `Assigned Rep: ${profile.salesperson}` : '',
+    salesRep: profile?.assignedSalesRep || null,
     viaPassword: Boolean(profile?.viaPassword),
   };
   customer.type = account && account.type === 'CASH' ? 'cash' : 'credit';
@@ -100,7 +101,7 @@ export const formatDate = (iso) => new Date(iso).toLocaleDateString('en-GB', { d
 
 /** Sign out here and at the server, then back to the front door. */
 export async function signOutCustomer() {
-  await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+  await fetch('/api/catalog/access/exit', { method: 'POST' }).catch(() => {});
   state = empty();
   location.assign('/');
 }

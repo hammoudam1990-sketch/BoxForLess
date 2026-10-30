@@ -437,27 +437,29 @@ body.unified-login-page {
   display: grid;
   min-height: 100vh;
   min-height: 100svh;
-  place-items: center;
-  padding: clamp(20px, 5vw, 56px);
+  place-items: stretch;
+  padding: 0;
   background: #f7f9fc;
   color: #172f55;
 }
 
 body.unified-login-page .login-layout {
-  width: min(100%, 1060px);
-  min-height: 600px;
-  grid-template-columns: minmax(0, 1.86fr) minmax(280px, 1fr);
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, .9fr);
   overflow: hidden;
-  border: 1px solid #e1eaf5;
-  border-radius: 12px;
+  border: 0;
+  border-radius: 0;
   background: #fff;
-  box-shadow: 0 18px 48px rgba(27, 62, 105, .09);
+  box-shadow: none;
 }
 
 body.unified-login-page .login-panel {
-  min-height: 600px;
+  min-height: 100vh;
+  min-height: 100svh;
   place-items: center;
-  padding: 48px clamp(36px, 6vw, 68px);
+  padding: 48px clamp(36px, 8vw, 120px);
   background: #fff;
 }
 
@@ -546,8 +548,8 @@ body.unified-login-page .input-icon {
 
 body.unified-login-page .password-toggle {
   right: 7px;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
 }
 
 body.unified-login-page .eye-icon {
@@ -699,12 +701,17 @@ body.unified-login-page .benefit small {
 
 @media (max-width: 760px) {
   body.unified-login-page {
-    padding: 24px;
+    display: block;
+    padding: 0;
   }
 
   body.unified-login-page .login-layout {
-    min-height: 0;
+    min-height: 100vh;
+    min-height: 100svh;
     grid-template-columns: minmax(0, 1fr);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   body.unified-login-page .login-panel {
@@ -769,9 +776,10 @@ body.unified-login-page .benefit small {
   }
 
   body.unified-login-page .login-panel {
+    display: grid;
     min-height: 100vh;
     min-height: 100svh;
-    padding: 44px 24px 32px;
+    padding: max(28px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
   }
 
   body.unified-login-page .login-brand {
@@ -799,6 +807,42 @@ body.unified-login-page .benefit small {
 
 @media (max-width: 360px) {
   body.unified-login-page .security-line {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) and (max-height: 500px) {
+  body.unified-login-page .login-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.unified-login-page .login-panel {
+    min-height: 100vh;
+    min-height: 100svh;
+    padding: 16px 24px;
+  }
+
+  body.unified-login-page .login-content {
+    width: min(100%, 480px);
+  }
+
+  body.unified-login-page .login-brand {
+    margin-bottom: 12px;
+  }
+
+  body.unified-login-page .form-intro {
+    margin-bottom: 12px;
+  }
+
+  body.unified-login-page .login-form {
+    gap: 9px;
+  }
+
+  body.unified-login-page .security-note {
+    margin-top: 12px;
+  }
+
+  body.unified-login-page .login-info-panel {
     display: none;
   }
 }

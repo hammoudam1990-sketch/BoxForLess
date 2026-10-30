@@ -129,7 +129,7 @@ export function buildPriceBar() {
   window.addEventListener('bfl:sign-in', goToSignIn);
 
   async function signOut() {
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    await fetch('/api/catalog/access/exit', { method: 'POST' }).catch(() => {});
     setSession(null);
   }
 

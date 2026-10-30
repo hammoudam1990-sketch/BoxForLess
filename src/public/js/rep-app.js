@@ -40,7 +40,7 @@ function toast(text) {
 let repName = '';
 
 async function signOut() {
-  await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+  await fetch('/api/rep/logout', { method: 'POST' }).catch(() => {});
   location.href = '/rep/login';
 }
 

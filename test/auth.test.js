@@ -458,13 +458,13 @@ test('22. pages: each role lands on its own screens, and a wrong page sends them
       const res = await call(base, page, { cookie });
       return res.status === 302 ? res.headers.get('location') : res.status;
     };
-    assert.equal(await where('sales_rep@bfl.test', '/index.html'), '/rep.html');
+    assert.equal(await where('sales_rep@bfl.test', '/index.html'), '/rep.html?role=SALES_REP');
     assert.equal(await where('sales_rep@bfl.test', '/rep.html'), 200);
-    assert.equal(await where('sales_rep@bfl.test', '/scan.html'), '/rep.html');
-    assert.equal(await where('warehouse@bfl.test', '/rep.html'), '/index.html');
+    assert.equal(await where('sales_rep@bfl.test', '/scan.html'), '/rep.html?role=SALES_REP');
+    assert.equal(await where('warehouse@bfl.test', '/rep.html'), '/index.html?role=WAREHOUSE');
     assert.equal(await where('warehouse@bfl.test', '/scan.html'), 200);
     assert.equal(await where('sales_manager@bfl.test', '/index.html'), 200);
-    assert.equal(await where('sales_manager@bfl.test', '/scan.html'), '/index.html');
+    assert.equal(await where('sales_manager@bfl.test', '/scan.html'), '/index.html?role=SALES_MANAGER');
     assert.equal(await where(ADMIN_USER, '/scan.html', ADMIN_PASS), 200);
     const anon = await call(base, '/index.html');
     assert.equal(anon.status, 302);

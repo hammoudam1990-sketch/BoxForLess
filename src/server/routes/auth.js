@@ -17,7 +17,7 @@ import {
 import { changeStaffPassword, StaffAccountError, ROLE_HOME, ROLE_LABEL } from '../../domain/staff-accounts.js';
 import { MAX_PASSWORD_LENGTH } from '../../domain/passwords.js';
 import { startCustomerSession, currentCustomer, customerCookieClear } from '../customer-access.js';
-import { staffIdentity, clearStaffCookie } from '../staff-auth.js';
+import { staffIdentity, clearStaffCookies } from '../staff-auth.js';
 import { clearRoleCookies } from '../role-auth.js';
 
 const router = express.Router();
@@ -95,7 +95,7 @@ router.post('/staff/password', (req, res, next) => {
     if (!who || who.id === 0) return res.status(401).json({ error: 'Please sign in.' });
     if (throttled(req, `spw-${who.id}`, 15, 6)) return res.status(429).json(TOO_MANY);
     changeStaffPassword(req.db, who.id, text(req.body?.current, MAX_PASSWORD_LENGTH), text(req.body?.next, MAX_PASSWORD_LENGTH));
-    res.json({ ok: true, home: ROLE_HOME[who.role] });
+    res.json({ ok: true, home: ROLE_HOME[who.role], role: who.role });
   } catch (e) {
     if (e instanceof StaffAccountError) return res.status(e.status).json({ error: e.message, code: e.code });
     next(e);
@@ -117,7 +117,7 @@ router.post('/logout', (req, res) => {
   const c = currentCustomer(req);
   // a code session also ends every other use of that code; a password session is just this device
   if (c && c.method !== 'password') req.db.prepare('UPDATE customers SET session_epoch = COALESCE(session_epoch, 0) + 1 WHERE id = ?').run(c.id);
-  res.setHeader('Set-Cookie', [clearStaffCookie(), customerCookieClear(), ...clearRoleCookies()]);
+  res.setHeader('Set-Cookie', [...clearStaffCookies(), customerCookieClear(), ...clearRoleCookies()]);
   res.status(204).end();
 });
 

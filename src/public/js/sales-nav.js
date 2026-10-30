@@ -22,6 +22,7 @@ export function buildSalesNav() {
       h('p', { class: 'adm-label' }, 'More tools'),
       link('#/access', 'access', 'userPlus', 'Registrations', 'accessBadge'),
       link('#/requests', 'requests', 'clipboardCheck', 'Requests'),
+      link('#/customer-returns', 'customer-returns', 'returns', 'Customer Returns'),
       link('#/approvals', 'approvals', 'review', 'Approvals'),
       link('#/payments', 'payments', 'creditCard', 'Payments Due'),
       link('#/codes', 'codes', 'key', 'Customer Codes'),
