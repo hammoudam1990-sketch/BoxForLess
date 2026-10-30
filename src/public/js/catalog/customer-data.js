@@ -31,16 +31,20 @@ let state = empty();
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
+// An open invoice is to be paid by its pay-by date: the date the Sales Manager set for the order, else the customer's
+// schedule, else Odoo's due date (worked out on the server). A paid invoice keeps Odoo's due date.
 function shapeInvoice(i) {
   const open = Number(i.amountDue || 0);
-  const status = open <= 0 ? 'paid' : (i.dueDate && i.dueDate < todayIso() ? 'overdue' : 'open');
-  return { ref: i.number, order: i.orderNumber || '—', at: i.invoiceDate, due: i.dueDate, amount: i.amount, open, status, payBy: i.payBy || null };
+  const payBy = i.payBy || i.dueDate || null;
+  const status = open <= 0 ? 'paid' : (payBy && payBy < todayIso() ? 'overdue' : 'open');
+  return { ref: i.number, order: i.orderNumber || '—', at: i.invoiceDate, due: i.dueDate, amount: i.amount, open, status, payBy };
 }
 function shapeOrder(o) {
   const items = (o.items || []).map((x) => ({ barcode: x.barcode, name: x.name, cartons: x.cartons, discountedCartons: x.discountedCartons || 0, discountPct: x.discountPct || null, bestBefore: x.bestBefore || null }));
   return {
     ref: o.reference, odoo: o.odooNumber || '—', at: o.placedAt, status: STATUS_KEY[o.status] || 'received',
     cartons: items.reduce((n, x) => n + x.cartons, 0), lines: items.length, amount: o.total ?? null, items, hint: o.hint || '',
+    payBy: o.paymentDue || null,
   };
 }
 

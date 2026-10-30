@@ -5,6 +5,7 @@
 // Unlike the customer-facing catalog, staff DO see the stock timestamp and the
 // snapshot figures, because judging a request needs them.
 import { esc, num } from './api.js';
+import { mountPaymentDue } from './payment-due.js';
 
 async function getJSON(url) {
   const res = await fetch(url);
@@ -132,6 +133,8 @@ export async function renderRequestDetail(view, id) {
       </div>
     </div>
 
+    <div data-payment-due></div>
+
     <div class="section-title">${c.type === 'EXISTING_CUSTOMER' ? 'Customer (from the customer list)' : 'New customer details'}</div>
     <div class="card">
       <div class="kv">
@@ -159,6 +162,9 @@ export async function renderRequestDetail(view, id) {
         so this request still reads correctly even if the product changes later.
       </p>
     </div>`;
+
+  // the Sales Manager sets the order's payment due date after the purchase (a request with no order says so)
+  if (request.status !== 'DELETED') mountPaymentDue(view.querySelector('[data-payment-due]'), request.id);
 
   view.querySelector('[data-accept-request]')?.addEventListener('click', async (event) => {
     const button = event.currentTarget;

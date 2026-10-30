@@ -29,6 +29,14 @@ export const api = {
   warehouseInventory: (params = {}) => fetch(`/api/warehouse/inventory?${new URLSearchParams(params)}`).then(handle),
   warehouseMovements: (params = {}) => fetch(`/api/warehouse/movements?${new URLSearchParams(params)}`).then(handle),
   warehouseNotifications: () => fetch('/api/warehouse/notifications').then(handle),
+  // The payment due date the Sales Manager sets for an order (keyed by the request id), and the orders still without one.
+  paymentDue: (requestId) => fetch(`/api/payments/orders/${encodeURIComponent(requestId)}/due-date`).then(handle),
+  setPaymentDue: (requestId, body) => fetch(`/api/payments/orders/${encodeURIComponent(requestId)}/due-date`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(handle),
+  ordersAwaitingDueDate: () => fetch('/api/payments/orders/awaiting-due-date').then(handle),
   siteSettings: () => fetch('/api/site-settings').then(handle),
   workspaceSiteSettings: () => fetch('/api/admin-workspace/site-settings').then(handle),
   workspaceUpdateSiteSettings: (settings) => fetch('/api/admin-workspace/site-settings', {

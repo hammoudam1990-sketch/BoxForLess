@@ -239,12 +239,13 @@ export function mountOrders(container) {
   const orders = orderList();
   setChildren(container, h('div', { class: 'p-page' },
     pageHead('Orders', 'Every order with its Box for Less and Odoo numbers. The status follows Odoo; the amount appears once Odoo has invoiced it.'),
-    card('', table(['Order', 'Odoo number', 'Date', 'Cartons', 'Amount', 'Status', 'Action'],
+    card('', table(['Order', 'Odoo number', 'Date', 'Cartons', 'Amount', 'Pay by', 'Status', 'Action'],
       orders.map((o) => h('tr', {},
         h('td', {}, h('b', {}, o.ref),
           o.items.filter((i) => i.discountedCartons).map((i) => h('div', { class: 'p-muted' }, `${i.discountedCartons} × ${i.name} at ${i.discountPct}% off (not returnable)`))),
         h('td', {}, o.odoo), h('td', {}, formatDate(o.at)),
-        h('td', {}, `${o.cartons} (${o.lines} lines)`), h('td', {}, o.amount === null ? '—' : formatGhs(o.amount)), h('td', {}, statusPill(o.status)),
+        h('td', {}, `${o.cartons} (${o.lines} lines)`), h('td', {}, o.amount === null ? '—' : formatGhs(o.amount)),
+        h('td', {}, o.payBy ? formatDate(o.payBy) : '—'), h('td', {}, statusPill(o.status)),
         h('td', {}, h('button', {
           type: 'button',
           class: 'p-btn p-btn-secondary p-btn-sm',
@@ -280,8 +281,8 @@ export function mountBalance(container) {
       h('p', { class: 'p-formula' }, `Credit limit ${money(a.creditLimit)} − amount owed ${money(a.amountOwed)} − open orders ${money(a.openOrders)} = ${money(a.available)}`),
       h('p', { class: 'p-muted' }, 'An order that would go over your available credit cannot be sent. A late payment brings a reminder, not a block.')),
     card('', panelHead('Open invoices', link(pageUrl('invoices'), 'All invoices', 'p-link p-link-sm')),
-      table(['Invoice', 'Order', 'Due', 'Open amount'],
-        invoices.map((i) => h('tr', {}, h('td', {}, h('b', {}, i.ref)), h('td', {}, i.order), h('td', {}, formatDate(i.due)), h('td', {}, formatGhs(i.open))))))));
+      table(['Invoice', 'Order', 'Pay by', 'Open amount'],
+        invoices.map((i) => h('tr', {}, h('td', {}, h('b', {}, i.ref)), h('td', {}, i.order), h('td', {}, formatDate(i.payBy)), h('td', {}, formatGhs(i.open))))))));
   return { destroy() {} };
 }
 
@@ -292,9 +293,9 @@ export function mountInvoices(container) {
   const tone = { open: 'blue', overdue: 'red', paid: 'green' };
   setChildren(container, h('div', { class: 'p-page' },
     pageHead('Invoices', 'Your invoices and payment status.'),
-    card('', invoices.length ? table(['Invoice', 'Order', 'Date', 'Due', 'Amount', 'Open', 'Status'],
+    card('', invoices.length ? table(['Invoice', 'Order', 'Date', 'Pay by', 'Amount', 'Open', 'Status'],
       invoices.map((i) => h('tr', {},
-        h('td', {}, h('b', {}, i.ref)), h('td', {}, i.order), h('td', {}, formatDate(i.at)), h('td', {}, formatDate(i.due)),
+        h('td', {}, h('b', {}, i.ref)), h('td', {}, i.order), h('td', {}, formatDate(i.at)), h('td', {}, formatDate(i.payBy)),
         h('td', {}, formatGhs(i.amount)), h('td', {}, formatGhs(i.open)),
         h('td', {}, h('span', { class: `p-status ${tone[i.status]}` }, i.status[0].toUpperCase() + i.status.slice(1))))))
       : h('p', { class: 'p-empty' }, 'No invoices found on this account.'))));

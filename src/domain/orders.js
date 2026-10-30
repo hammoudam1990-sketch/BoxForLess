@@ -211,6 +211,8 @@ function shapeOrder(db, o) {
     items,
     // the amount appears only once Odoo has invoiced; before that the price is Odoo's to work out
     total: o.amount_total ?? null,
+    // the date the Sales Manager set for paying this order (payment-due.js), once set
+    paymentDue: o.payment_due || null,
   };
 }
 
@@ -220,8 +222,8 @@ function shapeOrder(db, o) {
  * sales entered straight into Odoo can't be tied to a buyer and are never shown.
  */
 export function listOrdersFor(db, customerId, limit = 50) {
-  const rows = db.prepare(`SELECT o.request_id, o.odoo_number, o.state, o.amount_total, o.received_at, o.updated_at, r.reference
-                             FROM odoo_orders o JOIN requests r ON r.id = o.request_id
+  const rows = db.prepare(`SELECT o.request_id, o.odoo_number, o.state, o.amount_total, o.received_at, o.updated_at, r.reference, d.due_date AS payment_due
+                             FROM odoo_orders o JOIN requests r ON r.id = o.request_id LEFT JOIN order_payment_due d ON d.order_id = o.id
                             WHERE o.customer_id = ? ORDER BY o.id DESC LIMIT ?`).all(Number(customerId), Math.min(Number(limit) || 50, 200));
   return rows.map((o) => shapeOrder(db, o));
 }

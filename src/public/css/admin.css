@@ -1112,3 +1112,16 @@ html[data-theme="dark"] .sb-mock-act-btn { background: #0f172a; border-color: #3
   background: #dcfce7; padding: 8px 12px; border-radius: 6px; letter-spacing: 1px;
   display: flex; align-items: center; justify-content: space-between;
 }
+
+/* The payment due date panel on an order (js/payment-due.js) */
+.pd-card { display: grid; gap: 10px; }
+.pd-intro { margin: 0; }
+.pd-summary p { margin: 0; }
+.pd-missing { color: #8a5508; }
+.pd-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.pd-field { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted, #64748b); }
+.pd-field input { min-height: 40px; }
+.pd-reason { min-width: min(320px, 70vw); }
+.pd-error { margin: 0; color: #b42323; font-weight: 600; }
+.pd-history-title { margin: 4px 0 0; font-weight: 700; }
+.pd-history-list { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }

@@ -234,7 +234,7 @@ test('10. the orders route shows only my orders, in the safe shape, and needs a 
     assert.equal(body.orders.length, 1);
     assert.equal(body.orders[0].reference, mine.reference);
     assert.deepEqual(Object.keys(body.orders[0]).sort(),
-      ['hint', 'items', 'odooNumber', 'placedAt', 'reference', 'status', 'statusLabel', 'step', 'steps', 'total', 'updatedAt']);
+      ['hint', 'items', 'odooNumber', 'paymentDue', 'placedAt', 'reference', 'status', 'statusLabel', 'step', 'steps', 'total', 'updatedAt']);
     const text = JSON.stringify(body);
     assert.ok(!text.includes('Other Co'), 'nothing about another customer');
     assert.equal(body.orders[0].total, null, 'no price before Odoo invoices it');

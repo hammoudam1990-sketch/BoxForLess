@@ -4,9 +4,10 @@
 import express from 'express';
 import { paymentsOverview, setSchedule, runReminders, markReminderSent, PaymentError } from '../../domain/payments.js';
 import { todayString } from '../../domain/expiry-list.js';
+import { paymentDueFor, setPaymentDue, ordersAwaitingDueDate, PaymentDueError } from '../../domain/payment-due.js';
 
 const router = express.Router();
-const fail = (e, res, next) => (e instanceof PaymentError ? res.status(e.status).json({ error: e.message }) : next(e));
+const fail = (e, res, next) => (e instanceof PaymentError || e instanceof PaymentDueError ? res.status(e.status).json({ error: e.message }) : next(e));
 
 router.get('/', (req, res, next) => {
   try { res.json(paymentsOverview(req.db, todayString())); } catch (e) { next(e); }
@@ -23,6 +24,17 @@ router.put('/customers/:id/schedule', (req, res, next) => {
 
 router.post('/reminders/:id/sent', (req, res, next) => {
   try { markReminderSent(req.db, req.params.id, req.staff?.name); res.json({ ok: true }); } catch (e) { fail(e, res, next); }
+});
+
+// The payment due date the Sales Manager sets for an order after the purchase (keyed by the BFL request id).
+router.get('/orders/awaiting-due-date', (req, res, next) => {
+  try { res.json({ items: ordersAwaitingDueDate(req.db, req.query.limit) }); } catch (e) { next(e); }
+});
+router.get('/orders/:requestId/due-date', (req, res, next) => {
+  try { res.json(paymentDueFor(req.db, req.params.requestId)); } catch (e) { fail(e, res, next); }
+});
+router.put('/orders/:requestId/due-date', (req, res, next) => {
+  try { res.json(setPaymentDue(req.db, req.params.requestId, req.body || {}, req.staff?.name || null)); } catch (e) { fail(e, res, next); }
 });
 
 export default router;

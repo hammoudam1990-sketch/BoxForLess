@@ -103,14 +103,19 @@ export function setSchedule(db, customerId, input, by = null, now = new Date()) 
   return { customerId: c.id, ...s, description: describeSchedule(s) };
 }
 
-/** A customer's open invoices with the day each is expected to be paid. */
+/**
+ * A customer's open invoices with the day each is expected to be paid: the due date the Sales Manager set for the
+ * invoice's order (payment-due.js) when there is one, else the customer's schedule (Odoo's due date by default).
+ */
 export function openInvoices(db, customerId, today) {
   const schedule = getSchedule(db, customerId);
-  return db.prepare("SELECT id, number, amount_due, invoice_date, due_date FROM odoo_invoices WHERE customer_id = ? AND state = 'OPEN' AND amount_due > 0 ORDER BY due_date, id")
+  return db.prepare(`SELECT i.id, i.number, i.amount_due, i.invoice_date, i.due_date, d.due_date AS set_due
+                       FROM odoo_invoices i LEFT JOIN order_payment_due d ON d.order_id = i.order_id
+                      WHERE i.customer_id = ? AND i.state = 'OPEN' AND i.amount_due > 0 ORDER BY i.due_date, i.id`)
     .all(Number(customerId))
     .map((i) => {
-      const pay = paymentDayFor(i.invoice_date, i.due_date, schedule);
-      return { id: i.id, number: i.number, amountDue: i.amount_due, payDay: pay, payBy: formatDay(pay), daysToPay: pay - today };
+      const pay = i.set_due ? toDay(i.set_due) : paymentDayFor(i.invoice_date, i.due_date, schedule);
+      return { id: i.id, number: i.number, amountDue: i.amount_due, payDay: pay, payBy: formatDay(pay), daysToPay: pay - today, setBySalesManager: Boolean(i.set_due) };
     });
 }
 
