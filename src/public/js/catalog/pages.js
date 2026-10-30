@@ -5,13 +5,13 @@
 // Products, stock, prices, credit, orders and invoices all come from the server (/api/catalog) for the signed-in
 // customer's own session, through ./customer-data.js. Until Odoo is connected they come from a stand-in for Odoo,
 // so the pages say "Sample".
-import { h, setChildren, svg } from '../lib/dom.js';
+import { h, setChildren, svg, toggleHidden } from '../lib/dom.js';
 import { createScope } from '../lib/util.js';
 import { getJSON } from './http.js';
 import { createProductCard } from './cards.js';
 import { navigate, pageUrl } from './router.js';
 import { patchList } from './list.js';
-import { createOffersSection } from './offers.js';
+import { onPrices, offerList, refreshOffers } from './prices.js';
 import {
   SAMPLE_NOTE, currentCustomer, accountSummary, orderList, invoiceList,
   ORDER_STATUS, formatGhs, formatDate,
@@ -166,23 +166,101 @@ function quickActions(account) {
     action(pageUrl('help'), 'help', 'Need Help?', 'Contact our support team'));
 }
 
+/**
+ * The "Discounted Products" tab: every product the Sales Manager (or the administrator) has put a discount on, as
+ * product cards with this customer's price and the discounted price. Like a price, an offer is for a signed-in,
+ * approved customer only — the server answers 401 otherwise — so a visitor is asked to sign in instead.
+ * Returns { el, badge }: the panel, and the count shown on its tab.
+ */
+function discountedPanel(account, scope) {
+  const el = h('div', { id: 'homeDiscounted', role: 'tabpanel', 'aria-labelledby': 'homeTabDiscounted', class: 'p-home-discounted' });
+  const badge = h('span', { class: 'p-badge p-home-tab-count', hidden: true });
+  if (!account) {
+    setChildren(el, card('p-signin-page',
+      h('div', { class: 'p-signin-box' },
+        icon('lock'),
+        h('p', {}, 'Sign in to see the products on discount, with your own price and the discounted price.'),
+        h('a', { class: 'p-btn', href: '/?next=%2Fcatalog' }, 'Sign in'))));
+    return { el, badge };
+  }
+
+  const products = new Map();   // barcode -> the catalogue product (or null when it cannot be shown)
+  let cardsScope = createScope();
+  let shownKey = null;
+  let loaded = false;           // until the first offers fetch answers, an empty list means "not known yet"
+  scope.add(() => cardsScope.dispose());
+
+  const productOf = (barcode) => {
+    if (!products.has(barcode)) {
+      products.set(barcode, getJSON(`/api/catalog/products/${encodeURIComponent(barcode)}`).catch(() => null));
+    }
+    return products.get(barcode);
+  };
+
+  async function paint() {
+    const offers = offerList().sort((a, b) => a.daysLeft - b.daysLeft);
+    badge.textContent = String(offers.length);
+    badge.hidden = offers.length === 0;
+    if (!offers.length && !loaded) return;
+    // the cards keep their own price and offer lines up to date; rebuild only when the set of products changes
+    const key = offers.map((o) => o.barcode).join('|');
+    if (key === shownKey) return;
+    shownKey = key;
+    if (!offers.length) {
+      cardsScope.dispose();
+      setChildren(el, h('p', { class: 'p-empty' }, 'No products are on discount right now. Discounts on near-expiry stock appear here as soon as they are set.'));
+      return;
+    }
+    const found = (await Promise.all(offers.map((o) => productOf(o.barcode)))).filter(Boolean);
+    if (key !== shownKey) return;   // the offers changed while the products loaded
+    cardsScope.dispose();
+    cardsScope = createScope();
+    setChildren(el,
+      h('p', { class: 'p-home-discounted-note' }, 'Good stock with a shorter date, at a lower price. The discounted cartons cannot be returned; Odoo confirms the final price on your order.'),
+      found.length ? h('div', { class: 'p-grid' }, found.map((p) => createProductCard(p, cardsScope)))
+        : h('p', { class: 'p-empty' }, 'No products are on discount right now.'));
+  }
+
+  setChildren(el, h('p', { class: 'p-empty', role: 'status' }, 'Loading discounted products…'));
+  scope.add(onPrices(() => { paint(); }));
+  refreshOffers().finally(() => { loaded = true; paint(); });
+  paint();
+  return { el, badge };
+}
+
 // ------------------------------------------------------------------ home
 export function mountHome(container) {
   const scope = createScope();
   let alive = true;
   scope.add(() => { alive = false; });
   const account = currentCustomer();
-  const grid = h('div', { class: 'p-grid' },
+  const grid = h('div', { class: 'p-grid', id: 'homeFeatured', role: 'tabpanel', 'aria-labelledby': 'homeTabFeatured' },
     Array.from({ length: 12 }, () => h('div', { class: 'p-card p-card-skeleton', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'))));
+  const discounted = discountedPanel(account, scope);
+
+  // Featured and Discounted sit side by side as two tabs over the same spot on the page.
+  const tab = (id, panel, label, extra) => h('button', {
+    type: 'button', role: 'tab', id, class: 'p-home-tab', 'aria-controls': panel, onClick: () => showTab(id),
+  }, label, extra);
+  const featuredTab = tab('homeTabFeatured', 'homeFeatured', 'Featured Products');
+  const discountedTab = tab('homeTabDiscounted', 'homeDiscounted', 'Discounted Products', discounted.badge);
+  function showTab(id) {
+    const onDiscounted = id === 'homeTabDiscounted';
+    featuredTab.setAttribute('aria-selected', String(!onDiscounted));
+    discountedTab.setAttribute('aria-selected', String(onDiscounted));
+    toggleHidden(grid, onDiscounted);
+    toggleHidden(discounted.el, !onDiscounted);
+  }
+  showTab('homeTabFeatured');
 
   setChildren(container, h('div', { class: 'p-home' },
     h('div', { class: 'p-home-main' },
       banner(account, scope),
-      account ? createOffersSection(scope) : null,
       h('div', { class: 'p-section-head' },
-        h('h2', {}, 'Featured Products'),
+        h('div', { class: 'p-home-tabs', role: 'tablist', 'aria-label': 'Products on the home page' }, featuredTab, discountedTab),
         link(pageUrl('products'), 'View All')),
-      grid),
+      grid,
+      discounted.el),
     h('aside', { class: 'p-rail', 'aria-label': 'Your account' },
       accountOverview(account),
       recentOrders(account),

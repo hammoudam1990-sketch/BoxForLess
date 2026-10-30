@@ -168,6 +168,25 @@ body { color: var(--p-ink); }
 
 .p-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 26px 0 14px; }
 .p-section-head h2 { margin: 0; color: var(--p-ink); font-size: 22px !important; font-weight: 750; }
+/* Home: "Featured Products" and "Discounted Products" side by side as tabs */
+.p-section-head:has(.p-home-tabs) { flex-wrap: wrap; }
+.p-home-tabs { display: flex; flex-wrap: wrap; gap: 4px 22px; min-width: 0; }
+.p-home-tab {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px; border: 0; border-bottom: 3px solid transparent;
+  background: transparent; color: var(--p-muted); font: inherit; font-size: 22px !important; font-weight: 750; cursor: pointer;
+}
+.p-home-tab:hover { color: var(--p-ink); }
+.p-home-tab[aria-selected="true"] { border-bottom-color: var(--p-blue); color: var(--p-ink); }
+.p-home-tab:focus-visible { outline: 2px solid var(--p-blue); outline-offset: 2px; border-radius: 4px; }
+.p-home-tab-count { font-size: 12px !important; }
+.p-home-discounted-note { margin: 0 0 14px; color: var(--p-muted); font-size: 14.5px !important; }
+@media (max-width: 760px) {
+  /* both tabs stay on one row on a phone; "View All" drops below them */
+  .p-home-tabs { flex: 1 1 100%; flex-wrap: nowrap; gap: 14px; }
+  .p-home-tab { font-size: 15.5px !important; white-space: nowrap; }
+  .p-section-head:has(.p-home-tabs) { row-gap: 2px; margin-bottom: 10px; }
+  .p-section-head:has(.p-home-tabs) > .p-link { margin-left: auto; }
+}
 .p-link { display: inline-flex; align-items: center; gap: 6px; color: var(--p-blue) !important; font-size: 15px !important; font-weight: 600; text-decoration: none; }
 .p-link:hover { text-decoration: underline; }
 .p-link svg { width: 17px; height: 17px; }
