@@ -225,9 +225,9 @@ function notFoundCard(barcode) {
 
 function productCard(p) {
   return `<div class="card">
-    <h2 style="margin-bottom:6px">${esc(p.name)}</h2>
+    <h2>${esc(p.name)}</h2>
+    <div class="sc-barcode" aria-label="Barcode"><small>Barcode</small>${esc(p.barcode || '—')}</div>
     <div class="kv">
-      <div class="k">Barcode</div><div>${esc(p.barcode)}</div>
       <div class="k">UoM</div><div>${esc(p.box_uom || '')}</div>
       <div class="k">Availability</div><div>${p.is_active ? stockPill(p.stock_status) : '<span class="pill muted">Inactive</span>'}</div>
       <div class="k">Free To Use</div><div>${num(p.free_to_use)}</div>

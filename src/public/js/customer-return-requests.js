@@ -81,7 +81,7 @@ export async function renderCustomerReturnRequests(view) {
         h('div', null, h('b', null, request.reference), ` · ${request.customerName}`),
         h('span', { class: `badge ${request.status === 'PENDING' ? 'warn' : request.status === 'APPROVED' ? 'ok' : 'err'}` }, request.status)),
       h('ul', { class: 'ret-lines' },
-        h('li', null, `${request.cartons} carton${request.cartons === 1 ? '' : 's'} · ${request.productName}`),
+        h('li', null, `${request.cartons} carton${request.cartons === 1 ? '' : 's'} · ${request.productName}`, request.barcode ? h('span', { class: 'muted' }, ` · Barcode ${request.barcode}`) : null),
         h('li', null, `Order ${request.orderReference}`)),
       h('p', null, h('b', null, 'Customer reason: '), request.reason),
       h('p', { class: 'muted' }, `Submitted ${day(request.createdAt)}`),

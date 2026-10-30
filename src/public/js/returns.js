@@ -65,7 +65,7 @@ export async function renderReturns(view) {
       h('div', { class: 'ret-top' },
         h('div', null, h('b', null, r.number), ' · ', r.customer, r.rep ? h('span', { class: 'muted' }, ` · rep ${r.rep}`) : null),
         r.overdue ? h('span', { class: 'badge err' }, `${r.ageDays} days — overdue`) : h('span', { class: 'muted' }, r.ageDays === 0 ? 'Received today' : `Received ${day(r.receivedOn)} (${r.ageDays} day${r.ageDays === 1 ? '' : 's'} ago)`)),
-      h('ul', { class: 'ret-lines' }, r.lines.map((l) => h('li', null, `${l.cartons} × ${l.product}`, l.lot ? h('span', { class: 'muted' }, ` · lot ${l.lot}`) : null))),
+      h('ul', { class: 'ret-lines' }, r.lines.map((l) => h('li', null, `${l.cartons} × ${l.product}`, l.barcode ? h('span', { class: 'muted' }, ` · Barcode ${l.barcode}`) : null, l.lot ? h('span', { class: 'muted' }, ` · lot ${l.lot}`) : null))),
       r.creditNotes.length ? h('p', { class: 'muted' }, 'Credit note: ', r.creditNotes.map((n) => `${n.number} (${money(n.amount)})`).join(', ')) : h('p', { class: 'muted' }, 'No credit note yet — Finance issues it in Odoo.'),
       r.brokenAgreement ? h('p', { class: 'ret-broken' }, (r.brokenAgreement.kind === 'CLEARANCE' ? `Agreement exception: these cartons were sold at ${r.brokenAgreement.discountPct}% off as not returnable.` : `Agreement exception: ${r.brokenAgreement.discountPct}% discount was agreed for this lot.`)) : null,
       r.reason && !canClassify ? h('p', null, h('b', null, 'Reason: '), r.reasonLabel, r.note ? ` — ${r.note}` : '', r.classifiedBy ? h('span', { class: 'muted' }, ` (by ${r.classifiedBy}, ${day(r.classifiedAt)})`) : null) : null,

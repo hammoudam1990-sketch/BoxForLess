@@ -45,7 +45,8 @@ const ROLE_NAV = {
 const ROLE_TITLE = { ADMIN: 'Administrator', SALES_MANAGER: 'Sales Manager', SALES_REP: 'Sales rep', WAREHOUSE: 'Warehouse Manager' };
 const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/sales', WAREHOUSE: '#/warehouse' };
 let me = { role: 'ADMIN', name: 'Staff' };
-const allowed = (name) => !ROLE_NAV[me.role] || ROLE_NAV[me.role].includes(name);
+const ADMIN_REMOVED = ['imports', 'changes']; // taken out of the administrator's menu; the warehouse role keeps them
+const allowed = (name) => !(me.role === 'ADMIN' && ADMIN_REMOVED.includes(name)) && (!ROLE_NAV[me.role] || ROLE_NAV[me.role].includes(name));
 const canSee = (name) => (ROLE_NAV[me.role] || []).includes(name) || !ROLE_NAV[me.role];
 
 async function loadMe() {

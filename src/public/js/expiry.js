@@ -227,7 +227,7 @@ export async function renderExpiry(view) {
     setChildren(checkBox,
       h('summary', null, h('b', null, 'Check these entries'), ` (${items.length}) — expiry dates that look like typing mistakes`),
       h('ul', { class: 'exp-check-list' }, items.map((e) => h('li', null,
-        h('b', null, e.productName), ` · lot ${e.lotName} · expires ${e.expiryDate} · received ${e.receivedDate}`,
+        h('b', null, e.productName), e.barcode ? ` · Barcode ${e.barcode}` : '', ` · lot ${e.lotName} · expires ${e.expiryDate} · received ${e.receivedDate}`,
         h('div', { class: 'muted' }, e.issues.map((i) => i.text).join('; '))))));
   }
 

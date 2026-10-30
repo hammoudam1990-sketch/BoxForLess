@@ -1,0 +1,60 @@
+/* The scan page, in the staff design: navy bar, grey-blue page, white bordered cards, one blue accent
+   (same palette as warehouse.css). Scoped to body.scan-app so it never touches other pages. */
+body.scan-app {
+  --sc-navy: #103d73; --sc-blue: #1765b5; --sc-blue-soft: #eaf2fc; --sc-page: #f4f7fb;
+  --sc-ink: #183153; --sc-muted: #64748b; --sc-line: #e2e8f0;
+  --sc-ok: #0f7a4e; --sc-ok-soft: #e7f6ef; --sc-warn: #8a5508; --sc-warn-soft: #fdf3e2; --sc-err: #b42323; --sc-err-soft: #fdecec;
+  background: var(--sc-page); color: var(--sc-ink); min-height: 100vh;
+}
+.scan-app .sc-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: var(--sc-navy); color: #fff; }
+.scan-app .sc-brand { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; }
+.scan-app .sc-brand span { display: grid; line-height: 1.15; }
+.scan-app .sc-brand b { font-size: 16px; letter-spacing: .04em; }
+.scan-app .sc-brand small { font-size: 12px; opacity: .8; }
+.scan-app .sc-back { color: #fff; font-weight: 600; font-size: 14px; text-decoration: none; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, .35); }
+.scan-app .sc-back:hover { background: rgba(255, 255, 255, .12); }
+
+.scan-app .sc-page { max-width: 560px; margin: 0 auto; padding: 20px 14px 40px; display: grid; gap: 16px; }
+.scan-app .sc-head h1 { margin: 0 0 4px; font-size: 26px; font-weight: 750; letter-spacing: -.01em; color: var(--sc-ink); }
+.scan-app .sc-head p { margin: 0; color: var(--sc-muted); font-size: 14.5px; }
+
+.scan-app .sc-card, .scan-app .scan-result .card { background: #fff; border: 1px solid var(--sc-line); border-radius: 10px; padding: 16px; box-shadow: 0 1px 2px rgba(16, 61, 115, .06); }
+.scan-app .scan-result { margin-top: 0; }
+.scan-app .scan-result .card h2 { margin: 0 0 10px; font-size: 18px; color: var(--sc-ink); }
+
+.scan-app .scan-stage { border-radius: 8px; background: #0b1b30; }
+.scan-app .scan-reticle { border-color: #fff; border-radius: 10px; }
+.scan-app .scan-status { color: var(--sc-muted); font-weight: 600; font-size: 14px; }
+.scan-app .scan-actions { gap: 10px; }
+.scan-app button { background: var(--sc-blue); border-color: var(--sc-blue); color: #fff; border-radius: 6px; font-weight: 650; min-height: 44px; }
+.scan-app button:hover:not(:disabled) { background: var(--sc-navy); border-color: var(--sc-navy); }
+.scan-app button.ghost, .scan-app button.secondary { background: #fff; color: var(--sc-blue); border-color: var(--sc-line); }
+.scan-app button.ghost:hover:not(:disabled), .scan-app button.secondary:hover:not(:disabled) { background: var(--sc-blue-soft); color: var(--sc-navy); border-color: var(--sc-blue); }
+.scan-app button:focus-visible, .scan-app input:focus-visible, .scan-app a:focus-visible { outline: 3px solid rgba(23, 101, 181, .45); outline-offset: 2px; }
+
+.scan-app .linkbtn { background: transparent; border: 0; color: var(--sc-muted); font-size: 14px; min-height: 40px; }
+.scan-app .linkbtn:hover:not(:disabled) { background: transparent; color: var(--sc-ink); }
+.scan-app .linkbtn b { color: var(--sc-blue); }
+.scan-app .manual-panel { background: var(--sc-page); border: 1px solid var(--sc-line); border-radius: 8px; }
+.scan-app .manual-label { font-size: 12px; font-weight: 700; color: var(--sc-muted); }
+.scan-app .manual-panel input[type=text] { border: 1px solid var(--sc-line); border-radius: 6px; background: #fff; color: var(--sc-ink); }
+
+.scan-app .notice { background: var(--sc-warn-soft); color: var(--sc-warn); border: 1px solid #f0dca0; border-radius: 8px; }
+.scan-app .errbox { background: var(--sc-err-soft); color: var(--sc-err); border: 1px solid #f3c2bc; border-radius: 8px; }
+.scan-app .okbox { background: var(--sc-ok-soft); color: var(--sc-ok); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+
+/* the found product */
+.scan-app .sc-barcode { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 6px 12px; border-radius: 6px; background: var(--sc-blue-soft); color: var(--sc-navy); font-family: ui-monospace, Consolas, monospace; font-size: 17px; font-weight: 700; letter-spacing: .06em; }
+.scan-app .sc-barcode small { font: 600 11px/1 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--sc-muted); }
+.scan-app .kv { grid-template-columns: 130px 1fr; gap: 8px 14px; font-size: 15px; }
+.scan-app .kv .k { color: var(--sc-muted); font-weight: 600; }
+.scan-app .scan-result .back { color: var(--sc-blue); font-weight: 650; text-decoration: none; }
+.scan-app .pill { font-size: 12.5px; }
+.scan-app .saved-photo { border-radius: 8px; border: 1px solid var(--sc-line); }
+
+@media (max-width: 480px) {
+  .scan-app .sc-top { padding: 10px 12px; }
+  .scan-app .sc-brand small { display: none; }
+  .scan-app .sc-head h1 { font-size: 22px; }
+  .scan-app .kv { grid-template-columns: 110px 1fr; }
+}

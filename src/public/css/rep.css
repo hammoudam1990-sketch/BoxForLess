@@ -682,6 +682,7 @@ body.rep-page .topbar {
   margin-bottom: 6px;
 }
 
+.rep-lot-barcode { font-size: 12px; font-weight: 500; opacity: .75; letter-spacing: .03em; }
 .rep-lot-name {
   font-size: 18px;
   font-weight: 700;

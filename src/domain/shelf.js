@@ -407,7 +407,7 @@ export function listVisits(db, { today, loader = loadShelf, limit = 100 } = {}) 
   for (const l of lineRows) {
     const rec = recordByKey.get(l.record_key);
     const line = {
-      productName: rec?.productName ?? l.record_key, lotName: rec?.lotName ?? '',
+      productName: rec?.productName ?? l.record_key, barcode: rec?.barcode ?? '', lotName: rec?.lotName ?? '',
       outcome: OUTCOME_LABEL[l.outcome] ?? l.outcome, cartonsOnShelf: l.cartons_on_shelf,
       discountPct: l.discount_pct, contactName: l.contact_name, returnReason: l.return_reason,
     };
@@ -445,7 +445,7 @@ function discountRows(db, today, loader, settings) {
     return {
       id: l.id, customer: cust.get(l.customer_id)?.name ?? `Customer ${l.customer_id}`, customerId: l.customer_id,
       rep: rep.get(l.rep_id)?.name ?? l.rep_id, visitedOn: l.visited_on,
-      productName: r?.productName ?? l.record_key, lotName: r?.lotName ?? '', expiryDate: r?.expiryDate ?? null,
+      productName: r?.productName ?? l.record_key, barcode: r?.barcode ?? '', lotName: r?.lotName ?? '', expiryDate: r?.expiryDate ?? null,
       daysLeft: r ? daysLeft(r.expiryDate, today) : null, salesOrder: r?.salesOrder ?? '',
       cartonsOnShelf: l.cartons_on_shelf, discountPct: l.discount_pct, contactName: l.contact_name,
       approvalStatus: l.approval_status, reason: l.approval_reason, decidedAt: l.approved_at, creditNoteRef: l.credit_note_ref,
@@ -468,7 +468,7 @@ export function approvals(db, { today, loader = loadShelf, settings = sampleSett
   });
 
   const returns = all.filter((r) => r.state === ShelfState.RETURN_EXPECTED).map((r) => ({
-    customer: shelf.customers.find((c) => c.id === r.customerId)?.name, productName: r.productName, lotName: r.lotName,
+    customer: shelf.customers.find((c) => c.id === r.customerId)?.name, productName: r.productName, barcode: r.barcode, lotName: r.lotName,
     expiryDate: r.expiryDate, cartonsOnShelf: r.cartonsOnShelf, rep: repName.get(custRep.get(r.customerId)),
     returnReason: r.returnReason ?? null, returnNote: r.returnNote || null,
   }));

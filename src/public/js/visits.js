@@ -51,6 +51,7 @@ export async function renderVisits(view) {
           h('span', { class: `bfl-badge ${OUTCOME_TONE[l.outcome] ?? 'neutral'}`.trim() }, l.outcome),
           ' ',
           h('b', null, l.productName),
+          l.barcode ? h('span', { class: 'muted' }, ` · Barcode ${l.barcode}`) : null,
           l.lotName ? h('span', { class: 'muted' }, ` · lot ${l.lotName}`) : null,
           h('span', { class: 'muted' }, lineText(l)),
           l.returnReason ? h('div', { class: 'muted', style: { marginTop: '3px' } }, h('b', null, 'Reason for the return: '), l.returnReason) : null)))))

@@ -51,7 +51,7 @@ export async function renderApprovals(view) {
     setChildren(returnsBox, d.returnsExpected.length
       ? table(['Customer', 'Product', 'Lot', 'Expires', 'Cartons', 'Return reason', 'Rep'],
         d.returnsExpected.map((r) => [
-          r.customer, r.productName, r.lotName, date(r.expiryDate), String(r.cartonsOnShelf),
+          r.customer, h('span', null, r.productName, r.barcode ? h('div', { class: 'muted' }, r.barcode) : null), r.lotName, date(r.expiryDate), String(r.cartonsOnShelf),
           r.returnReason ? `${r.returnReason}${r.returnNote ? ` (${r.returnNote})` : ''}` : 'Expired',
           r.rep,
         ]))

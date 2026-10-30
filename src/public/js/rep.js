@@ -610,7 +610,7 @@ function lotCard(lot, index) {
   const dayClass = lot.expired ? 'expired' : lot.daysLeft <= 14 ? 'soon' : '';
   const el = h('article', { class: `card rep-lot ${lot.overdue ? ' overdue' : ''}` },
     h('div', { class: 'rep-lot-header' },
-      h('div', { class: 'rep-lot-name' }, lot.productName),
+      h('div', { class: 'rep-lot-name' }, lot.productName, lot.barcode ? h('div', { class: 'rep-lot-barcode' }, `Barcode ${lot.barcode}`) : null),
       lot.overdue ? h('span', { class: 'rep-pill err' }, 'Overdue') : null),
     h('div', { class: 'rep-lot-facts' },
       h('span', { class: `rep-days ${dayClass}` }, `${dateText(lot.expiryDate)} · ${daysText(lot.daysLeft)}`),

@@ -84,7 +84,7 @@ router.get('/stock-expiry', (req, res, next) => {
     const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
     const items = req.db.prepare(
       `SELECT l.id, l.lot_code AS lotCode, l.expiry_date AS expiryDate,
-              l.delivered_ctn AS deliveredCartons, p.name AS product,
+              l.delivered_ctn AS deliveredCartons, p.name AS product, p.barcode AS barcode,
               p.box_uom AS pack, c.name AS customer,
               (SELECT v.outcome FROM rep_visit_lines v WHERE v.lot_id = l.id ORDER BY v.id DESC LIMIT 1) AS lastOutcome
          FROM delivery_lots l

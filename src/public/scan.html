@@ -1,66 +1,67 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme-default="light" data-theme-toggle="false">
 <head>
   <meta charset="utf-8" />
   <script src="/js/theme-init.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>Scan — Box for Less</title>
+  <title>Scan Product — Box for Less</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/css/backdrop.css" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="/css/extras.css" />
   <link rel="stylesheet" href="/css/dark.css" />
+  <link rel="stylesheet" href="/css/scan.css" />
   <link rel="stylesheet" href="/css/print.css" media="print" />
 </head>
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="logo" role="img" aria-label="Box for Less">BFL</span>
-      <div>
-        <div class="brand-title">Box for Less</div>
-        <div class="brand-sub">Barcode Scan · Mobile</div>
-      </div>
-    </div>
-    <nav class="mainnav">
-      <a href="index.html">← Product Master</a>
-    </nav>
+<body class="scan-app">
+  <header class="sc-top">
+    <a class="sc-brand" href="index.html" aria-label="Box for Less staff home">
+      <img src="/img/bfl-mark-white.svg" alt="" width="36" height="36" />
+      <span><b>BOX FOR LESS</b><small>Wholesale Made Simple</small></span>
+    </a>
+    <a class="sc-back" href="index.html">← Back to dashboard</a>
   </header>
 
-  <main class="scan-wrap">
+  <main class="sc-page">
+    <div class="sc-head">
+      <h1>Scan Product</h1>
+      <p>Point the camera at a barcode to check stock, or find a product by typing its barcode.</p>
+    </div>
+
     <div id="unsupported" class="notice hidden"></div>
 
-    <div class="scan-stage" id="stage">
-      <video id="video" playsinline muted></video>
-      <div class="scan-reticle hidden" id="reticle"></div>
-    </div>
-    <div class="scan-status" id="status">Camera not started.</div>
-
-    <div class="scan-actions">
-      <button id="startBtn">Start camera</button>
-      <button id="stopBtn" class="ghost hidden">Stop</button>
-    </div>
-
-    <!-- Fallback for a barcode the camera cannot read: damaged, tiny, or awkwardly
-         placed. Camera scanning stays the primary method; this is hidden until asked
-         for, and uses the SAME lookup as a successful scan. -->
-    <div class="manual-entry">
-      <button id="manualToggle" class="linkbtn" type="button" aria-expanded="false" aria-controls="manualPanel">
-        Can't scan the barcode? <b>Enter barcode manually</b>
-      </button>
-
-      <div id="manualPanel" class="manual-panel hidden">
-        <label class="manual-label" for="manualBarcode">Enter barcode</label>
-        <!-- inputmode text, not numeric: a few real barcodes contain letters and
-             symbols, and type=number would strip leading zeros -->
-        <input id="manualBarcode" type="text" inputmode="text" autocomplete="off"
-               autocapitalize="off" autocorrect="off" spellcheck="false"
-               enterkeyhint="search" placeholder="e.g. 6281003101428" />
-        <div class="scan-actions">
-          <button id="manualFind" type="button">Find Product</button>
-          <button id="manualCancel" class="ghost" type="button">Back to camera</button>
-        </div>
-        <div id="manualMsg" class="scan-status"></div>
+    <section class="sc-card sc-camera" aria-label="Barcode scanner">
+      <div class="scan-stage" id="stage">
+        <video id="video" playsinline muted></video>
+        <div class="scan-reticle hidden" id="reticle"></div>
       </div>
-    </div>
+      <div class="scan-status" id="status">Camera not started.</div>
+
+      <div class="scan-actions">
+        <button id="startBtn">Start camera</button>
+        <button id="stopBtn" class="ghost hidden">Stop</button>
+      </div>
+
+      <!-- Fallback for a barcode the camera cannot read: hidden until asked for, and uses the SAME lookup as a successful scan. -->
+      <div class="manual-entry">
+        <button id="manualToggle" class="linkbtn" type="button" aria-expanded="false" aria-controls="manualPanel">
+          Can't scan the barcode? <b>Enter barcode manually</b>
+        </button>
+
+        <div id="manualPanel" class="manual-panel hidden">
+          <label class="manual-label" for="manualBarcode">Enter barcode</label>
+          <!-- inputmode text, not numeric: a few real barcodes contain letters and symbols, and type=number would strip leading zeros -->
+          <input id="manualBarcode" type="text" inputmode="text" autocomplete="off"
+                 autocapitalize="off" autocorrect="off" spellcheck="false"
+                 enterkeyhint="search" placeholder="e.g. 6281003101428" />
+          <div class="scan-actions">
+            <button id="manualFind" type="button">Find Product</button>
+            <button id="manualCancel" class="ghost" type="button">Back to camera</button>
+          </div>
+          <div id="manualMsg" class="scan-status"></div>
+        </div>
+      </div>
+    </section>
 
     <div id="result" class="scan-result"></div>
   </main>

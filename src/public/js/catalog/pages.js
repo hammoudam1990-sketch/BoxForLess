@@ -564,7 +564,7 @@ export function mountCustomerReturns(container) {
       onChange: () => { quantity.max = String(items[Number(select.value)]?.availableCartons || 1); },
     },
       items.map((item, index) => h('option', { value: String(index) },
-        `${item.productName} · ${item.orderReference} · ${item.availableCartons} of ${item.purchasedCartons} cartons available`)));
+        `${item.productName}${item.barcode ? ` (Barcode ${item.barcode})` : ''} · ${item.orderReference} · ${item.availableCartons} of ${item.purchasedCartons} cartons available`)));
     quantity.max = String(items[0].availableCartons);
     const reason = h('textarea', { required: true, maxlength: '1000', rows: '4', placeholder: 'Tell us why you are requesting this return.', 'aria-label': 'Reason for return' });
     const message = h('p', { role: 'status', class: 'p-muted', 'aria-live': 'polite' });
@@ -606,6 +606,7 @@ export function mountCustomerReturns(container) {
     }
     setChildren(historyEl, requests.map((request) => h('article', { class: 'p-return-history-item' },
       h('div', {}, h('b', {}, request.productName), h('span', { class: 'p-muted' }, ` · ${request.reference}`)),
+      h('p', { class: 'p-muted' }, request.barcode ? `Barcode ${request.barcode}` : ''),
       h('p', {}, `${request.cartons} carton${request.cartons === 1 ? '' : 's'} from order ${request.orderReference}`),
       h('p', {}, h('b', {}, 'Your reason: '), request.reason),
       h('p', {}, h('b', {}, 'Status: '), request.status),
