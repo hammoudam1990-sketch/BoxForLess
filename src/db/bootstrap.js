@@ -6,8 +6,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from '../config.js';
 import { createPreview, confirmImport } from '../import/service.js';
-import { seedFeaturedProductImages } from '../domain/images.js';
-import { ensureCategoryPath } from '../domain/categories.js';
+import { seedFeaturedProductImages, FEATURED_PHOTO_PRODUCTS } from '../domain/images.js';
+import { fileUncategorised, refileGuessedNonFood } from '../domain/category-guess.js';
 import { hashPassword } from '../domain/passwords.js';
 import { seedHistory, historyLoaded } from '../domain/sample-history.js';
 import { recomputeFinance } from '../domain/sample-odoo.js';
@@ -47,23 +47,12 @@ export function bootstrapDatabase(db) {
     // 2. Ensure the 4 featured product images are copied and linked
     seedFeaturedProductImages(db);
 
-    // 2b. Ensure every active product has a valid Odoo category path & category_id so category filters and reports work
-    const uncategorised = db.prepare('SELECT id, name FROM products WHERE odoo_category_path IS NULL OR category_id IS NULL').all();
-    if (uncategorised.length > 0) {
-      const updCat = db.prepare('UPDATE products SET odoo_category_path = ?, category_id = ? WHERE id = ?');
-      for (const p of uncategorised) {
-        const upper = String(p.name || '').toUpperCase();
-        let catPath = 'FOOD / SPICES & SEASONINGS';
-        if (upper.includes('LAZIZA') || upper.includes('MALT')) catPath = 'DRINKS & BEVERAGES / MALT DRINKS';
-        else if (upper.includes('LUNA') || upper.includes('COFFEE')) catPath = 'DRINKS & BEVERAGES / READY TO DRINK COFFEE';
-        else if (upper.includes('PICKLE') || upper.includes('TURNIP') || upper.includes('AL AMIR')) catPath = 'FOOD / PICKLES & CONDIMENTS';
-        else if (upper.includes('BEANS') || upper.includes('CHTOURA') || upper.includes('CANNED')) catPath = 'FOOD / CANNED & PRESERVED FOODS';
-        else if (upper.includes('SEED') || upper.includes('WHOLE')) catPath = 'FOOD / SPICES & SEASONINGS / WHOLE SPICES';
-        else if (upper.includes('POWDER') || upper.includes('GROUND')) catPath = 'FOOD / SPICES & SEASONINGS / GROUND SPICES';
-        const leafId = ensureCategoryPath(db, catPath, { now: now.toISOString() });
-        updCat.run(catPath, leafId, p.id);
-      }
-    }
+    // 2b. Ensure every active product has a category path & category_id so category filters and reports work. Odoo's
+    //     category wins whenever the export carries one; these are filed by name until then (domain/category-guess.js).
+    fileUncategorised(db, now.toISOString());
+    // 2c. Products filed by name before the non-food rules existed (perfumes, detergents, shampoos under FOOD /
+    //     SPICES & SEASONINGS): moved to their NON-FOOD category, each move logged, never one Odoo categorised.
+    refileGuessedNonFood(db, { keep: FEATURED_PHOTO_PRODUCTS.map((p) => p.barcode), now: now.toISOString() });
 
     // 3. Ensure default staff accounts for ALL roles (ADMIN, SALES_MANAGER, WAREHOUSE, SALES_REP) exist
     const defaultPassHash = hashPassword('Admin123456!');
