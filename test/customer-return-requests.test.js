@@ -179,3 +179,16 @@ test('customers can request only their own eligible cartons; managers decide and
     dbForStaff = undefined;
   }
 });
+
+test('products bought at a discount can never be listed or requested for return', async () => {
+  const { createCustomerReturnRequest, listReturnableItems } = await import('../src/domain/customer-return-requests.js');
+  const db = freshDb();
+  const customerId = makeCustomer(db, 'Discount Buyer', 'CUST-D', 'Rep');
+  makeOrder(db, customerId, 'ORD-DISC', '777', 'Discounted product', 'DISPATCHED', 4);
+  makeOrder(db, customerId, 'ORD-FULL', '888', 'Full price product', 'DISPATCHED', 4);
+  db.prepare("UPDATE request_items SET clearance_cartons = 2, clearance_pct = 30 WHERE barcode_at_request = '777'").run();
+  assert.deepEqual(listReturnableItems(db, customerId).map((i) => i.orderReference), ['ORD-FULL']);
+  assert.throws(() => createCustomerReturnRequest(db, customerId, { orderReference: 'ORD-DISC', barcode: '777', cartons: 1, reason: 'Damaged' }),
+    (e) => e.status === 403);
+  assert.equal(createCustomerReturnRequest(db, customerId, { orderReference: 'ORD-FULL', barcode: '888', cartons: 1, reason: 'Damaged' }).status, 'PENDING');
+});

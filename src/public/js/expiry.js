@@ -74,6 +74,8 @@ export async function renderExpiry(view) {
   // only the Sales Manager (or the administrator) sets the discount customers are offered on a lot
   const me = await fetch('/api/auth/me').then((r) => r.json()).catch(() => ({}));
   const canDiscount = ['ADMIN', 'SALES_MANAGER'].includes(me.staff?.role);
+  // The warehouse sees stock and dates only: no amounts and no decision/action column.
+  const isWarehouse = me.staff?.role === 'WAREHOUSE';
   let data = null;
   const repNames = canDiscount
     ? await api.shelfReps().then((r) => (r.reps || []).map((x) => x.name).filter(Boolean)).catch(() => [])
@@ -157,12 +159,13 @@ export async function renderExpiry(view) {
         h('table', { class: 'exp-table exp-list' },
           h('thead', null, h('tr', null, [
             'Product', 'Lot', 'Expires', 'Days left', 'Band', 'Cartons', 'Location', 'Value at risk', 'Action', 'Decide by', 'Status', 'Customer discount',
-          ].map((t, i) => h('th', { class: i === 3 || i === 5 || i === 7 ? 'num' : null }, t)))),
+          ].filter((t) => !(isWarehouse && (t === 'Value at risk' || t === 'Action')))
+            .map((t) => h('th', { class: ['Days left', 'Cartons', 'Value at risk'].includes(t) ? 'num' : null }, t)))),
           tbody),
         emptyNote)),
     h('p', { class: 'muted exp-foot' },
-      'Value at risk is cartons × selling price, shown to staff only. The move, return or write-off itself is done in Odoo by the warehouse; this list records the decision. ',
-      'A customer discount puts the lot in the "Discounted — near expiry" section of the customers\' catalogue (signed-in customers only) and on their quotation; only the Sales Manager sets it.'));
+      isWarehouse ? 'The move, return or write-off itself is done in Odoo by the warehouse.' : 'Value at risk is cartons × selling price, shown to staff only. The move, return or write-off itself is done in Odoo by the warehouse; this list records the decision. ',
+      isWarehouse ? null : 'A customer discount puts the lot in the "Discounted — near expiry" section of the customers\' catalogue (signed-in customers only) and on their quotation; only the Sales Manager sets it.'));
 
   // ---- behaviour -----------------------------------------------------------------------
   function minRow(c) {
@@ -236,13 +239,15 @@ export async function renderExpiry(view) {
     for (const [code, t] of tiles) {
       t.count.textContent = s.counts[code].toLocaleString();
       const v = s.value.byBand[code];
-      t.value.textContent = v === undefined ? '' : (money(v) || '');
+      t.value.textContent = v === undefined || isWarehouse ? '' : (money(v) || '');
     }
     const parts = [];
     if (s.needsAction) parts.push(`${plural(s.needsAction, 'lot')} still need a decision`);
     if (s.overdue) parts.push(`${s.overdue} overdue`);
-    parts.push(`value at risk ${money(s.value.total)}`);
-    if (s.value.unpriced) parts.push(`${plural(s.value.unpriced, 'lot')} without a price`);
+    if (!isWarehouse) {
+      parts.push(`value at risk ${money(s.value.total)}`);
+      if (s.value.unpriced) parts.push(`${plural(s.value.unpriced, 'lot')} without a price`);
+    }
     summaryLine.textContent = parts.join(' · ');
   }
 
@@ -356,8 +361,8 @@ export async function renderExpiry(view) {
       h('td', null, h('span', { class: `pill ${tone.tone}` }, tone.label)),
       h('td', { class: 'num' }, r.cartons.toLocaleString()),
       h('td', null, locCell),
-      h('td', { class: 'num' }, money(r.valueAtRisk) || h('span', { class: 'muted' }, 'no price')),
-      h('td', null, r.actionable ? repCell : h('span', { class: 'muted' }, '—')),
+      isWarehouse ? null : h('td', { class: 'num' }, money(r.valueAtRisk) || h('span', { class: 'muted' }, 'no price')),
+      isWarehouse ? null : h('td', null, r.actionable ? repCell : h('span', { class: 'muted' }, '—')),
       h('td', null, r.actionable ? [dateIn, overdue] : h('span', { class: 'muted' }, '—')),
       h('td', null, r.actionable ? statusSelect : h('span', { class: 'muted' }, '—')),
       h('td', null, discCell));

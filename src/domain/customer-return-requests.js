@@ -12,6 +12,13 @@ export class CustomerReturnRequestError extends Error {
   }
 }
 
+// A product bought at a clearance discount can never be returned. Applied to every query that decides eligibility.
+const NOT_DISCOUNTED = `COALESCE(ri.clearance_cartons, 0) = 0 AND COALESCE(ri.clearance_pct, 0) = 0
+      AND NOT EXISTS (
+        SELECT 1 FROM request_items d
+         WHERE d.request_id = r.id AND d.barcode_at_request = ri.barcode_at_request
+           AND (COALESCE(d.clearance_cartons, 0) > 0 OR COALESCE(d.clearance_pct, 0) > 0))`;
+
 function eligibleItemsQuery() {
   return `
     SELECT r.reference AS orderReference, ri.barcode_at_request AS barcode,
@@ -28,6 +35,7 @@ function eligibleItemsQuery() {
     JOIN request_items ri ON ri.request_id = r.id
     WHERE o.customer_id = ?
       AND o.state IN ('DISPATCHED','INVOICED','PAID')
+      AND ${NOT_DISCOUNTED}
     GROUP BY r.reference, ri.barcode_at_request, ri.product_name_at_request, ri.box_uom_at_request
     ORDER BY r.reference DESC, ri.product_name_at_request`;
 }
@@ -62,6 +70,19 @@ export function createCustomerReturnRequest(db, customerId, input = {}, now = ne
     throw new CustomerReturnRequestError('Enter a whole-carton quantity of at least one.');
   }
 
+  const discounted = db.prepare(`
+    SELECT 1
+    FROM requests r
+    JOIN odoo_orders o ON o.request_id = r.id
+    JOIN request_items ri ON ri.request_id = r.id
+    WHERE o.customer_id = ? AND r.reference = ? AND ri.barcode_at_request = ?
+      AND (COALESCE(ri.clearance_cartons, 0) > 0 OR COALESCE(ri.clearance_pct, 0) > 0)
+    LIMIT 1
+  `).get(customerId, orderReference, barcode);
+  if (discounted) {
+    throw new CustomerReturnRequestError('Products bought at a discount cannot be returned.', 403);
+  }
+
   const matchingLines = db.prepare(`
     SELECT ri.id, ri.product_name_at_request AS productName,
            ri.quantity_ctn AS purchasedCartons
@@ -72,6 +93,7 @@ export function createCustomerReturnRequest(db, customerId, input = {}, now = ne
       AND o.state IN ('DISPATCHED','INVOICED','PAID')
       AND r.reference = ?
       AND ri.barcode_at_request = ?
+      AND ${NOT_DISCOUNTED}
   `).all(customerId, orderReference, barcode);
   if (!matchingLines.length) {
     throw new CustomerReturnRequestError('That product is not on one of your eligible orders.', 404);

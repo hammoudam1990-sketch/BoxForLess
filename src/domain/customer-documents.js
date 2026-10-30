@@ -242,6 +242,26 @@ export function invoicePdf(db, customerId, number, todayStr, now = new Date()) {
 // ---------------------------------------------------------------------------------------------
 // the account statement
 // ---------------------------------------------------------------------------------------------
+// A running ledger: opening balance, then every invoice (charge), payment and credit note (both credits) by date, each with
+// the balance after it. The invoices list keeps the open ones from before the period; they are folded into the opening balance.
+function buildLedger(db, customerId, from, invoices, payments, credits) {
+  const before = (sql, ...a) => db.prepare(sql).get(...a).t || 0;
+  const opening = money(
+    before('SELECT SUM(amount) AS t FROM odoo_invoices WHERE customer_id = ? AND invoice_date < ?', customerId, from)
+    - before('SELECT SUM(amount) AS t FROM odoo_payments WHERE customer_id = ? AND paid_on < ?', customerId, from)
+    - before(`SELECT SUM(amount) AS t FROM odoo_credit_notes WHERE customer_kind = 'BFL' AND customer_ref = ? AND issued_on < ?`, customerId, from));
+  const events = [
+    ...invoices.filter((i) => i.invoiceDate >= from).map((i) => ({ date: i.invoiceDate, order: 0, type: 'Invoice', details: `Invoice ${i.number}`, charge: i.amount, credit: 0 })),
+    ...payments.map((p) => ({ date: p.paidOn, order: 1, type: 'Payment received', details: p.invoice ? `Payment ${p.invoice}` : 'Payment', charge: 0, credit: p.amount })),
+    ...credits.map((x) => ({ date: x.issuedOn, order: 1, type: 'Credit note', details: `Credit note ${x.number}`, charge: 0, credit: x.amount })),
+  ].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.order - b.order));
+  let balance = opening;
+  const rows = events.map((e) => { balance = money(balance + e.charge - e.credit); return { ...e, balance }; });
+  const invoiced = money(events.reduce((t, e) => t + e.charge, 0));
+  const paid = money(events.reduce((t, e) => t + e.credit, 0));
+  return { opening, invoiced, paid, due: balance, rows };
+}
+
 export function statementData(db, customerId, todayStr) {
   const c = customerRow(db, customerId);
   const account = accountFor(db, c.id, todayStr);
@@ -262,9 +282,11 @@ export function statementData(db, customerId, todayStr) {
   const credits = db.prepare(`SELECT number, amount, issued_on, invoice_number FROM odoo_credit_notes
                                WHERE customer_kind = 'BFL' AND customer_ref = ? AND issued_on >= ? ORDER BY issued_on DESC, id DESC`).all(String(c.id), from)
     .map((x) => ({ number: x.number, amount: money(x.amount), issuedOn: x.issued_on, invoice: x.invoice_number || null }));
+  const ledger = buildLedger(db, c.id, from, invoices, payments, credits);
   return {
     customer: { name: c.name, ref: c.odoo_customer_ref || null, address: c.delivery_address || null },
     asOf: todayStr, from, months: STATEMENT_MONTHS,
+    ledger,
     summary: {
       creditLimit: account.creditLimit, amountOwed: money(account.amountOwed), overdue: money(account.overdue),
       openOrders: money(account.openOrders), availableCredit: account.availableCredit, paymentSchedule: account.paymentSchedule,
@@ -298,20 +320,16 @@ export function statementPdf(db, customerId, todayStr, now = new Date()) {
     { empty: 'No open invoices: nothing is owed.' },
   );
   L.totals([['Total still due', ghs(d.open.reduce((t, i) => t + i.amountDue, 0)), { bold: true }]]);
-  L.heading(`Invoices, last ${d.months} months`);
+  L.heading('Account activity');
+  const lg = d.ledger;
+  L.totals([
+    ['Opening balance', ghs(lg.opening)], ['Invoiced amount', ghs(lg.invoiced)], ['Amount paid', ghs(lg.paid)], ['Amount due', ghs(lg.due), { bold: true }],
+  ]);
   L.table(
-    [{ label: 'Invoice', width: 22 }, { label: 'Order', width: 16 }, { label: 'Date', width: 16 }, { label: 'Amount', width: 18, align: 'right' }, { label: 'Still due', width: 16, align: 'right' }, { label: 'Status', width: 12 }],
-    d.invoices.map((i) => [i.number, i.order || '—', day(i.invoiceDate), ghs(i.amount), ghs(i.amountDue), i.status]),
-    { empty: 'No invoices in this period.' },
+    [{ label: 'Date', width: 15 }, { label: 'Transactions', width: 20 }, { label: 'Details', width: 25 }, { label: 'Amount', width: 14, align: 'right' }, { label: 'Payments', width: 14, align: 'right' }, { label: 'Balance', width: 12, align: 'right' }],
+    [[day(d.from), '*** Opening balance ***', '', '', '', ghs(lg.opening)],
+      ...lg.rows.map((r) => [day(r.date), r.type, r.details, r.charge ? ghs(r.charge) : '', r.credit ? ghs(r.credit) : '', ghs(r.balance)])],
   );
-  L.heading(`Payments, last ${d.months} months`);
-  L.table([{ label: 'Date', width: 34 }, { label: 'Invoice', width: 33 }, { label: 'Amount', width: 33, align: 'right' }],
-    d.payments.map((p) => [day(p.paidOn), p.invoice || '—', ghs(p.amount)]), { empty: 'No payments in this period.' });
-  if (d.credits.length) {
-    L.heading(`Credit notes, last ${d.months} months`);
-    L.table([{ label: 'Credit note', width: 30 }, { label: 'Date', width: 22 }, { label: 'Invoice', width: 24 }, { label: 'Amount', width: 24, align: 'right' }],
-      d.credits.map((x) => [x.number, day(x.issuedOn), x.invoice || '—', ghs(x.amount)]));
-  }
   return { filename: `Statement-${fileSafe(d.customer.ref || d.customer.name)}-${d.asOf}.pdf`, buffer: L.finish(footerNote(now)) };
 }
 
@@ -334,14 +352,13 @@ export function statementCsv(db, customerId, todayStr) {
     csvRow(['Amount owed', s.amountOwed]), csvRow(['Overdue', s.overdue]), csvRow(['Credit limit', s.creditLimit ?? '']),
     csvRow(['Open orders', s.openOrders]), csvRow(['Available credit', s.availableCredit ?? '']), csvRow(['Payment terms', s.paymentSchedule || '']),
     '',
+    csvRow(['Date', 'Transactions', 'Details', 'Amount (GHS)', 'Payments (GHS)', 'Balance (GHS)']),
+    csvRow([d.from, '*** Opening balance ***', '', '', '', d.ledger.opening]),
+    ...d.ledger.rows.map((r) => csvRow([r.date, r.type, r.details, r.charge || '', r.credit || '', r.balance])),
+    csvRow(['', 'Totals', '', d.ledger.invoiced, d.ledger.paid, d.ledger.due]),
+    '',
     csvRow(['Invoices', 'Order', 'Invoice date', 'Odoo due date', 'Pay by', 'Amount (GHS)', 'Still due (GHS)', 'Status']),
     ...d.invoices.map((i) => csvRow([i.number, i.order || '', i.invoiceDate, i.dueDate, i.payBy || '', i.amount, i.amountDue, i.status])),
-    '',
-    csvRow(['Payments', 'Invoice', 'Amount (GHS)']),
-    ...d.payments.map((p) => csvRow([p.paidOn, p.invoice || '', p.amount])),
-    '',
-    csvRow(['Credit notes', 'Date', 'Invoice', 'Amount (GHS)']),
-    ...d.credits.map((x) => csvRow([x.number, x.issuedOn, x.invoice || '', x.amount])),
   ];
   return { filename: `Statement-${fileSafe(d.customer.ref || d.customer.name)}-${d.asOf}.csv`, text: `﻿${out.join('\r\n')}\r\n` };
 }
