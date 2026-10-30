@@ -34,6 +34,37 @@ function select(options, value, props = {}) {
   return h('select', props, options.map(([v, label]) => h('option', { value: v, selected: v === value }, label)));
 }
 
+// A pop-up to pick one sales rep: searchable list, keyboard friendly, closes on Escape or a click outside.
+function pickRep(names, current, label, onPick) {
+  const prevFocus = document.activeElement;
+  const search = h('input', { type: 'search', placeholder: 'Search sales reps…', 'aria-label': 'Search sales reps', autocomplete: 'off' });
+  const list = h('ul', { class: 'rep-pick-list', role: 'listbox', 'aria-label': 'Sales reps' });
+  const close = () => { document.removeEventListener('keydown', onKey); overlay.remove(); prevFocus?.focus?.(); };
+  const choose = async (n) => { close(); await onPick(n); };
+  const paint = () => {
+    const q = search.value.trim().toLowerCase();
+    const found = names.filter((n) => n.toLowerCase().includes(q));
+    setChildren(list, found.length
+      ? found.map((n) => h('li', { role: 'option', 'aria-selected': String(n === current) },
+        h('button', { type: 'button', class: n === current ? 'is-current' : '', onClick: () => choose(n) }, n, n === current ? h('span', { class: 'muted' }, ' · current') : null)))
+      : h('li', { class: 'muted rep-pick-none' }, names.length ? `No sales rep matches “${search.value.trim()}”.` : 'No sales reps are available.'));
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+    else if (e.key === 'Enter' && document.activeElement === search) { const b = list.querySelector('button'); if (b) b.click(); }
+  };
+  const dialog = h('div', { class: 'rep-pick', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Choose a sales rep' },
+    h('div', { class: 'rep-pick-head' }, h('h2', null, 'Push to a sales rep'), h('button', { type: 'button', class: 'ghost', 'aria-label': 'Close', onClick: close }, '✕')),
+    h('p', { class: 'muted' }, label),
+    search, list);
+  const overlay = h('div', { class: 'rep-pick-overlay', onMousedown: (e) => { if (e.target === overlay) close(); } }, dialog);
+  search.addEventListener('input', paint);
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(overlay);
+  paint();
+  search.focus();
+}
+
 export async function renderExpiry(view) {
   // a link may open the list already filtered: #/expiry?band=EXPIRED, or several bands: ?band=CRITICAL,WARNING
   const bandParam = String(new URLSearchParams(location.hash.split('?')[1] || '').get('band') || '').toUpperCase()
@@ -251,21 +282,18 @@ export async function renderExpiry(view) {
       } finally { control.disabled = false; }
     };
 
-    const actionSel = select(ACTIONS, r.action || '', { 'aria-label': `Action for ${label}`, onChange: (e) => save('action', e.target.value, e.target) });
+    const actionSel = select(ACTIONS, r.action || '', { 'aria-label': `Action for ${label}`, onChange: async (e) => {
+      await save('action', e.target.value, e.target);
+      if (e.target.value === 'PUSH_THROUGH_REPS' && canDiscount) openRepPicker();
+    } });
     // Assign the lot to one named sales rep, saved through the existing decision save (the `owner` field holds the rep's name).
-    const repSel = h('select', { 'aria-label': `Sales rep for ${label}` },
-      h('option', { value: '' }, 'Choose a sales rep…'),
-      repNames.map((n) => h('option', { value: n, selected: n === r.owner }, n)));
-    if (r.owner && !repNames.includes(r.owner)) repSel.appendChild(h('option', { value: r.owner, selected: true }, r.owner));
     const repNow = h('div', { class: 'muted' });
-    const paintRep = () => { repNow.textContent = r.owner ? `Assigned to ${r.owner}` : 'Not assigned'; repSel.value = r.owner || ''; };
-    const assignBtn = h('button', { type: 'button', class: 'secondary', onClick: async (e) => {
-      if (!repSel.value) { toast('Choose a sales rep first.', 'err'); return; }
-      await save('owner', repSel.value, e.currentTarget); paintRep();
-    } }, 'Assign');
+    const pickBtn = h('button', { type: 'button', class: 'secondary', onClick: () => openRepPicker() }, 'Choose sales rep…');
+    const paintRep = () => { repNow.textContent = r.owner ? `Assigned to ${r.owner}` : 'Not assigned'; pickBtn.textContent = r.owner ? 'Change sales rep…' : 'Choose sales rep…'; };
+    const openRepPicker = () => pickRep(repNames, r.owner, label, async (name) => { await save('owner', name, pickBtn); paintRep(); });
     paintRep();
     const repCell = !canDiscount ? h('span', { class: r.owner ? '' : 'muted' }, r.owner || 'Not assigned')
-      : h('div', { class: 'exp-rep-assign' }, repSel, assignBtn, repNow);
+      : h('div', { class: 'exp-rep-assign' }, pickBtn, repNow);
     const dateIn = h('input', {
       type: 'date', value: r.decideBy || '', 'aria-label': `Decide by, ${label}`,
       onChange: (e) => save('decideBy', e.target.value, e.target),

@@ -1159,3 +1159,17 @@ html[data-theme="dark"] .sb-mock-act-btn { background: #0f172a; border-color: #3
 .exp-table .exp-rep-assign button { width: 100%; }
 .exp-table td:nth-child(4) .pill { display: inline-block; margin-top: 4px; white-space: nowrap; }
 .exp-table .pill { white-space: nowrap; }
+
+/* Sales rep pick-up pop-up */
+.rep-pick-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(16,30,54,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.rep-pick { background: #fff; border-radius: 14px; width: min(440px, 100%); max-height: min(560px, 90vh); display: flex; flex-direction: column; gap: 10px; padding: 18px; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+.rep-pick-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rep-pick-head h2 { margin: 0; font-size: 18px; }
+.rep-pick input[type="search"] { width: 100%; min-height: 44px; box-sizing: border-box; }
+.rep-pick-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
+.rep-pick-list li { border-bottom: 1px solid var(--line); }
+.rep-pick-list li:last-child { border-bottom: 0; }
+.rep-pick-list button { width: 100%; text-align: left; background: transparent; color: inherit; border: 0; border-radius: 0; min-height: 46px; padding: 10px 14px; font-size: 15px; cursor: pointer; }
+.rep-pick-list button:hover, .rep-pick-list button:focus-visible { background: #e8eff8; }
+.rep-pick-list button.is-current { font-weight: 700; }
+.rep-pick-none { padding: 14px; }
