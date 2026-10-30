@@ -156,7 +156,7 @@ export async function renderExpiry(view) {
       h('div', { class: 'exp-wrap' },
         h('table', { class: 'exp-table exp-list' },
           h('thead', null, h('tr', null, [
-            'Product', 'Lot', 'Expires', 'Days left', 'Band', 'Cartons', 'Location', 'Value at risk', 'Action', 'Assigned sales rep', 'Decide by', 'Status', 'Customer discount',
+            'Product', 'Lot', 'Expires', 'Days left', 'Band', 'Cartons', 'Location', 'Value at risk', 'Action', 'Decide by', 'Status', 'Customer discount',
           ].map((t, i) => h('th', { class: i === 3 || i === 5 || i === 7 ? 'num' : null }, t)))),
           tbody),
         emptyNote)),
@@ -284,16 +284,19 @@ export async function renderExpiry(view) {
 
     const actionSel = select(ACTIONS, r.action || '', { 'aria-label': `Action for ${label}`, onChange: async (e) => {
       await save('action', e.target.value, e.target);
+      paintRep();
       if (e.target.value === 'PUSH_THROUGH_REPS' && canDiscount) openRepPicker();
     } });
-    // Assign the lot to one named sales rep, saved through the existing decision save (the `owner` field holds the rep's name).
-    const repNow = h('div', { class: 'muted' });
-    const pickBtn = h('button', { type: 'button', class: 'secondary', onClick: () => openRepPicker() }, 'Choose sales rep…');
-    const paintRep = () => { repNow.textContent = r.owner ? `Assigned to ${r.owner}` : 'Not assigned'; pickBtn.textContent = r.owner ? 'Change sales rep…' : 'Choose sales rep…'; };
+    // "Push through sales reps" opens a pop-up to pick one rep; the choice is saved through the existing decision save (`owner` holds the rep's name).
+    const pickBtn = h('button', { type: 'button', class: 'ghost exp-rep-link', onClick: () => openRepPicker() });
+    const paintRep = () => {
+      const pushed = r.action === 'PUSH_THROUGH_REPS';
+      pickBtn.classList.toggle('hidden', !pushed || !canDiscount);
+      pickBtn.textContent = r.owner ? `Rep: ${r.owner} · change` : 'Choose sales rep…';
+    };
     const openRepPicker = () => pickRep(repNames, r.owner, label, async (name) => { await save('owner', name, pickBtn); paintRep(); });
     paintRep();
-    const repCell = !canDiscount ? h('span', { class: r.owner ? '' : 'muted' }, r.owner || 'Not assigned')
-      : h('div', { class: 'exp-rep-assign' }, pickBtn, repNow);
+    const repCell = h('div', { class: 'exp-action' }, actionSel, pickBtn);
     const dateIn = h('input', {
       type: 'date', value: r.decideBy || '', 'aria-label': `Decide by, ${label}`,
       onChange: (e) => save('decideBy', e.target.value, e.target),
@@ -354,7 +357,6 @@ export async function renderExpiry(view) {
       h('td', { class: 'num' }, r.cartons.toLocaleString()),
       h('td', null, locCell),
       h('td', { class: 'num' }, money(r.valueAtRisk) || h('span', { class: 'muted' }, 'no price')),
-      h('td', null, r.actionable ? actionSel : h('span', { class: 'muted' }, '—')),
       h('td', null, r.actionable ? repCell : h('span', { class: 'muted' }, '—')),
       h('td', null, r.actionable ? [dateIn, overdue] : h('span', { class: 'muted' }, '—')),
       h('td', null, r.actionable ? statusSelect : h('span', { class: 'muted' }, '—')),
