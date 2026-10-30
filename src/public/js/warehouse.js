@@ -9,13 +9,10 @@ import { api } from './api.js';
 import { h, setChildren, toggleHidden } from './lib/dom.js';
 import { debounce, createLatest } from './lib/util.js';
 import { icon } from './lib/lucide.js';
-
-// ------------------------------------------------------------------ formatting
-const qty = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
-const signed = (n) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${qty(Math.abs(n))}`;
-const dateText = (iso) => (iso ? new Date(`${String(iso).slice(0, 10)}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—');
-const plural = (n, w) => `${qty(n)} ${w}${n === 1 ? '' : 's'}`;
-const greeting = (now = new Date()) => (now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening');
+import {
+  qty, signed, dateText, plural, greeting, badge, card, cardHead, viewAll, loading, empty, errorBox, sampleTag, hashParam,
+  periodControl, niceStep, s, barPath,
+} from './dash-ui.js';
 
 const STATUS = {
   IN_STOCK: ['In stock', 'success'], LOW_STOCK: ['Low stock', 'warning'], OUT_OF_STOCK: ['Out of stock', 'danger'],
@@ -23,39 +20,7 @@ const STATUS = {
 const MOVE = {
   STOCK_IN: ['Stock In', 'success'], STOCK_OUT: ['Stock Out', 'danger'], TRANSFER: ['Transfer', 'info'], ADJUSTMENT: ['Adjustment', 'warning'], RETURN: ['Return', 'purple'],
 };
-const badge = (label, tone) => h('span', { class: `wh-badge ${tone}` }, label);
 const LOCATION = { MAIN: 'Main warehouse', CLEARANCE: 'Clearance' };
-
-const card = (cls, ...children) => h('section', { class: `wh-card ${cls || ''}`.trim() }, ...children);
-const cardHead = (title, sub, right) => h('div', { class: 'wh-card-head' },
-  h('div', null, h('h2', null, title), sub ? h('p', null, sub) : null), right || null);
-const viewAll = (href, label = 'View All') => h('a', { class: 'wh-link', href }, label, icon('arrowRight'));
-const loading = (lines = 3) => h('div', { class: 'wh-skeleton', role: 'status', 'aria-label': 'Loading' }, Array.from({ length: lines }, () => h('i')));
-const empty = (title, text) => h('div', { class: 'wh-empty' }, h('b', null, title), text ? h('p', null, text) : null);
-const errorBox = (e) => h('div', { class: 'wh-error', role: 'alert' }, icon('alert'), h('span', null, e?.message || 'Could not load this. Try again.'));
-const sampleTag = (text) => h('span', { class: 'wh-tag', title: text }, 'Sample');
-
-// ------------------------------------------------------------------ period control (built once)
-const PERIOD_OPTIONS = [['today', 'Today'], ['week', 'This Week'], ['month', 'This Month'], ['last_month', 'Last Month'], ['year', 'This Year'], ['custom', 'Custom Date Range']];
-
-function periodControl(onChange, initial = 'week') {
-  const today = new Date().toISOString().slice(0, 10);
-  const select = h('select', { class: 'wh-select', 'aria-label': 'Date range' },
-    PERIOD_OPTIONS.map(([v, t]) => h('option', { value: v, selected: v === initial }, t)));
-  const from = h('input', { type: 'date', class: 'wh-input', 'aria-label': 'From', max: today });
-  const to = h('input', { type: 'date', class: 'wh-input', 'aria-label': 'To', max: today, value: today });
-  const apply = h('button', { type: 'button', class: 'wh-btn', onClick: () => { if (from.value && to.value) onChange(value()); } }, 'Apply');
-  const custom = h('span', { class: 'wh-custom hidden' }, from, h('span', { class: 'wh-muted' }, 'to'), to, apply);
-  select.addEventListener('change', () => {
-    toggleHidden(custom, select.value !== 'custom');
-    if (select.value !== 'custom') onChange(value());
-    else from.focus();
-  });
-  function value() {
-    return select.value === 'custom' ? { period: 'custom', from: from.value, to: to.value } : { period: select.value };
-  }
-  return { el: h('div', { class: 'wh-period' }, icon('calendar'), select, custom), value };
-}
 
 // ------------------------------------------------------------------ inventory table (dashboard card and full page)
 /**
@@ -197,24 +162,6 @@ function movementsTable(items, { compact = false } = {}) {
 
 // ------------------------------------------------------------------ the stock-levels chart (grouped bars)
 const SERIES = [['available', 'wh-bar-available'], ['incoming', 'wh-bar-incoming']];
-const niceStep = (max) => {
-  const raw = max / 4;
-  const mag = 10 ** Math.floor(Math.log10(raw || 1));
-  return [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) || mag * 10;
-};
-const NS = 'http://www.w3.org/2000/svg';
-const s = (tag, attrs = {}, text = null) => {
-  const el = document.createElementNS(NS, tag);
-  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
-  if (text !== null) el.textContent = text;
-  return el;
-};
-/** A bar with 4px rounded top corners, square at the baseline. */
-const barPath = (x, top, w, base) => {
-  const r = Math.min(4, w / 2, Math.max(0, base - top));
-  return `M${x},${base}V${top + r}Q${x},${top} ${x + r},${top}H${x + w - r}Q${x + w},${top} ${x + w},${top + r}V${base}Z`;
-};
-
 function stockChart(levels) {
   const groups = levels.groups;
   const tip = h('div', { class: 'wh-tip hidden', role: 'status' });
@@ -370,8 +317,6 @@ export async function renderWarehouseHome(view) {
 }
 
 // ------------------------------------------------------------------ full pages
-const hashParam = (name) => new URLSearchParams(location.hash.split('?')[1] || '').get(name) || '';
-
 export async function renderInventoryPage(view) {
   let fromTopBar = '';
   try { fromTopBar = sessionStorage.getItem('bfl.inventorySearch') || ''; sessionStorage.removeItem('bfl.inventorySearch'); } catch { /* storage blocked */ }

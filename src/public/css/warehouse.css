@@ -23,7 +23,7 @@ body.adm {
 }
 
 /* ---------------------------------------------------------------- the warehouse sidebar */
-body.adm.role-warehouse { grid-template-columns: 215px minmax(0, 1fr); }
+body.adm.role-warehouse, body.adm.role-sales { grid-template-columns: 215px minmax(0, 1fr); }
 .wh-side { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .wh-nav a { gap: 11px; min-height: 40px; font-size: 14.5px; }
 .wh-nav a .lucide { width: 19px; height: 19px; flex: none; stroke-width: 1.8; }
@@ -234,6 +234,13 @@ th[aria-sort="ascending"] .wh-sort .lucide, th[aria-sort="descending"] .wh-sort 
 .adm-body .view .wh-btn { min-height: 38px; font-size: 14px; }
 .adm-body .view .wh-sort { min-height: 0; font-size: 12px; }
 .adm-body .view .wh-page-btn { min-height: 34px; padding: 0; font-size: 14px; }
+.adm-body .view .wh-head h1 { font-size: 26px; }
+.adm-body .view .wh-card-head h2 { font-size: 17px; }
+.adm-body .view .wh-sub { font-size: 14.5px; }
+.adm-body .view .wh-eyebrow { font-size: 13px; }
+.adm-body .view .wh-card-head p { font-size: 13px; }
+.adm-body .view .wh-note { font-size: 12.5px; }
+.adm-body .view .wh-empty p { font-size: 13.5px; }
 /* the dashboard's inventory panel: the same seven columns, packed tighter so they fit beside the right-hand column */
 .adm-body .view .wh-compact .wh-table th, .adm-body .view .wh-compact .wh-table td { padding-left: 8px; padding-right: 8px; }
 .wh-compact .wh-td-name { min-width: 170px; }
@@ -243,14 +250,14 @@ th[aria-sort="ascending"] .wh-sort .lucide, th[aria-sort="descending"] .wh-sort 
 /* ---------------------------------------------------------------- responsive */
 @media (max-width: 1280px) { .wh-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 1100px) { .wh-grid { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 1080px) { body.adm.role-warehouse { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 1080px) { body.adm.role-warehouse, body.adm.role-sales { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {
   .wh-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .wh-kpi { padding: 12px; gap: 10px; }
   .wh-kpi-icon { width: 34px; height: 34px; }
   .wh-kpi-value { font-size: 22px; }
   .wh-card { padding: 14px; }
-  .wh-head h1 { font-size: 22px; }
+  .wh-head h1, .adm-body .view .wh-head h1 { font-size: 22px; }
   .wh-filters .wh-select { flex: 1 1 140px; max-width: none; }
   .wh-quick-grid { grid-template-columns: minmax(0, 1fr); }
   .wh-quick { min-height: 0; grid-template-columns: auto 1fr; align-items: center; }

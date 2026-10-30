@@ -1,0 +1,135 @@
+/* The Sales Manager's module (js/sales-manager.js, js/sales-nav.js). It is built on the warehouse module's design
+   system (css/warehouse.css: tokens, cards, KPI cards, tables, badges, chart basics); this file adds only what the
+   sales screens need — the six-figure KPI row, progress bars, avatars, the line and donut charts, the target forms.
+   Solid colours, no gradients. Dark mode: the html[data-theme="dark"] block at the end. */
+
+body.adm {
+  /* the donut's slices, one per representative: led by the corporate blue, in a fixed order, the "other reps" slice
+     neutral. Validated (dataviz validate_palette.js, light surface) for every neighbouring pair including the last to
+     the first; every slice is also named, valued and given its share in the table beside it, with a 2px gap between. */
+  --sm-s0: #1765b5; --sm-s1: #1baf7a; --sm-s2: #6250d6; --sm-s3: #d55181; --sm-s4: #5e9a2e; --sm-other: #94a3b8;
+  --sm-track: #e8eef6;
+}
+
+/* ---------------------------------------------------------------- layout */
+.sm-kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+/* six in a row: the icon sits above the figures so an amount gets the card's full width */
+.sm-kpis .wh-kpi { flex-direction: column; padding: 14px; gap: 8px; }
+.sm-kpis .wh-kpi-body { width: 100%; }
+.sm-kpis .wh-kpi-icon { width: 34px; height: 34px; }
+.sm-kpis .wh-kpi-value { font-size: clamp(17px, 1.32vw, 22px); letter-spacing: -.01em; }
+.sm-kpis .wh-kpi-text, .sm-kpis .sm-change { font-size: 12px; }
+.sm-kpis-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.sm-analytics { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1.15fr) minmax(250px, .8fr); gap: 18px; align-items: start; }
+.sm-bottom { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.sm-back { margin-bottom: -6px; }
+.sm-back .lucide { width: 16px; height: 16px; }
+
+/* ---------------------------------------------------------------- KPI extras */
+.sm-change { display: inline-flex; align-items: center; gap: 3px; color: var(--wh-muted); font-size: 12.5px; font-weight: 600; }
+.sm-change .lucide { width: 14px; height: 14px; }
+.sm-change.up { color: var(--wh-success-ink); }
+.sm-change.down { color: var(--wh-danger-ink); }
+.sm-over { color: var(--wh-success-ink); font-weight: 650; }
+.sm-missing { color: var(--wh-warning-ink); font-weight: 650; }
+.sm-est { font-size: 12px; }
+
+/* ---------------------------------------------------------------- progress */
+.sm-progress-wrap { display: inline-flex; align-items: center; gap: 8px; min-width: 120px; }
+.wh-kpi .sm-progress-wrap { display: flex; margin: 4px 0 2px; }
+.sm-progress { position: relative; display: block; flex: 1; height: 6px; min-width: 60px; border-radius: 999px; background: var(--sm-track); }
+.sm-progress > i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--wh-blue); }
+.sm-progress.success > i { background: var(--wh-success); }
+.sm-progress.warning > i { background: var(--wh-warning); }
+.sm-progress.danger > i { background: var(--wh-danger); }
+.sm-progress-mark { position: absolute; top: -3px; width: 2px; height: 12px; margin-left: -1px; border-radius: 1px; background: var(--wh-ink); }
+.sm-progress-text { min-width: 46px; color: var(--wh-ink); font-size: 12.5px; font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- people */
+.sm-avatar {
+  display: inline-grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%;
+  background: var(--wh-blue-soft); color: var(--wh-blue); font-size: 12.5px; font-weight: 750; letter-spacing: .02em;
+}
+.sm-rep-cell { display: flex; align-items: center; gap: 10px; min-width: 200px; }
+.sm-rep-cell > span:last-child { display: grid; min-width: 0; }
+.sm-rep-cell .wh-muted { font-size: 12.5px; }
+.sm-activity { display: grid; gap: 1px; min-width: 120px; font-size: 13px; }
+.sm-activity .wh-muted { font-size: 12px; }
+.sm-rep-head { display: flex; align-items: center; gap: 14px; }
+.sm-rep-head .sm-avatar { width: 52px; height: 52px; font-size: 17px; }
+.sm-rep-head h1 { margin: 0 0 4px; }
+
+/* ---------------------------------------------------------------- the line chart */
+.sm-line .sm-actual-line { fill: none; stroke: var(--wh-c-available); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.sm-line .sm-area { fill: var(--wh-c-available); opacity: .1; }
+.sm-line .sm-target-line, .sm-target-tick { fill: none; stroke: var(--wh-c-incoming); stroke-width: 2; stroke-dasharray: 6 5; }
+.sm-target-tick { stroke-dasharray: none; stroke: var(--wh-navy); }
+.sm-line .sm-cross { stroke: #94a3b8; stroke-width: 1; stroke-dasharray: 3 3; }
+.sm-line .sm-dot-actual { fill: var(--wh-c-available); stroke: var(--wh-card); stroke-width: 2; }
+.sm-line .sm-dot-target { fill: var(--wh-card); stroke: var(--wh-c-incoming); stroke-width: 2; }
+.sm-line .hidden { display: none; }
+.sm-key-line { display: inline-block; width: 20px; height: 0; border-top: 2px solid var(--wh-c-available); vertical-align: middle; }
+.sm-key-line.dashed { border-top: 2px dashed var(--wh-c-incoming); }
+.sm-trend-plot { min-height: 200px; }
+
+/* ---------------------------------------------------------------- the donut */
+.sm-donut-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.sm-donut { flex: none; display: block; margin: 0 auto; }
+.sm-slice { stroke: var(--wh-card); stroke-width: 2; transition: opacity .12s ease; }
+.sm-donut:has(.sm-slice.on) .sm-slice:not(.on) { opacity: .4; }
+.sm-slice-0 { fill: var(--sm-s0); background: var(--sm-s0); }
+.sm-slice-1 { fill: var(--sm-s1); background: var(--sm-s1); }
+.sm-slice-2 { fill: var(--sm-s2); background: var(--sm-s2); }
+.sm-slice-3 { fill: var(--sm-s3); background: var(--sm-s3); }
+.sm-slice-4 { fill: var(--sm-s4); background: var(--sm-s4); }
+.sm-slice-other { fill: var(--sm-other); background: var(--sm-other); }
+.sm-donut-value { fill: var(--wh-ink); font-size: 17px; font-weight: 750; }
+.sm-donut-label { fill: var(--wh-muted); font-size: 11px; }
+.sm-donut-table { flex: 1 1 200px; font-size: 13px; }
+.adm-body .view .sm-donut-table td, .adm-body .view .sm-donut-table th { height: auto; padding: 7px 6px; }
+.sm-donut-table td:first-child { display: flex; align-items: center; gap: 8px; }
+.sm-donut-table tr.on td { background: var(--wh-blue-soft); }
+.sm-swatch { display: inline-block; width: 10px; height: 10px; flex: none; border-radius: 3px; }
+
+/* ---------------------------------------------------------------- orders */
+.adm-body .view .sm-orders.compact td { padding: 7px 8px; font-size: 13.5px; }
+.sm-orders.compact .wh-td-name { min-width: 120px; }
+
+/* ---------------------------------------------------------------- targets, settings, forms */
+.sm-target-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; margin-bottom: 6px; }
+.sm-target-head > div { display: grid; gap: 4px; min-width: 180px; }
+.sm-target-head p { margin: 0; }
+.sm-big { color: var(--wh-ink); font-size: 24px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.sm-target-form, .sm-settings-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin-top: 10px; }
+.adm-body .view .sm-amount { width: 140px; }
+.adm-body .view .sm-reason { min-width: 200px; flex: 1 1 200px; }
+.sm-form-msg { color: var(--wh-danger-ink); font-size: 13px; font-weight: 600; }
+.sm-facts { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; font-size: 14px; }
+.sm-facts dt { color: var(--wh-muted); }
+.sm-facts dd { margin: 0; color: var(--wh-ink); font-weight: 650; text-align: right; }
+.sm-check { display: inline-flex; align-items: center; gap: 6px; color: var(--wh-ink); font-size: 14px; }
+.sm-links { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+
+/* ---------------------------------------------------------------- responsive */
+@media (max-width: 1360px) { .sm-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .sm-kpis .wh-kpi { flex-direction: row; } .sm-kpis .wh-kpi-value { font-size: 22px; } }
+@media (max-width: 1360px) {
+  .sm-analytics { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .sm-analytics .sm-perf-card { grid-column: 1 / -1; }
+}
+@media (max-width: 1180px) { .sm-bottom { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 900px) { .sm-kpis-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .sm-analytics { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .sm-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sm-big { font-size: 20px; }
+  .adm-body .view .sm-amount { width: 120px; }
+}
+@media (prefers-reduced-motion: reduce) { .sm-slice { transition: none; } }
+
+/* ---------------------------------------------------------------- dark mode */
+html[data-theme="dark"] body.adm {
+  /* the same five, stepped for the dark surface (validated there too) */
+  --sm-s0: #3987e5; --sm-s1: #199e70; --sm-s2: #9085e9; --sm-s3: #d55181; --sm-s4: #6ba539; --sm-other: #64748b;
+  --sm-track: #23324a;
+}
+html[data-theme="dark"] .sm-target-tick { stroke: #cfe2fa; }

@@ -33,6 +33,7 @@ import returnsRouter from './routes/returns.js';
 import odooRouter from './routes/odoo.js';
 import repsRouter from './routes/reps.js';
 import warehouseRouter from './routes/warehouse.js';
+import salesDashboardRouter from './routes/sales-dashboard.js';
 import { startOdooJobs } from '../odoo/jobs.js';
 import { takeStockSnapshot } from '../domain/reports.js';
 import { runReminders } from '../domain/payments.js';
@@ -106,6 +107,8 @@ export function createApp(db) {
   app.use('/api/reviews', requireStaff, requireRole('ADMIN', 'WAREHOUSE'), changesRouter);
   // The Warehouse Manager's dashboard: inventory, lots, movements and alerts (read-only).
   app.use('/api/warehouse', requireStaff, requireRole('ADMIN', 'WAREHOUSE', { SALES_MANAGER: 'r' }), warehouseRouter);
+  // The Sales Manager's dashboard: company-wide sales, targets, reps, orders and customers (managers only).
+  app.use('/api/sales-dashboard', requireStaff, requireRole('ADMIN', 'SALES_MANAGER'), salesDashboardRouter);
   // Warehouse expiry list (staff only; sample data until the Odoo lot sync exists).
   app.use('/api/expiry', requireStaff, requireRole('ADMIN', 'WAREHOUSE', 'SALES_MANAGER'), expiryRouter);
   // Customer-shelf alerts: rep visits and discount approvals (staff only; sample data for now).

@@ -37,6 +37,27 @@ export const api = {
     body: JSON.stringify(body),
   }).then(handle),
   ordersAwaitingDueDate: () => fetch('/api/payments/orders/awaiting-due-date').then(handle),
+  // The Sales Manager's dashboard (managers only): figures, reps, orders, customers, targets, settings, search, alerts.
+  salesSummary: (params = {}) => fetch(`/api/sales-dashboard/summary?${new URLSearchParams(params)}`).then(handle),
+  salesRep: (id, params = {}) => fetch(`/api/sales-dashboard/reps/${encodeURIComponent(id)}?${new URLSearchParams(params)}`).then(handle),
+  salesOrders: (params = {}) => fetch(`/api/sales-dashboard/orders?${new URLSearchParams(params)}`).then(handle),
+  salesCustomers: (params = {}) => fetch(`/api/sales-dashboard/customers?${new URLSearchParams(params)}`).then(handle),
+  salesCustomer: (id, params = {}) => fetch(`/api/sales-dashboard/customers/${encodeURIComponent(id)}?${new URLSearchParams(params)}`).then(handle),
+  salesTargets: (month = '') => fetch(`/api/sales-dashboard/targets?${new URLSearchParams(month ? { month } : {})}`).then(handle),
+  salesTargetHistory: () => fetch('/api/sales-dashboard/targets/history?limit=50').then(handle),
+  setSalesTarget: (body) => fetch('/api/sales-dashboard/targets', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(handle),
+  salesSettings: () => fetch('/api/sales-dashboard/settings').then(handle),
+  setSalesSettings: (body) => fetch('/api/sales-dashboard/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(handle),
+  salesSearch: (q) => fetch(`/api/sales-dashboard/search?${new URLSearchParams({ q })}`).then(handle),
+  salesNotifications: () => fetch('/api/sales-dashboard/notifications').then(handle),
   siteSettings: () => fetch('/api/site-settings').then(handle),
   workspaceSiteSettings: () => fetch('/api/admin-workspace/site-settings').then(handle),
   workspaceUpdateSiteSettings: (settings) => fetch('/api/admin-workspace/site-settings', {

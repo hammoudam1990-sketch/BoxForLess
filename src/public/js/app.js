@@ -20,6 +20,11 @@ import { renderRepCustomers } from './rep-customers.js';
 import { renderWorkspacePage, renderCategories } from './workspace.js';
 import { renderWarehouseHome, renderInventoryPage, renderMovementsPage, renderNotifications } from './warehouse.js';
 import { buildWarehouseNav } from './warehouse-nav.js';
+import {
+  renderSalesHome, renderPerformance, renderSalesTargets, renderOrdersPage, renderCustomersPage, renderSalesNotifications,
+  renderSalesSettings, renderSalesSearch,
+} from './sales-manager.js';
+import { buildSalesNav } from './sales-nav.js';
 import { renderVisits } from './visits.js';
 
 const view = document.getElementById('view');
@@ -32,11 +37,11 @@ const menuToggle = document.getElementById('menuToggle');
 // person can use. null = everything.
 const ROLE_NAV = {
   ADMIN: null,
-  SALES_MANAGER: ['access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
+  SALES_MANAGER: ['sales', 'performance', 'targets', 'orders', 'customers', 'notifications', 'sales-settings', 'search', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
   WAREHOUSE: ['warehouse', 'inventory', 'movements', 'notifications', 'products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-settings', 'workspace-data-quality'],
 };
 const ROLE_TITLE = { ADMIN: 'Administrator', SALES_MANAGER: 'Sales Manager', SALES_REP: 'Sales rep', WAREHOUSE: 'Warehouse Manager' };
-const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/access', WAREHOUSE: '#/warehouse' };
+const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/sales', WAREHOUSE: '#/warehouse' };
 let me = { role: 'ADMIN', name: 'Staff' };
 const allowed = (name) => !ROLE_NAV[me.role] || ROLE_NAV[me.role].includes(name);
 const canSee = (name) => (ROLE_NAV[me.role] || []).includes(name) || !ROLE_NAV[me.role];
@@ -54,6 +59,15 @@ async function loadMe() {
     document.body.classList.add('role-warehouse');
     document.getElementById('bellLink')?.setAttribute('href', '#/notifications');
     document.getElementById('brandHome')?.setAttribute('href', '#/warehouse');
+  }
+  if (me.role === 'SALES_MANAGER') {
+    // the Sales Manager gets the sales module's own menu, in the same design as the warehouse's
+    document.getElementById('mainNav')?.replaceWith(buildSalesNav());
+    document.body.classList.add('role-sales');
+    document.getElementById('bellLink')?.setAttribute('href', '#/notifications');
+    document.getElementById('brandHome')?.setAttribute('href', '#/sales');
+    const box = document.getElementById('gsearch');
+    if (box) { box.placeholder = 'Search orders, customers, products…'; box.setAttribute('aria-label', 'Search orders, customers, products and sales reps'); }
   }
   document.querySelectorAll('[data-nav]').forEach((a) => { if (a.dataset.nav === 'dashboard' ? me.role !== 'ADMIN' : !canSee(a.dataset.nav)) a.classList.add('hidden'); });
   // a heading with nothing visible under it (a role that sees none of those screens) is hidden too
@@ -114,6 +128,13 @@ async function refreshBadge() {
       setBadge('whNotifBadge', count || 0);
       setBadge('bellCount', count || 0);
     } catch { /* ignore */ }
+  } else if (me.role === 'SALES_MANAGER') {
+    // the sales bell and menu count every alert on the sales Notifications screen
+    try {
+      const { count } = await api.salesNotifications();
+      setBadge('smNotifBadge', count || 0);
+      setBadge('bellCount', count || 0);
+    } catch { /* ignore */ }
   } else setBadge('bellCount', reviews + access + returnsLate);
   refreshConnection();
 }
@@ -162,6 +183,12 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openSide(f
 document.getElementById('globalSearch').addEventListener('submit', (e) => {
   e.preventDefault();
   const term = document.getElementById('gsearch').value.trim();
+  // the Sales Manager searches orders, customers, products and reps together
+  if (me.role === 'SALES_MANAGER') {
+    const target = `#/search?q=${encodeURIComponent(term)}`;
+    if (location.hash === target) route(); else location.hash = target;
+    return;
+  }
   // where the inventory can be seen, the search opens it (it matches name, barcode, SKU and location); else the products
   const target = allowed('inventory') ? 'inventory' : 'products';
   try { sessionStorage.setItem(target === 'inventory' ? 'bfl.inventorySearch' : 'bfl.productSearch', term); } catch { /* storage blocked */ }
@@ -193,7 +220,14 @@ async function route() {
     else if (path === 'warehouse') { setActiveNav('warehouse'); await renderWarehouseHome(view); }
     else if (path === 'inventory') { setActiveNav('inventory'); await renderInventoryPage(view); }
     else if (path === 'movements') { setActiveNav('movements'); await renderMovementsPage(view); }
-    else if (path === 'notifications') { setActiveNav('notifications'); await renderNotifications(view); }
+    else if (path === 'notifications') { setActiveNav('notifications'); await (me.role === 'SALES_MANAGER' ? renderSalesNotifications(view) : renderNotifications(view)); }
+    else if (path === 'sales') { setActiveNav('sales'); await renderSalesHome(view); }
+    else if (path === 'performance') { setActiveNav('performance'); await renderPerformance(view, arg || null); }
+    else if (path === 'targets') { setActiveNav('targets'); await renderSalesTargets(view); }
+    else if (path === 'orders') { setActiveNav('orders'); await renderOrdersPage(view); }
+    else if (path === 'customers') { setActiveNav('customers'); await renderCustomersPage(view, arg || null); }
+    else if (path === 'sales-settings') { setActiveNav('sales-settings'); await renderSalesSettings(view); }
+    else if (path === 'search') { setActiveNav('search'); await renderSalesSearch(view); }
     else if (path === 'products' && arg) { setActiveNav('products'); await renderProductDetail(view, arg); }
     else if (path === 'products') { setActiveNav('products'); await renderProducts(view); }
     else if (path === 'imports' && arg) { setActiveNav('imports'); await renderImportDetail(view, arg); }

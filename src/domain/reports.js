@@ -55,23 +55,47 @@ export function getTarget(db, scope, scopeValue, measure, month) {
   return r ? r.value : null;
 }
 
-export function setTarget(db, { scope, scopeValue, measure, month, value }, by = null, now = new Date()) {
+/**
+ * Set (or clear) a target. Every change is kept in report_target_changes — the old value, the new one, who, when and
+ * the reason given — so a target is never overwritten without a trace. Setting the value it already has records nothing.
+ */
+export function setTarget(db, { scope, scopeValue, measure, month, value, reason }, by = null, now = new Date()) {
   if (!['COMPANY', 'REP'].includes(scope)) throw new ReportError('A target is for the company or for a rep.');
   if (!TARGET_MEASURES[measure]) throw new ReportError('That measure has no target.');
   if (month !== 'DEFAULT' && !isMonth(month)) throw new ReportError('Choose a month, or "every month".');
   if (scope === 'REP' && measure !== 'net_sales' && measure !== 'collections' && measure !== 'active_customers') throw new ReportError('A rep has targets for net sales, collections and active customers.');
   const rep = scope === 'REP' ? String(scopeValue || '').trim() : '';
   if (scope === 'REP' && !rep) throw new ReportError('Choose the rep.');
+  const old = db.prepare('SELECT value FROM report_targets WHERE scope = ? AND scope_value = ? AND measure = ? AND month = ?').get(scope, rep, measure, month);
+  const why = String(reason ?? '').trim().slice(0, 300) || null;
+  const log = (newValue) => db.prepare(`INSERT INTO report_target_changes (scope, scope_value, measure, month, old_value, new_value, reason, changed_by, changed_at)
+                                        VALUES (?,?,?,?,?,?,?,?,?)`).run(scope, rep, measure, month, old ? old.value : null, newValue, why, by, now.toISOString());
   if (value === '' || value === null || value === undefined) {
-    db.prepare('DELETE FROM report_targets WHERE scope = ? AND scope_value = ? AND measure = ? AND month = ?').run(scope, rep, measure, month);
+    if (old) {
+      db.prepare('DELETE FROM report_targets WHERE scope = ? AND scope_value = ? AND measure = ? AND month = ?').run(scope, rep, measure, month);
+      log(null);
+    }
     return { cleared: true };
   }
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0 || n > 1e12) throw new ReportError('A target is a number, 0 or more.');
+  if (old && old.value === n) return { cleared: false, value: n };
   db.prepare(`INSERT INTO report_targets (scope, scope_value, measure, month, value, set_by, set_at) VALUES (?,?,?,?,?,?,?)
               ON CONFLICT(scope, scope_value, measure, month) DO UPDATE SET value = excluded.value, set_by = excluded.set_by, set_at = excluded.set_at`)
     .run(scope, rep, measure, month, n, by, now.toISOString());
+  log(n);
   return { cleared: false, value: n };
+}
+
+/** The history of one target (newest first), or of every target when no key is given. */
+export function targetHistory(db, { scope = null, scopeValue = null, measure = 'net_sales', month = null, limit = 100 } = {}) {
+  const where = ['measure = ?'];
+  const params = [measure];
+  if (scope) { where.push('scope = ?'); params.push(scope); }
+  if (scopeValue !== null && scopeValue !== undefined) { where.push('scope_value = ?'); params.push(String(scopeValue)); }
+  if (month) { where.push('month = ?'); params.push(month); }
+  return db.prepare(`SELECT scope, scope_value AS scopeValue, measure, month, old_value AS oldValue, new_value AS newValue, reason, changed_by AS changedBy, changed_at AS changedAt
+                       FROM report_target_changes WHERE ${where.join(' AND ')} ORDER BY id DESC LIMIT ?`).all(...params, Math.min(Math.max(Number(limit) || 100, 1), 500));
 }
 
 export function listTargets(db) {
@@ -110,6 +134,9 @@ function openAt(db, day) {
       FROM odoo_invoices i WHERE i.invoice_date <= ?`).all(day, day, day)
     .map((r) => ({ ...r, due: money(r.amount - r.paid - r.credited) })).filter((r) => r.due > 0.004);
 }
+
+/** Every invoice still (partly) unpaid at the end of `day`: payments and credit notes up to that day are taken off. */
+export const openInvoicesAt = (db, day) => openAt(db, day);
 
 const isCredit = "(c.customer_type IS NULL OR c.customer_type = 'CREDIT')";
 

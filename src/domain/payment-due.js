@@ -94,13 +94,17 @@ export function setPaymentDue(db, requestId, input = {}, by = null, now = new Da
   return paymentDueFor(db, requestId);
 }
 
-/** Credit orders that are not cancelled or paid and have no due date yet: the Sales Manager's to-do list, oldest first. */
+/** The order states in which a due date is still waiting to be set: placed, not yet invoiced (an invoiced order already has Odoo's due date). */
+export const AWAITING_STATES = Object.freeze(['RECEIVED', 'WAITING_FOR_APPROVAL', 'APPROVED', 'DISPATCHED']);
+export const AWAITING_SQL = `(c.customer_type IS NULL OR c.customer_type = 'CREDIT') AND o.state IN (${AWAITING_STATES.map((x) => `'${x}'`).join(', ')})`;
+
+/** Credit orders placed and not yet invoiced that have no due date: the Sales Manager's to-do list, oldest first. */
 export function ordersAwaitingDueDate(db, limit = 50) {
   return db.prepare(`
     SELECT o.request_id AS requestId, r.reference, o.odoo_number AS odooNumber, c.name AS customer, c.salesperson AS rep,
            o.state, o.received_at AS placedAt, COALESCE(o.amount_total, o.amount_open) AS amount
       FROM odoo_orders o JOIN requests r ON r.id = o.request_id JOIN customers c ON c.id = o.customer_id
-     WHERE (c.customer_type IS NULL OR c.customer_type = 'CREDIT') AND o.state NOT IN ('CANCELLED', 'PAID')
+     WHERE ${AWAITING_SQL}
        AND NOT EXISTS (SELECT 1 FROM order_payment_due d WHERE d.order_id = o.id)
      ORDER BY o.received_at, o.id LIMIT ?`).all(Math.min(Math.max(Number(limit) || 50, 1), 500));
 }

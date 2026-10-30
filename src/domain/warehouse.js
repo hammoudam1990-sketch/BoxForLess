@@ -16,7 +16,8 @@ import { computeStockStatus } from './stock.js';
 import { StockStatus } from './constants.js';
 import { buildExpiryList, todayString } from './expiry-list.js';
 import { parseCategoryPath } from './categories.js';
-import { toDay, formatDay, ExpiryBand } from './expiry.js';
+import { ExpiryBand } from './expiry.js';
+import { periodRange as sharedPeriodRange, PeriodError } from './periods.js';
 import { reviewCounts } from './review.js';
 import { overdueUnclassified } from './returns.js';
 import { getStockSource } from './stock-source.js';
@@ -33,29 +34,15 @@ export const PERIODS = Object.freeze({
   today: 'Today', week: 'This week', month: 'This month', last_month: 'Last month', year: 'This year', custom: 'Custom range',
 });
 export const DEFAULT_PERIOD = 'week';
-const MAX_CUSTOM_DAYS = 400;
 
-/** The calendar days a period covers (both ends included), as 'YYYY-MM-DD'. A week starts on Monday. */
+/** The calendar days a period covers (both ends included), as 'YYYY-MM-DD'. A week starts on Monday (periods.js). */
 export function periodRange(period = DEFAULT_PERIOD, { from = null, to = null } = {}, today = todayString()) {
-  const key = PERIODS[period] ? period : DEFAULT_PERIOD;
-  const t = toDay(today);
-  const [y, m] = today.split('-').map(Number);
-  const day = (yy, mm, dd) => toDay(`${yy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`);
-  let start = t;
-  let end = t;
-  if (key === 'week') start = t - ((((t + 3) % 7) + 7) % 7);          // 1970-01-01 was a Thursday
-  else if (key === 'month') start = day(y, m, 1);
-  else if (key === 'last_month') { start = day(m === 1 ? y - 1 : y, m === 1 ? 12 : m - 1, 1); end = day(y, m, 1) - 1; }
-  else if (key === 'year') start = day(y, 1, 1);
-  else if (key === 'custom') {
-    const f = toDay(from);
-    const e = toDay(to);
-    if (f === null || e === null) throw new WarehouseError('Choose a start and an end date.');
-    if (f > e) throw new WarehouseError('The start date is after the end date.');
-    if (e - f > MAX_CUSTOM_DAYS) throw new WarehouseError(`Choose a range of at most ${MAX_CUSTOM_DAYS} days.`);
-    start = f; end = e;
+  try {
+    return sharedPeriodRange(period, { from, to }, today, { allowed: Object.keys(PERIODS), fallback: DEFAULT_PERIOD });
+  } catch (e) {
+    if (e instanceof PeriodError) throw new WarehouseError(e.message, e.status);
+    throw e;
   }
-  return { period: key, label: key === 'custom' ? `${formatDay(start)} to ${formatDay(end)}` : PERIODS[key], start: formatDay(start), end: formatDay(end) };
 }
 
 // ---------------------------------------------------------------------------------------------
