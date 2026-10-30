@@ -27,7 +27,7 @@ import {
 } from './sales-manager.js';
 import { buildSalesNav } from './sales-nav.js';
 import { renderVisits } from './visits.js';
-import { renderTeamPerformance, renderSalesTargets } from './sales-targets.js';
+import { renderTeamPerformance, renderSalesTargets as renderSalesTargetsPage } from './sales-targets.js';
 
 const view = document.getElementById('view');
 const side = document.getElementById('side');
@@ -227,7 +227,7 @@ async function route() {
   try {
     if (path === 'dashboard' || !path) { setActiveNav('dashboard'); await renderDashboard(view); }
     else if (path === 'team-performance') { setActiveNav('team-performance'); await renderTeamPerformance(view, routeCtx, { pageHead }); }
-    else if (path === 'sales-targets') { setActiveNav('sales-targets'); await renderSalesTargets(view, routeCtx, { pageHead }); }
+    else if (path === 'sales-targets') { setActiveNav('sales-targets'); await renderSalesTargetsPage(view, routeCtx, { pageHead }); }
     else if (path === 'warehouse') { setActiveNav('warehouse'); await renderWarehouseHome(view); }
     else if (path === 'inventory') { setActiveNav('inventory'); await renderInventoryPage(view); }
     else if (path === 'movements') { setActiveNav('movements'); await renderMovementsPage(view); }

@@ -244,11 +244,11 @@ test('12. a target set through the API carries the manager\'s name from the sess
 test('13. the sidebar\'s eight screens all have a route, and the role starts on the dashboard', () => {
   const nav = fs.readFileSync(new URL('../src/public/js/sales-nav.js', import.meta.url), 'utf8');
   const app = fs.readFileSync(new URL('../src/public/js/app.js', import.meta.url), 'utf8');
-  const main = ['sales', 'performance', 'targets', 'orders', 'customers', 'reports', 'notifications', 'sales-settings'];
+  const main = ['dashboard', 'sales', 'team-performance', 'sales-targets', 'orders', 'customers', 'reports', 'notifications', 'sales-settings'];
   for (const r of main) {
     assert.match(nav, new RegExp(`link\\('#/${r}', '${r}'`), `${r} is in the menu`);
     assert.match(app, new RegExp(`path === '${r}'`), `${r} has a route`);
   }
-  assert.match(app, /SALES_MANAGER: '#\/sales'/);
+  assert.match(app, /SALES_MANAGER: '#\/dashboard'/);
   assert.match(nav, /Grow Together/);
 });
