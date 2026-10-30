@@ -559,6 +559,66 @@ export function applyMigrations(db) {
       updated_by TEXT
     )`);
 
+  // Products filed by name because the Odoo export had no category (domain/category-guess.js): every move is logged.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS category_guess_log (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+      barcode    TEXT,
+      old_path   TEXT,
+      new_path   TEXT NOT NULL,
+      reason     TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )`);
+
+  // The payment due date the Sales Manager sets for an order after the purchase (domain/payment-due.js). BFL's own
+  // record: it drives reminders and what the customer is told to pay by; it is never written to Odoo. One current date
+  // per order, and every change kept with who, when and why.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS order_payment_due (
+      order_id   INTEGER PRIMARY KEY REFERENCES odoo_orders(id) ON DELETE RESTRICT,
+      due_date   TEXT NOT NULL,
+      set_by     TEXT,
+      set_at     TEXT NOT NULL
+    )`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS order_payment_due_changes (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id   INTEGER NOT NULL REFERENCES odoo_orders(id) ON DELETE RESTRICT,
+      old_date   TEXT,
+      new_date   TEXT NOT NULL,
+      reason     TEXT,
+      changed_by TEXT,
+      changed_at TEXT NOT NULL
+    )`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_payment_due_changes_order ON order_payment_due_changes(order_id)');
+
+  // Sales targets keep their history: report_targets holds the current value, this table every change (who, when, why).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS report_target_changes (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      scope       TEXT NOT NULL,
+      scope_value TEXT NOT NULL,
+      measure     TEXT NOT NULL,
+      month       TEXT NOT NULL,
+      old_value   REAL,
+      new_value   REAL,
+      reason      TEXT,
+      changed_by  TEXT,
+      changed_at  TEXT NOT NULL
+    )`);
+  db.exec('CREATE INDEX IF NOT EXISTS ix_target_changes_key ON report_target_changes(scope, scope_value, measure, month)');
+
+  // The Sales Manager dashboard's team-performance thresholds (domain/sales-dashboard.js). One row.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sales_dashboard_settings (
+      id            INTEGER PRIMARY KEY CHECK (id = 1),
+      on_track_pct  REAL NOT NULL,
+      at_risk_pct   REAL NOT NULL,
+      updated_by    TEXT,
+      updated_at    TEXT NOT NULL
+    )`);
+
 }
 
 /** Seed default administrators if absent so any cloned repo works out of the box */
