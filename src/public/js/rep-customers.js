@@ -31,7 +31,7 @@ export async function renderRepCustomers(view) {
       [h('option', { value: '' }, '— no rep —'), ...data.reps.map((r) => h('option', { value: r.id }, r.name))]);
     row.sel.value = c.repId || '';
     row.tr = h('tr', null,
-      h('td', null, h('b', null, c.name), c.kind === 'SHOP' ? h('span', { class: 'badge' }, ' SHELF') : null),
+      h('td', null, h('b', null, c.name)),
       h('td', null, c.odooId || '—'),
       h('td', { class: 'muted' }, c.kind === 'SHOP' ? 'Shelf-monitored shop' : c.customerType === 'CASH' ? 'Cash customer' : 'Credit customer'),
       h('td', null, row.sel));
