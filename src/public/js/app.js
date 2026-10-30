@@ -53,7 +53,7 @@ async function loadMe() {
   try {
     const r = await (await fetch('/api/auth/me')).json();
     if (!r.staff) { location.assign('/staff/login'); return false; }
-    if (r.staff.mustChangePassword) { location.assign('/staff/login?change=1'); return false; }
+    if (r.staff.mustChangePassword) { location.assign(`/staff/login?change=1&accountRole=${encodeURIComponent(r.staff.role)}`); return false; }
     me = { role: r.staff.role, name: r.staff.name };
   } catch { /* keep the default; the server still enforces everything */ }
   if (me.role === 'WAREHOUSE') {

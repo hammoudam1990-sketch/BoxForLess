@@ -175,6 +175,7 @@ button { touch-action: manipulation; }
 
 .login-form { display: grid; gap: 13px; }
 .form-field { display: grid; gap: 5px; }
+.form-field[hidden] { display: none; }
 .form-field label { color: #294562; font-size: 11px; font-weight: 680; }
 .input-wrap { position: relative; }
 .input-wrap input {

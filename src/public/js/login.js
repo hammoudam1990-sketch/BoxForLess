@@ -133,6 +133,7 @@ form.addEventListener('submit', async (event) => {
       if (account.mustChangePassword) {
         showMessage('Sign-in successful. Choose a new password to continue…', 'success');
         navigating = true;
+        sessionStorage.setItem('bfl.oneTime', password.value);
         location.assign(`/signin.html?role=staff&accountRole=${encodeURIComponent(account.role)}`);
         return;
       }

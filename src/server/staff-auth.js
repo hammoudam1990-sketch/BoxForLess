@@ -154,6 +154,15 @@ export function staffIdentity(req) {
 
 export const hasStaffSession = (req) => Boolean(staffIdentity(req));
 
+/** Every valid staff session in this browser (one per role), so a page can pick the one it is for. */
+function allStaffIdentities(req) {
+  const config = settings();
+  if (!config) return [];
+  return [...Object.values(ROLE_COOKIES), LEGACY_COOKIE_NAME]
+    .map((name) => identityFromCookie(req, name, config)?.identity)
+    .filter(Boolean);
+}
+
 function sendConfigError(res) {
   return res.status(503).json({ error: 'Staff login is not configured on this server.' });
 }
@@ -277,8 +286,17 @@ export function privatePageFor(...roles) {
   return (req, res, next) => {
     res.setHeader('Cache-Control', 'no-store');
     const who = staffIdentity(req);
+    // With several roles signed in and nothing saying which one this tab is for, take the one this page
+    // serves and pin it in the address, so every request from this tab keeps using that same account.
+    const signedIn = who && !explicitRoleHint(req) ? allStaffIdentities(req) : [];
+    const mine = signedIn.length > 1 && signedIn.find((s) => roles.includes(s.role) && !s.mustChangePassword);
+    if (mine) {
+      const url = new URL(req.originalUrl, 'http://x');
+      url.searchParams.set('role', mine.role);
+      return res.redirect(`${url.pathname}${url.search}`);
+    }
     if (!who) return res.redirect(`/staff/login?next=${encodeURIComponent(req.path)}`);
-    if (who.mustChangePassword) return res.redirect('/staff/login?change=1');
+    if (who.mustChangePassword) return res.redirect(`/staff/login?change=1&accountRole=${encodeURIComponent(who.role)}`);
     if (!roles.includes(who.role)) {
       const home = ROLE_HOME[who.role] || '/';
       return res.redirect(`${home}${home.includes('?') ? '&' : '?'}role=${encodeURIComponent(who.role)}`);

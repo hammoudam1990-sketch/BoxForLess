@@ -164,7 +164,7 @@ export function createApp(db) {
   // The unified sign-in page is the front door. Keep the older form only for
   // staff who must choose a new password after their first sign-in.
   const signInPage = (_req, res) => { res.setHeader('Cache-Control', 'no-store'); res.sendFile(path.join(publicDir, 'login.html')); };
-  const passwordChangePage = (_req, res) => { res.setHeader('Cache-Control', 'no-store'); res.sendFile(path.join(publicDir, 'signin.html')); };
+  const passwordChangePage = (_req, res) => { res.setHeader('Cache-Control', 'no-store'); res.sendFile(path.join(publicDir, 'change-password.html')); };
   app.get('/', signInPage);
   app.get('/login.html', signInPage);
   app.get('/staff/login', (req, res) => req.query.change === '1' ? passwordChangePage(req, res) : signInPage(req, res));
