@@ -1043,3 +1043,13 @@ body.rep-page .topbar {
 .rep-orders-table { margin-bottom: 10px; font-size: 12.5px; }
 .rep-orders-table th, .rep-orders-table td { padding: 8px 9px; }
 .rep-orders-table td:last-child, .rep-orders-table th:last-child { text-align: right; }
+
+/* desktop: use the screen instead of a phone-width column */
+@media (min-width: 900px) {
+  .rep-wrap { max-width: 1280px; padding: 24px clamp(24px, 4vw, 48px) 80px; }
+  .rep-shop-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; align-items: start; }
+  .rep-shop-list > .rep-shop { margin: 0; }
+  .rep-shop-list > .rep-empty { grid-column: 1 / -1; }
+  .rep-kpi-grid, .rep-quick { gap: 16px; }
+  .rep-figs { grid-template-columns: repeat(4, 1fr); }
+}

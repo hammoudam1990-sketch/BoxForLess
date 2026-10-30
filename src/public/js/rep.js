@@ -148,7 +148,7 @@ const toolbar = h('div', { class: 'rep-toolbar' },
   h('div', { class: 'rep-sort-wrap' }, h('span', null, 'Sort:'), sortSelect));
 
 const totals = h('p', { class: 'rep-totals', role: 'status' });
-const listBox = h('div');
+const listBox = h('div', { class: 'rep-shop-list' });
 
 // "My month": a sales rep's own customers and figures, nothing company-wide (shown to reps only)
 const monthHero = h('div', { class: 'bfl-hero-grid rep-hero hidden', 'aria-label': 'My target and sales this month' });
