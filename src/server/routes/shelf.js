@@ -10,6 +10,7 @@ import { requireRole } from '../staff-auth.js';
 import { listReps, myVisits, visitSheet, recordVisit, listVisits, approvals, decideDiscount, recordCreditNote, shelfLotDiscounts, saveShelfLotDiscount } from '../../domain/shelf.js';
 import { LotDiscountError } from '../../domain/lot-discounts.js';
 import { todayString } from '../../domain/expiry-list.js';
+import { buildExpiryList } from '../../domain/expiry-list.js';
 
 const router = express.Router();
 const rep = (req) => (req.staff?.role === 'SALES_REP' ? String(req.staff.repId ?? '') : String((req.method === 'GET' ? req.query.rep : req.body?.rep) ?? ''));
@@ -21,6 +22,22 @@ router.get('/reps', repScreens, (req, res, next) => {
     // a rep sees only themselves in the list
     const all = listReps(todayString(), req.db);
     res.json({ source: 'DATABASE', reps: req.staff?.role === 'SALES_REP' ? all.filter((r) => r.id === req.staff.repId) : all });
+  } catch (e) { next(e); }
+});
+
+// Expiry lots the Sales Manager has pushed to this rep. Read-only, the rep's own lots only, no money figures.
+router.get('/my-assignments', requireRole('SALES_REP'), (req, res, next) => {
+  try {
+    const me = listReps(todayString(), req.db).find((r) => r.id === String(req.staff?.repId ?? ''));
+    const name = (me?.name || req.staff?.name || '').trim().toLowerCase();
+    const items = !name ? [] : buildExpiryList(req.db, {}).rows
+      .filter((r) => r.action === 'PUSH_THROUGH_REPS' && (r.owner || '').trim().toLowerCase() === name && r.status !== 'DONE')
+      .map((r) => ({
+        key: r.key, productName: r.productName, barcode: r.barcode, lotName: r.lotName, expiryDate: r.expiryDate,
+        daysLeft: r.daysLeft, band: r.band, cartons: r.cartons, shopName: r.shopName, location: r.location,
+        decideBy: r.decideBy, status: r.status, discountPct: r.discountPct,
+      }));
+    res.json({ items });
   } catch (e) { next(e); }
 });
 

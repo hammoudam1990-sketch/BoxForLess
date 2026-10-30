@@ -154,6 +154,7 @@ const listBox = h('div', { class: 'rep-shop-list' });
 const monthHero = h('div', { class: 'bfl-hero-grid rep-hero hidden', 'aria-label': 'My target and sales this month' });
 const monthCard = h('div', { class: 'card rep-month hidden' });
 const recentOrdersCard = h('div', { class: 'card rep-month hidden' });
+const assignedCard = h('div', { class: 'card rep-assigned hidden', role: 'region', 'aria-label': 'Tasks assigned to you' });
 const repBroadcastBox = h('div', { class: 'rep-broadcast-banner hidden' });
 
 /** "Good morning" / "Good afternoon" / "Good evening" for the local hour. */
@@ -188,6 +189,7 @@ const listView = h('section', { 'aria-label': 'My visits' },
   monthHero,
   monthCard,
   quickActions,
+  assignedCard,
   recentOrdersCard,
   h('div', { class: 'card rep-as', id: 'repAs' },
     h('div', { class: 'rep-as-head' }, 'Visiting as'),
@@ -754,6 +756,30 @@ const placedText = (iso) => {
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
+// Lots the Sales Manager has pushed to this rep (a sales rep only; the card stays hidden when there are none).
+function loadAssignments() {
+  return fetch('/api/shelf/my-assignments', { headers: { Accept: 'application/json' } })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+    .then(({ items }) => {
+      if (!items.length) { assignedCard.classList.add('hidden'); return; }
+      const fmt = (iso) => (iso ? new Date(`${String(iso).slice(0, 10)}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—');
+      setChildren(assignedCard,
+        h('h2', null, `New task: ${items.length} expiring ${items.length === 1 ? 'lot' : 'lots'} assigned to you`),
+        h('p', { class: 'rep-note' }, 'Your Sales Manager asked you to push these lots to customers before they expire.'),
+        h('div', { class: 'bfl-table-wrap' }, h('table', { class: 'bfl-table' },
+          h('thead', null, h('tr', null, ['Product', 'Lot', 'Expires', 'Where', 'Decide by'].map((t) => h('th', null, t)), h('th', { class: 'num' }, 'Cartons'))),
+          h('tbody', null, items.map((i) => h('tr', null,
+            h('td', { class: 'primary-text' }, i.productName, h('div', { class: 'rep-note' }, i.barcode)),
+            h('td', null, i.lotName),
+            h('td', null, `${fmt(i.expiryDate)}${i.daysLeft === null ? '' : ` (${i.daysLeft < 0 ? 'expired' : `${i.daysLeft} days left`})`}`),
+            h('td', null, i.location === 'SHOP' ? (i.shopName || 'Customer shop') : 'Warehouse'),
+            h('td', null, fmt(i.decideBy)),
+            h('td', { class: 'num' }, String(i.cartons ?? '—'))))))));
+      assignedCard.classList.remove('hidden');
+    })
+    .catch(() => { /* a bonus panel; the page works without it */ });
+}
+
 function loadRecentOrders() {
   return fetch('/api/rep-orders/mine', { headers: { Accept: 'application/json' } })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
@@ -822,6 +848,7 @@ function loadRecentOrders() {
         quickActions.classList.remove('hidden');
         repGreeting.textContent = `${greeting()}, ${reps[0].name.split(' ')[0]}`;
         loadMyMonth();
+        loadAssignments();
         loadRecentOrders();
         const sub = document.querySelector('.brand-sub');
         if (sub) sub.textContent = `Sales Representative · ${reps[0].name}`;

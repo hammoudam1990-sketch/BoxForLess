@@ -1053,3 +1053,7 @@ body.rep-page .topbar {
   .rep-kpi-grid, .rep-quick { gap: 16px; }
   .rep-figs { grid-template-columns: repeat(4, 1fr); }
 }
+
+.rep-assigned { border-left: 5px solid var(--orange, #f59e0b); }
+.rep-assigned h2 { margin: 0 0 4px; }
+
