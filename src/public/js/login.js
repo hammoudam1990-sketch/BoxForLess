@@ -99,9 +99,8 @@ form.addEventListener('submit', async (event) => {
       return;
     }
 
-    if (customerRes.status === 429) {
-      throw new Error('Too many sign-in attempts. Please wait 15 minutes and try again.');
-    }
+    // A busy customer or legacy-role check must not block a staff account: only the staff step below can refuse for good.
+    const probeLimited = customerRes.status === 429;
 
     const staffRes = await fetch('/api/auth/login', {
       method: 'POST',
@@ -118,9 +117,7 @@ form.addEventListener('submit', async (event) => {
       return;
     }
 
-    if (staffRes.status === 429) {
-      throw new Error('Too many sign-in attempts. Please wait 15 minutes and try again.');
-    }
+    const probeLimitedAny = probeLimited || staffRes.status === 429;
 
     const accountRes = await fetch('/api/staff/login', {
       method: 'POST',
@@ -170,6 +167,9 @@ form.addEventListener('submit', async (event) => {
     }
 
     const accountData = await accountRes.json().catch(() => ({}));
+    if (probeLimitedAny && accountRes.status === 401) {
+      throw new Error('Too many sign-in attempts. Please wait 15 minutes and try again.');
+    }
     throw new Error(accountData.error || 'The Customer ID, work email or password is not correct.');
   } catch (error) {
     showMessage(error instanceof TypeError
