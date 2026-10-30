@@ -72,11 +72,9 @@ export async function renderExpiry(view) {
   });
   const categorySel = h('select', { 'aria-label': 'Category', onChange: () => { state.category = categorySel.value; load(); } });
   const locationSel = select([
-    ['', 'All stock (Warehouse & Shop)'],
-    ['WAREHOUSE', 'Warehouse stock only'],
-    ['MAIN', 'Main warehouse'],
-    ['CLEARANCE', 'Clearance warehouse'],
-    ['SHOP', 'Customer shop stock'],
+    ['', 'All stock'],
+    ['WAREHOUSE', 'Warehouse'],
+    ['SHOP', 'Customer shop'],
   ], '', {
     'aria-label': 'Stock location (Warehouse vs Shop)', onChange: () => { state.location = locationSel.value; load(); },
   });
