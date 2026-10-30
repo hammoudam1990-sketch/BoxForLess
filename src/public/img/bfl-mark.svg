@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Box for Less">
+  <!-- The Box for Less mark (the open box with the arrow from img/logo.png), redrawn as a vector in the corporate navy and blue. -->
+  <path d="M8 18.5 24 26.5l16-8M24 26.5V43M8 18.5V34l16 9 16-9V18.5M8 18.5l4.5-8.5L24 15.5 35.5 10 40 18.5" fill="none" stroke="#103D73" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M24 24V13.5M19.5 17.5 24 13l4.5 4.5" fill="none" stroke="#1765B5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -18,7 +18,8 @@ import { renderReturns } from './returns.js';
 import { renderHealth } from './health.js';
 import { renderRepCustomers } from './rep-customers.js';
 import { renderWorkspacePage, renderCategories } from './workspace.js';
-import { renderWarehouseHome } from './warehouse.js';
+import { renderWarehouseHome, renderInventoryPage, renderMovementsPage, renderNotifications } from './warehouse.js';
+import { buildWarehouseNav } from './warehouse-nav.js';
 import { renderVisits } from './visits.js';
 
 const view = document.getElementById('view');
@@ -32,8 +33,9 @@ const menuToggle = document.getElementById('menuToggle');
 const ROLE_NAV = {
   ADMIN: null,
   SALES_MANAGER: ['access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
-  WAREHOUSE: ['warehouse', 'products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-data-quality'],
+  WAREHOUSE: ['warehouse', 'inventory', 'movements', 'notifications', 'products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-settings', 'workspace-data-quality'],
 };
+const ROLE_TITLE = { ADMIN: 'Administrator', SALES_MANAGER: 'Sales Manager', SALES_REP: 'Sales rep', WAREHOUSE: 'Warehouse Manager' };
 const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/access', WAREHOUSE: '#/warehouse' };
 let me = { role: 'ADMIN', name: 'Staff' };
 const allowed = (name) => !ROLE_NAV[me.role] || ROLE_NAV[me.role].includes(name);
@@ -46,6 +48,13 @@ async function loadMe() {
     if (r.staff.mustChangePassword) { location.assign('/staff/login?change=1'); return false; }
     me = { role: r.staff.role, name: r.staff.name };
   } catch { /* keep the default; the server still enforces everything */ }
+  if (me.role === 'WAREHOUSE') {
+    // the Warehouse Manager gets the warehouse module's own menu in place of the main one
+    document.getElementById('mainNav')?.replaceWith(buildWarehouseNav());
+    document.body.classList.add('role-warehouse');
+    document.getElementById('bellLink')?.setAttribute('href', '#/notifications');
+    document.getElementById('brandHome')?.setAttribute('href', '#/warehouse');
+  }
   document.querySelectorAll('[data-nav]').forEach((a) => { if (a.dataset.nav === 'dashboard' ? me.role !== 'ADMIN' : !canSee(a.dataset.nav)) a.classList.add('hidden'); });
   // a heading with nothing visible under it (a role that sees none of those screens) is hidden too
   document.querySelectorAll('.adm-nav .adm-label, #side .adm-label').forEach((label) => {
@@ -56,7 +65,7 @@ async function loadMe() {
   const who = document.getElementById('staffName');
   if (who) who.textContent = me.role === 'ADMIN' ? 'Administrator' : me.name;
   const roleEl = document.getElementById('staffRole');
-  if (roleEl) roleEl.textContent = ({ ADMIN: 'Administrator', SALES_MANAGER: 'Sales Manager', SALES_REP: 'Sales rep', WAREHOUSE: 'Warehouse' })[me.role] || 'Staff account';
+  if (roleEl) roleEl.textContent = ROLE_TITLE[me.role] || 'Staff account';
   return true;
 }
 
@@ -98,7 +107,14 @@ async function refreshBadge() {
     returnsLate = (await api.returnsAlert()).overdue || 0;
     setBadge('returnsBadge', returnsLate);
   } catch { /* ignore */ }
-  setBadge('bellCount', reviews + access + returnsLate);
+  if (me.role === 'WAREHOUSE') {
+    // the warehouse bell and menu count every alert on the Notifications screen
+    try {
+      const { count } = await api.warehouseNotifications();
+      setBadge('whNotifBadge', count || 0);
+      setBadge('bellCount', count || 0);
+    } catch { /* ignore */ }
+  } else setBadge('bellCount', reviews + access + returnsLate);
   refreshConnection();
 }
 
@@ -146,9 +162,11 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openSide(f
 document.getElementById('globalSearch').addEventListener('submit', (e) => {
   e.preventDefault();
   const term = document.getElementById('gsearch').value.trim();
-  try { sessionStorage.setItem('bfl.productSearch', term); } catch { /* storage blocked */ }
-  if (location.hash === '#/products') route();
-  else location.hash = '#/products';
+  // where the inventory can be seen, the search opens it (it matches name, barcode, SKU and location); else the products
+  const target = allowed('inventory') ? 'inventory' : 'products';
+  try { sessionStorage.setItem(target === 'inventory' ? 'bfl.inventorySearch' : 'bfl.productSearch', term); } catch { /* storage blocked */ }
+  if (location.hash.split('?')[0] === `#/${target}`) route();
+  else location.hash = `#/${target}`;
 });
 // "/" focuses the search, unless someone is already typing somewhere
 document.addEventListener('keydown', (e) => {
@@ -173,6 +191,9 @@ async function route() {
   try {
     if (path === 'dashboard' || !path) { setActiveNav('dashboard'); await renderDashboard(view); }
     else if (path === 'warehouse') { setActiveNav('warehouse'); await renderWarehouseHome(view); }
+    else if (path === 'inventory') { setActiveNav('inventory'); await renderInventoryPage(view); }
+    else if (path === 'movements') { setActiveNav('movements'); await renderMovementsPage(view); }
+    else if (path === 'notifications') { setActiveNav('notifications'); await renderNotifications(view); }
     else if (path === 'products' && arg) { setActiveNav('products'); await renderProductDetail(view, arg); }
     else if (path === 'products') { setActiveNav('products'); await renderProducts(view); }
     else if (path === 'imports' && arg) { setActiveNav('imports'); await renderImportDetail(view, arg); }

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 56" role="img" aria-label="Box for Less — Wholesale Made Simple">
+  <!-- The full Box for Less logo (mark + wordmark + tagline) for white backgrounds: documents, reports, sign-in. -->
+  <g transform="translate(2 4)">
+    <path d="M8 18.5 24 26.5l16-8M24 26.5V43M8 18.5V34l16 9 16-9V18.5M8 18.5l4.5-8.5L24 15.5 35.5 10 40 18.5" fill="none" stroke="#103D73" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M24 24V13.5M19.5 17.5 24 13l4.5 4.5" fill="none" stroke="#1765B5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="56" y="29" fill="#103D73" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif" font-size="23" font-weight="800" letter-spacing="1.2">BOX FOR LESS</text>
+  <text x="57" y="46" fill="#64748B" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif" font-size="12.5" font-weight="600" letter-spacing="0.6">Wholesale Made Simple</text>
+</svg>

@@ -4,9 +4,9 @@
    styles.css. Dark mode: the html[data-theme="dark"] block at the end. */
 
 body.adm {
-  --a-navy: #0b2341;
+  --a-navy: #103d73;          /* solid navy (Box for Less brand) */
   --a-navy-2: #12305a;
-  --a-blue: #1a63d6;          /* 5.2:1 with white */
+  --a-blue: #1765b5;          /* 5.6:1 with white */
   --a-blue-soft: #e8f0fd;
   --a-green: #16a34a;
   --a-green-soft: #e6f6ec;
@@ -53,8 +53,8 @@ body.adm {
   scrollbar-width: thin; scrollbar-color: #2a4670 transparent;
 }
 .adm-brand { display: flex; align-items: center; gap: 11px; padding: 2px 10px 20px; color: #fff; text-decoration: none; }
-.adm-brand svg { width: 40px; height: 40px; flex: none; }
-.adm-brand b { display: block; font-size: 21px; line-height: 1.1; letter-spacing: -.02em; }
+.adm-brand svg, .adm-brand img { width: 40px; height: 40px; flex: none; }
+.adm-brand b { display: block; font-size: 17px; font-weight: 800; line-height: 1.1; letter-spacing: .04em; }
 .adm-brand small { display: block; margin-top: 2px; color: #b7c7dc; font-size: 12px; white-space: nowrap; }
 
 .adm-nav { display: flex; flex-direction: column; gap: 2px; }
@@ -66,7 +66,7 @@ body.adm {
 }
 .adm-nav a svg { width: 21px; height: 21px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .adm-nav a:hover { background: rgba(255, 255, 255, .07); color: #fff; }
-.adm-nav a.active { background: var(--a-blue); color: #fff; font-weight: 650; box-shadow: 0 6px 16px rgba(26, 99, 214, .35); }
+.adm-nav a.active { background: var(--a-blue); color: #fff; font-weight: 650; }
 .adm-nav a .badge {
   margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; display: inline-grid; place-items: center;
   border-radius: 999px; background: #ef4444; color: #fff; font-size: 12px; font-weight: 700;
@@ -164,10 +164,8 @@ body.adm {
   box-shadow: var(--shadow); transition: transform .15s ease, box-shadow .15s ease;
 }
 .ad-kpi:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15, 36, 64, .1); }
-.ad-kpi-blue { background: linear-gradient(135deg, #fff 30%, #eef4fe); }
-.ad-kpi-green { background: linear-gradient(135deg, #fff 30%, #ecf8f1); }
-.ad-kpi-purple { background: linear-gradient(135deg, #fff 30%, #f4effe); }
-.ad-kpi-amber { background: linear-gradient(135deg, #fff 30%, #fdf4e7); }
+/* solid cards: the colour lives in each card's icon, not a gradient wash */
+.ad-kpi-blue, .ad-kpi-green, .ad-kpi-purple, .ad-kpi-amber { background: var(--panel); }
 .ad-kpi-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; color: #fff; }
 .ad-kpi > span:last-child { min-width: 0; }
 .ad-kpi-icon svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

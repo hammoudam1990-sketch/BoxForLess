@@ -24,6 +24,11 @@ export const api = {
   workspaceStockExpiry: (band = 'all') =>
     fetch(`/api/admin-workspace/stock-expiry?band=${encodeURIComponent(band)}`).then(handle),
   workspaceDataQuality: () => fetch('/api/admin-workspace/data-quality').then(handle),
+  // The Warehouse Manager's dashboard (read-only): KPIs, inventory, stock movements, alerts.
+  warehouseSummary: (params = {}) => fetch(`/api/warehouse/summary?${new URLSearchParams(params)}`).then(handle),
+  warehouseInventory: (params = {}) => fetch(`/api/warehouse/inventory?${new URLSearchParams(params)}`).then(handle),
+  warehouseMovements: (params = {}) => fetch(`/api/warehouse/movements?${new URLSearchParams(params)}`).then(handle),
+  warehouseNotifications: () => fetch('/api/warehouse/notifications').then(handle),
   siteSettings: () => fetch('/api/site-settings').then(handle),
   workspaceSiteSettings: () => fetch('/api/admin-workspace/site-settings').then(handle),
   workspaceUpdateSiteSettings: (settings) => fetch('/api/admin-workspace/site-settings', {

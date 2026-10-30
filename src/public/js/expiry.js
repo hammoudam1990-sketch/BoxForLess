@@ -35,7 +35,10 @@ function select(options, value, props = {}) {
 }
 
 export async function renderExpiry(view) {
-  const state = { band: '', category: '', location: '', owner: '', status: '', q: '' };
+  // a link may open the list already filtered: #/expiry?band=EXPIRED, or several bands: ?band=CRITICAL,WARNING
+  const bandParam = String(new URLSearchParams(location.hash.split('?')[1] || '').get('band') || '').toUpperCase()
+    .split(',').filter((b) => BANDS.some(([code]) => code === b)).join(',');
+  const state = { band: bandParam, category: '', location: '', owner: '', status: '', q: '' };
   const latest = createLatest();
   // only the Sales Manager (or the administrator) sets the discount customers are offered on a lot
   const me = await fetch('/api/auth/me').then((r) => r.json()).catch(() => ({}));
@@ -174,7 +177,8 @@ export async function renderExpiry(view) {
     count.textContent = data.shown === data.summary.lots
       ? `${plural(data.shown, 'lot')}`
       : `${data.shown} of ${plural(data.summary.lots, 'lot')}`;
-    for (const [code, t] of tiles) t.button.setAttribute('aria-pressed', String(state.band === code));
+    for (const [code, t] of tiles) t.button.setAttribute('aria-pressed', String(state.band.split(',').includes(code)));
+    if (bandSel.value !== state.band) bandSel.value = BANDS.some(([c]) => c === state.band) ? state.band : '';
   }
 
   function paintSummary() {
