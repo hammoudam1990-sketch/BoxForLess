@@ -281,6 +281,12 @@ body { color: var(--p-ink); }
 .p-page > h1, .p-page-head h1 { margin: 0; color: var(--p-ink); font-size: 28px !important; font-weight: 800; letter-spacing: -.02em; }
 .p-page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .p-page-head p { margin: 4px 0 0; color: var(--p-muted); font-size: 15px !important; }
+/* the customer's own downloads: statement (PDF, CSV) beside the title, a PDF link on each invoice */
+.p-page-head { flex-wrap: wrap; }
+.p-downloads { display: flex; flex-wrap: wrap; gap: 8px; }
+.p-downloads .p-btn { min-height: 40px; padding: 0 14px; font-size: 14px !important; box-shadow: none; }
+.p-invoice-pdf { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.p-invoice-pdf svg { width: 15px; height: 15px; }
 .p-page .p-sample-note { margin: -8px 0 0; }
 .p-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .p-tile { padding: 16px; border: 1px solid var(--p-line); border-radius: 8px; background: #fff; box-shadow: var(--p-shadow); }

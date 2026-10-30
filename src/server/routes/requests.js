@@ -27,6 +27,7 @@ import { listPending, outboxSummary } from '../../domain/outbox.js';
 import { pricesForCustomer } from '../../domain/prices.js';
 import { clearanceOffersFor } from '../../domain/lot-discounts.js';
 import { listOrdersFor, accountFor, checkCredit } from '../../domain/orders.js';
+import { invoicePdf, statementPdf, statementCsv, DocumentError } from '../../domain/customer-documents.js';
 import { resetCustomerPassword, setOdooCustomerId, CustomerAuthError } from '../../domain/customer-auth.js';
 import { issueAccessCode, listCustomerCodes, formatAccessCode } from '../../domain/access-codes.js';
 import { lanAddresses } from '../net.js';
@@ -118,6 +119,37 @@ customerRouter.get('/orders', requireCustomer, (req, res, next) => {
 // GET /api/catalog/account — MY balance as Odoo reports it (a cash customer has none).
 customerRouter.get('/account', requireCustomer, (req, res, next) => {
   try { res.json({ source: 'SAMPLE', ...accountFor(req.db, req.customer.id) }); } catch (e) { next(e); }
+});
+
+// Downloads for MY account: a copy of one of my invoices (PDF) and my account statement (PDF or CSV). The customer is the
+// session's; an invoice number that is not mine is "not found". A cash account has nothing to download.
+const sendDocumentError = (e, res, next) => (e instanceof DocumentError ? res.status(e.status).json({ error: e.message }) : next(e));
+const attachment = (res, type, filename) => {
+  res.setHeader('Content-Type', type);
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+};
+customerRouter.get('/invoices/:number/pdf', requireCustomer, (req, res, next) => {
+  try {
+    const doc = invoicePdf(req.db, req.customer.id, String(req.params.number || '').slice(0, 64), new Date().toISOString().slice(0, 10));
+    attachment(res, 'application/pdf', doc.filename);
+    res.end(doc.buffer);
+  } catch (e) { sendDocumentError(e, res, next); }
+});
+customerRouter.get('/statement.pdf', requireCustomer, (req, res, next) => {
+  try {
+    const doc = statementPdf(req.db, req.customer.id, new Date().toISOString().slice(0, 10));
+    attachment(res, 'application/pdf', doc.filename);
+    res.end(doc.buffer);
+  } catch (e) { sendDocumentError(e, res, next); }
+});
+customerRouter.get('/statement.csv', requireCustomer, (req, res, next) => {
+  try {
+    const doc = statementCsv(req.db, req.customer.id, new Date().toISOString().slice(0, 10));
+    attachment(res, 'text/csv; charset=utf-8', doc.filename);
+    res.end(doc.text);
+  } catch (e) { sendDocumentError(e, res, next); }
 });
 
 // GET /api/catalog/profile — MY contact & account profile for the Settings screen (no internal id, code, or price class).

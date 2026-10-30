@@ -27,6 +27,7 @@ const PATHS = {
   wallet: 'M4 7h15a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a2 2 0 0 1 2-2h11v3M16 13.5h.01',
   help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01',
   lock: 'M6 11h12v10H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3',
+  download: 'M12 3v12M7 10l5 5 5-5M4 19h16',
 };
 const icon = (name) => svg(`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${PATHS[name]}"/></svg>`);
 const link = (href, text, cls = 'p-link') => h('a', { class: cls, href }, text, ' ', icon('arrow'));
@@ -225,8 +226,16 @@ function needsSignIn(container, title) {
   return { destroy() {} };
 }
 
-const pageHead = (title, sub) => h('div', { class: 'p-page-head' },
-  h('div', {}, h('h1', {}, title), sub ? h('p', {}, sub) : null), sampleTag());
+const pageHead = (title, sub, actions = null) => h('div', { class: 'p-page-head' },
+  h('div', {}, h('h1', {}, title), sub ? h('p', {}, sub) : null), sampleTag(), actions);
+
+// Downloads of the signed-in customer's own documents (the server takes the customer from the session).
+const STATEMENT_PDF = '/api/catalog/statement.pdf';
+const STATEMENT_CSV = '/api/catalog/statement.csv';
+const invoicePdfUrl = (ref) => `/api/catalog/invoices/${encodeURIComponent(ref)}/pdf`;
+const statementButtons = () => h('div', { class: 'p-downloads' },
+  h('a', { class: 'p-btn', href: STATEMENT_PDF, download: '' }, icon('download'), 'Download statement (PDF)'),
+  h('a', { class: 'p-btn p-btn-ghost', href: STATEMENT_CSV, download: '' }, 'Excel / CSV'));
 
 const table = (head, rows) => h('div', { class: 'p-table-wrap' },
   h('table', { class: 'p-table' },
@@ -271,7 +280,7 @@ export function mountBalance(container) {
   const tile = (label, value, tone = '') => h('div', { class: `p-tile ${tone}` }, h('span', {}, label), h('b', {}, money(value)));
   const invoices = invoiceList().filter((i) => i.open > 0);
   setChildren(container, h('div', { class: 'p-page' },
-    pageHead('Account Balance', 'Your live credit position, open invoices, and available limit.'),
+    pageHead('Account Balance', 'Your live credit position, open invoices, and available limit.', statementButtons()),
     h('div', { class: 'p-tiles' },
       tile('Available Credit', a.available, 'green'),
       tile('Credit Limit', a.creditLimit),
@@ -292,12 +301,13 @@ export function mountInvoices(container) {
   const invoices = invoiceList();
   const tone = { open: 'blue', overdue: 'red', paid: 'green' };
   setChildren(container, h('div', { class: 'p-page' },
-    pageHead('Invoices', 'Your invoices and payment status.'),
-    card('', invoices.length ? table(['Invoice', 'Order', 'Date', 'Pay by', 'Amount', 'Open', 'Status'],
+    pageHead('Invoices', 'Your invoices and payment status. Download a copy of any invoice, or your account statement.', invoices.length ? statementButtons() : null),
+    card('', invoices.length ? table(['Invoice', 'Order', 'Date', 'Pay by', 'Amount', 'Open', 'Status', 'Download'],
       invoices.map((i) => h('tr', {},
         h('td', {}, h('b', {}, i.ref)), h('td', {}, i.order), h('td', {}, formatDate(i.at)), h('td', {}, formatDate(i.payBy)),
         h('td', {}, formatGhs(i.amount)), h('td', {}, formatGhs(i.open)),
-        h('td', {}, h('span', { class: `p-status ${tone[i.status]}` }, i.status[0].toUpperCase() + i.status.slice(1))))))
+        h('td', {}, h('span', { class: `p-status ${tone[i.status]}` }, i.status[0].toUpperCase() + i.status.slice(1))),
+        h('td', {}, h('a', { class: 'p-link p-link-sm p-invoice-pdf', href: invoicePdfUrl(i.ref), download: '', 'aria-label': `Download invoice ${i.ref} as PDF` }, icon('download'), 'PDF')))))
       : h('p', { class: 'p-empty' }, 'No invoices found on this account.'))));
   return { destroy() {} };
 }
