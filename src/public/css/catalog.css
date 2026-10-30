@@ -74,6 +74,9 @@
 .p-return-history-item:last-child { border-bottom: 0; }
 .p-return-decline { color: #b42318; }
 .p-support-contact a { overflow-wrap: anywhere; }
+.p-contact-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.p-contact-actions .p-btn { min-height: 44px; padding: 0 22px; text-decoration: none; }
+.p-btn-wa { border-color: #25a244 !important; color: #168a35 !important; }
 
 * { box-sizing: border-box; }
 

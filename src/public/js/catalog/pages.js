@@ -498,6 +498,14 @@ export function mountSettings(container) {
   return { destroy() {} };
 }
 
+/** wa.me needs the number as digits with the country code; a local Ghana number (0xx…) becomes 233xx…. */
+function whatsappLink(phone, company) {
+  let digits = String(phone).replace(/[^\d+]/g, '');
+  digits = digits.startsWith('+') ? digits.slice(1) : digits.startsWith('00') ? digits.slice(2) : digits.startsWith('0') ? `233${digits.slice(1)}` : digits;
+  const text = `Hello, I am ${company || 'a Box for Less customer'} and I need some help.`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}
+
 export function mountHelp(container) {
   const account = currentCustomer();
   const rep = account?.salesRep;
@@ -507,6 +515,9 @@ export function mountHelp(container) {
       ? h('div', { class: 'p-support-contact' },
         h('p', {}, h('b', {}, rep.name)),
         rep.phone ? h('p', {}, 'Phone: ', h('a', { href: `tel:${rep.phone}` }, rep.phone)) : null,
+        rep.phone ? h('div', { class: 'p-contact-actions' },
+          h('a', { class: 'p-btn', href: `tel:${rep.phone.replace(/[^\d+]/g, '')}` }, 'Call'),
+          h('a', { class: 'p-btn p-btn-ghost p-btn-wa', href: whatsappLink(rep.phone, account.company), target: '_blank', rel: 'noopener' }, 'WhatsApp')) : null,
         rep.email ? h('p', {}, 'Email: ', h('a', { href: `mailto:${rep.email}` }, rep.email)) : null,
         !rep.phone && !rep.email ? h('p', { class: 'p-muted' }, 'Your representative is assigned, but their direct contact details are not available here. Please contact the Box for Less office and ask for them by name.') : null)
       : h('p', {}, 'No Sales Representative is currently assigned to your account. Please contact the Box for Less office for assistance.');
