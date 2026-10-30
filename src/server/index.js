@@ -156,12 +156,17 @@ export function createApp(db) {
   // catalog session before the customer continues to the authoritative catalog.
   app.get('/customer-shop', (_req, res) => res.sendFile(path.join(publicDir, 'customer shop.html')));
 
-  // The sign-in page is the front door. Customers sign in with their Odoo ID and a password; staff with
-  // an email or phone number and a password. It also links to browsing the catalogue and registering.
-  const signInPage = (_req, res) => { res.setHeader('Cache-Control', 'no-store'); res.sendFile(path.join(publicDir, 'signin.html')); };
+  // The unified sign-in page is the front door. Keep the older form only for
+  // staff who must choose a new password after their first sign-in.
+  const signInPage = (_req, res) => { res.setHeader('Cache-Control', 'no-store'); res.sendFile(path.join(publicDir, 'login.html')); };
+  const passwordChangePage = (_req, res) => { res.setHeader('Cache-Control', 'no-store'); res.sendFile(path.join(publicDir, 'signin.html')); };
   app.get('/', signInPage);
-  app.get('/staff/login', signInPage);
+  app.get('/login.html', signInPage);
+  app.get('/staff/login', (req, res) => req.query.change === '1' ? passwordChangePage(req, res) : signInPage(req, res));
   app.get('/signin', signInPage);
+  app.get('/signin.html', (req, res) => (
+    req.query.role === 'staff' || req.query.change === '1' ? passwordChangePage(req, res) : signInPage(req, res)
+  ));
 
   // The staff shell, the rep screens and the scanner are private, and each is for its own roles:
   // someone who signs in with the wrong role is sent to their own home instead.

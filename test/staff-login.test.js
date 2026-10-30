@@ -89,6 +89,25 @@ test('the universal sign-in page detects customer and team accounts', async () =
 
 });
 
+test('the front door and legacy sign-in URLs serve the new page', async () => {
+  for (const path of ['/', '/signin', '/signin.html', '/login.html', '/staff/login']) {
+    const response = await fetch(`${baseUrl}${path}`, { redirect: 'manual' });
+    const html = await response.text();
+    assert.equal(response.status, 200, path);
+    assert.equal(response.headers.get('cache-control'), 'no-store', path);
+    assert.match(html, /id="generalLoginForm"/, path);
+    assert.match(html, /Welcome back/, path);
+  }
+
+  const firstLogin = await fetch(`${baseUrl}/signin.html?role=staff`, { redirect: 'manual' });
+  assert.equal(firstLogin.status, 200);
+  assert.match(await firstLogin.text(), /id="changeForm"/);
+
+  const passwordChange = await fetch(`${baseUrl}/staff/login?change=1`, { redirect: 'manual' });
+  assert.equal(passwordChange.status, 200);
+  assert.match(await passwordChange.text(), /id="changeForm"/);
+});
+
 test('database-backed staff can sign in with their work email through the staff endpoint', async () => {
   const { temporaryPassword } = createStaffUser(db, {
     name: 'Test Sales Rep',

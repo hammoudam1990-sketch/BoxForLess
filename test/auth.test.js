@@ -472,7 +472,7 @@ test('22. pages: each role lands on its own screens, and a wrong page sends them
     // the front door is the sign-in page
     const front = await fetch(`${base}/`);
     assert.equal(front.status, 200);
-    assert.match(await front.text(), /id="signin"/);
+    assert.match(await front.text(), /id="generalLoginForm"/);
   });
 });
 
