@@ -107,7 +107,7 @@ const skuOf = (p) => p.source_odoo_id || (/\[([A-Za-z0-9._-]{2,40})\]\s*$/.exec(
 function categoryOptions(products) {
   const counts = new Map();
   for (const p of products) {
-    const c = parseCategoryPath(p.odoo_category_path);
+    const c = parseCategoryPath(p.categoryPath);
     if (!c) continue;
     for (const path of [c.segments[0], c.segments.slice(0, 2).join(' / ')]) counts.set(path, (counts.get(path) || 0) + 1);
   }

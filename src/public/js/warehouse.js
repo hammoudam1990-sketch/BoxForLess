@@ -101,7 +101,7 @@ export function createInventoryTable({ pageSize = 6, search: initialSearch = '',
   const note = h('p', { class: 'wh-note hidden' });
   const body = h('div', null, loading(compact ? 4 : 6));
 
-  const el = h('div', { class: 'wh-inventory-table' },
+  const el = h('div', { class: `wh-inventory-table${compact ? ' wh-compact' : ''}` },
     h('div', { class: 'wh-filters' }, h('label', { class: 'wh-search-wrap' }, icon('search'), search), category, locationSel, status),
     body, note);
 
@@ -175,18 +175,20 @@ export function createInventoryTable({ pageSize = 6, search: initialSearch = '',
 function movementsTable(items, { compact = false } = {}) {
   if (!items.length) return empty('No stock movements in this period', 'Movements appear when stock changes between imports, deliveries are validated or returns are received.');
   return h('div', { class: 'wh-table-wrap' }, h('table', { class: `wh-table wh-moves${compact ? ' compact' : ''}` },
+    // compact (the dashboard panel): the date goes under the product and the reference is left to the full page
     h('thead', null, h('tr', null,
-      h('th', { scope: 'col' }, 'Date'), h('th', { scope: 'col' }, 'Product'), h('th', { scope: 'col' }, 'Movement Type'),
-      h('th', { scope: 'col', class: 'num' }, 'Quantity'), h('th', { scope: 'col' }, 'Reference'))),
+      compact ? null : h('th', { scope: 'col' }, 'Date'), h('th', { scope: 'col' }, 'Product'), h('th', { scope: 'col' }, compact ? 'Type' : 'Movement Type'),
+      h('th', { scope: 'col', class: 'num' }, compact ? 'Qty' : 'Quantity'), compact ? null : h('th', { scope: 'col' }, 'Reference'))),
     h('tbody', null, items.map((m) => {
       const [label, tone] = MOVE[m.type] || [m.type, 'neutral'];
       const open = () => { location.hash = `#/inventory?q=${encodeURIComponent(m.barcode)}`; };
       return h('tr', { class: 'wh-row-link', tabindex: '0', title: m.note, onClick: open, onKeydown: (e) => { if (e.key === 'Enter') open(); } },
-        h('td', { class: 'wh-nowrap' }, dateText(m.at)),
-        h('td', { class: 'wh-td-name' }, h('b', null, m.product), compact ? null : h('span', { class: 'wh-muted' }, m.barcode)),
+        compact ? null : h('td', { class: 'wh-nowrap' }, dateText(m.at)),
+        h('td', { class: 'wh-td-name' }, h('b', null, m.product), h('span', { class: 'wh-muted' }, compact ? dateText(m.at) : m.barcode,
+          compact && m.source === 'SAMPLE_ODOO' ? sampleTag('From the Sample Odoo stand-in until Odoo is connected') : null)),
         h('td', null, badge(label, tone)),
         h('td', { class: `num wh-qty ${m.quantity > 0 ? 'in' : 'out'}` }, signed(m.quantity)),
-        h('td', { class: 'wh-nowrap' }, m.href
+        compact ? null : h('td', { class: 'wh-nowrap' }, m.href
           ? h('a', { class: 'wh-ref', href: m.href, onClick: (e) => e.stopPropagation() }, m.reference)
           : h('span', { class: 'wh-mono' }, m.reference),
         m.source === 'SAMPLE_ODOO' ? sampleTag('From the Sample Odoo stand-in until Odoo is connected') : null));
