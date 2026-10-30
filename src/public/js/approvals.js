@@ -71,7 +71,7 @@ export async function renderApprovals(view) {
     try { d = await api.shelfLotDiscounts(); } catch (e) { toast(e.message, 'err'); return; }
     setChildren(shelfBox, d.lots.length
       ? h('div', { class: 'exp-wrap' }, h('table', { class: 'exp-table' },
-        h('thead', null, h('tr', null, ['Product', 'Lot', 'Expires', 'Customer (shop)', 'Sales rep responsible', 'Cartons on shelf', 'Discount'].map((t) => h('th', null, t)))),
+        h('thead', null, h('tr', null, ['Product', 'Lot', 'Expires', 'Customer (shop)', 'Sales rep responsible', 'Cartons on shelf', 'Discount'].map((t) => h('th', { class: t === 'Cartons on shelf' ? 'num' : null }, t)))),
         h('tbody', null, d.lots.map(lotRow))))
       : h('p', { class: 'muted' }, 'No lot on a customer shelf is waiting for a visit.'));
   }

@@ -154,7 +154,7 @@ export async function renderExpiry(view) {
       h('div', { class: 'controls exp-controls' }, search, locationSel, twoMonthBtn, bandSel, categorySel, statusSel, csvBtn),
       h('div', { class: 'exp-count' }, count),
       h('div', { class: 'exp-wrap' },
-        h('table', { class: 'exp-table' },
+        h('table', { class: 'exp-table exp-list' },
           h('thead', null, h('tr', null, [
             'Product', 'Lot', 'Expires', 'Days left', 'Band', 'Cartons', 'Location', 'Value at risk', 'Action', 'Assigned sales rep', 'Decide by', 'Status', 'Customer discount',
           ].map((t, i) => h('th', { class: i === 3 || i === 5 || i === 7 ? 'num' : null }, t)))),
