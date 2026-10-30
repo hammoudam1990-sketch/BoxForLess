@@ -39,11 +39,11 @@ const menuToggle = document.getElementById('menuToggle');
 // person can use. null = everything.
 const ROLE_NAV = {
   ADMIN: null,
-  SALES_MANAGER: ['dashboard', 'sales', 'performance', 'targets', 'team-performance', 'sales-targets', 'orders', 'customers', 'notifications', 'sales-settings', 'search', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'customer-returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
+  SALES_MANAGER: ['sales', 'performance', 'targets', 'team-performance', 'sales-targets', 'orders', 'customers', 'notifications', 'sales-settings', 'search', 'access', 'codes', 'requests', 'approvals', 'expiry', 'sample-odoo', 'products', 'rep', 'team', 'rep-customers', 'payments', 'visibility', 'returns', 'customer-returns', 'reports', 'health', 'visits', 'workspace', 'workspace-data-quality'],
   WAREHOUSE: ['warehouse', 'inventory', 'movements', 'notifications', 'products', 'imports', 'changes', 'expiry', 'scan', 'returns', 'reports', 'health', 'workspace', 'workspace-settings', 'workspace-data-quality'],
 };
 const ROLE_TITLE = { ADMIN: 'Administrator', SALES_MANAGER: 'Sales Manager', SALES_REP: 'Sales rep', WAREHOUSE: 'Warehouse Manager' };
-const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/dashboard', WAREHOUSE: '#/warehouse' };
+const ROLE_START = { ADMIN: '#/dashboard', SALES_MANAGER: '#/sales', WAREHOUSE: '#/warehouse' };
 let me = { role: 'ADMIN', name: 'Staff' };
 const allowed = (name) => !ROLE_NAV[me.role] || ROLE_NAV[me.role].includes(name);
 const canSee = (name) => (ROLE_NAV[me.role] || []).includes(name) || !ROLE_NAV[me.role];
@@ -67,13 +67,13 @@ async function loadMe() {
     document.getElementById('mainNav')?.replaceWith(buildSalesNav());
     document.body.classList.add('role-sales');
     document.getElementById('bellLink')?.setAttribute('href', '#/notifications');
-    document.getElementById('brandHome')?.setAttribute('href', '#/dashboard');
+    document.getElementById('brandHome')?.setAttribute('href', '#/sales');
     const box = document.getElementById('gsearch');
     if (box) { box.placeholder = 'Search orders, customers, products…'; box.setAttribute('aria-label', 'Search orders, customers, products and sales reps'); }
   }
   document.querySelectorAll('[data-nav]').forEach((a) => {
     if (a.dataset.nav === 'dashboard'
-      ? !['ADMIN', 'SALES_MANAGER'].includes(me.role)
+      ? me.role !== 'ADMIN'
       : !canSee(a.dataset.nav)) a.classList.add('hidden');
   });
   // a heading with nothing visible under it (a role that sees none of those screens) is hidden too

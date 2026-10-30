@@ -11,8 +11,7 @@ const link = (href, nav, iconName, label, badgeId = null) => h('a', { href, 'dat
 export function buildSalesNav() {
   return h('div', { class: 'wh-side' },
     h('nav', { class: 'adm-nav wh-nav', 'aria-label': 'Sales' },
-      link('#/dashboard', 'dashboard', 'dashboard', 'Overview'),
-      link('#/sales', 'sales', 'trendingUp', 'Sales Dashboard'),
+      link('#/sales', 'sales', 'dashboard', 'Dashboard'),
       link('#/team-performance', 'team-performance', 'users', 'Team Performance'),
       link('#/sales-targets', 'sales-targets', 'target', 'Sales Targets'),
       link('#/orders', 'orders', 'cart', 'Orders'),
