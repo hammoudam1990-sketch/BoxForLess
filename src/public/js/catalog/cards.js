@@ -90,9 +90,8 @@ export function createOfferLine(barcode, scope) {
     el.classList.toggle('hidden', !o);
     if (!o) { el.replaceChildren(); return; }
     el.replaceChildren(
-      h('span', { class: 'c-offer-badge' }, `${o.discountPct}% off`),
       h('span', { class: 'c-offer-text' },
-        ` Best before ${o.bestBefore}`,
+        `Best before ${o.bestBefore}`,
         o.discountedPrice !== null ? [' · ', h('b', null, formatPrice(o.discountedPrice)), ' / carton ', h('s', { class: 'c-offer-was' }, formatPrice(o.price))] : null,
         `, up to ${o.maxCartons} carton${o.maxCartons === 1 ? '' : 's'} at this price. Not returnable.`));
   };
