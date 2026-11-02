@@ -1,5 +1,6 @@
 import express from 'express';
 import config from '../../config.js';
+import { sampleOdooEnabled } from '../../domain/sample-odoo.js';
 import { runDataQualityAudit } from '../../domain/data-quality.js';
 import { getSiteSettings, updateSiteSettings } from '../../domain/site-settings.js';
 
@@ -132,6 +133,27 @@ router.put('/site-settings', (req, res, next) => {
     const updated = updateSiteSettings(req.db, req.body, updatedBy);
     res.json(updated);
   } catch (error) { next(error); }
+});
+
+// Financials (Invoices, Payments, Credit & Balances): read-only copy of what Odoo holds (the sample data until Odoo is connected).
+router.get('/financials', (req, res, next) => {
+  try {
+    if (!['ADMIN', 'SALES_MANAGER'].includes(req.staff?.role)) return res.status(403).json({ error: 'Not allowed.' });
+    const db = req.db;
+    const invoices = db.prepare(`SELECT i.number, c.name AS customer, i.amount, i.amount_due AS amountDue, i.invoice_date AS invoiceDate, i.due_date AS dueDate, i.state
+                                   FROM odoo_invoices i JOIN customers c ON c.id = i.customer_id ORDER BY i.invoice_date DESC, i.id DESC LIMIT 300`).all();
+    const payments = db.prepare(`SELECT p.id, c.name AS customer, i.number AS invoice, p.amount, p.paid_on AS paidOn
+                                   FROM odoo_payments p JOIN customers c ON c.id = p.customer_id LEFT JOIN odoo_invoices i ON i.id = p.invoice_id
+                                  ORDER BY p.paid_on DESC, p.id DESC LIMIT 300`).all();
+    const credit = db.prepare(`SELECT c.name AS customer, f.credit_limit AS creditLimit, f.amount_owed AS amountOwed, f.overdue
+                                 FROM odoo_customer_finance f JOIN customers c ON c.id = f.customer_id ORDER BY f.amount_owed DESC LIMIT 300`).all();
+    const totals = db.prepare(`SELECT COUNT(*) AS invoices, COALESCE(SUM(amount),0) AS invoiced, COALESCE(SUM(amount_due),0) AS outstanding,
+                                      COALESCE(SUM(CASE WHEN state = 'OPEN' AND due_date < date('now') THEN amount_due END),0) AS overdue
+                                 FROM odoo_invoices`).get();
+    totals.owing = db.prepare('SELECT COUNT(*) AS n FROM odoo_customer_finance WHERE amount_owed > 0').get().n;
+    const paid = db.prepare('SELECT COUNT(*) AS payments, COALESCE(SUM(amount),0) AS received FROM odoo_payments').get();
+    res.json({ source: sampleOdooEnabled() ? 'SAMPLE' : 'ODOO', totals: { ...totals, ...paid }, invoices, payments, credit });
+  } catch (e) { next(e); }
 });
 
 export default router;

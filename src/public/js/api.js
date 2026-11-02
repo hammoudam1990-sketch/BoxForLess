@@ -20,6 +20,7 @@ export const api = {
   stats: () => fetch('/api/products/stats').then(handle),
   workspaceStatus: () => fetch('/api/admin-workspace/status').then(handle),
   workspaceQuotations: () => fetch('/api/admin-workspace/quotations').then(handle),
+  workspaceFinancials: () => fetch('/api/admin-workspace/financials').then(handle),
   workspaceVisibility: () => fetch('/api/admin-workspace/visibility').then(handle),
   workspaceStockExpiry: (band = 'all') =>
     fetch(`/api/admin-workspace/stock-expiry?band=${encodeURIComponent(band)}`).then(handle),

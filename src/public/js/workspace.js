@@ -36,7 +36,27 @@ function renderTable(headers, rows, empty) {
 async function renderWorkspacePage(view, key) {
   if (!TITLES[key]) { location.hash = '#/dashboard'; return; }
   if (['invoices', 'payments', 'credit'].includes(key)) {
-    view.innerHTML = odooRequired(TITLES[key]);
+    let f;
+    try { f = await api.workspaceFinancials(); } catch { view.innerHTML = odooRequired(TITLES[key]); return; }
+    const ghs = (n) => `GHS ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const kpi = (k, v) => `<div class="ad-kpi"><span><span class="ad-kpi-k">${k}</span><b class="ad-kpi-v">${v}</b></span></div>`;
+    const t = f.totals;
+    const note = f.source !== 'SAMPLE' ? 'Read from Odoo.' : '<span class="ad-source-tag">Sample data</span> <span class="ad-empty">Shown from the sample Odoo data until the real Odoo is connected.</span>';
+    let kpis; let table;
+    if (key === 'invoices') {
+      kpis = [kpi('Invoices', num(t.invoices)), kpi('Total invoiced', ghs(t.invoiced)), kpi('Still due', ghs(t.outstanding)), kpi('Overdue', ghs(t.overdue))];
+      table = renderTable(['Invoice', 'Customer', 'Invoiced', 'Due date', 'Amount', 'Still due', 'Status'],
+        f.invoices.map((i) => `<tr><td>${esc(i.number)}</td><td>${esc(i.customer)}</td><td>${esc(i.invoiceDate)}</td><td>${esc(i.dueDate)}</td><td>${ghs(i.amount)}</td><td>${ghs(i.amountDue)}</td><td>${i.state === 'PAID' ? 'Paid' : 'Open'}</td></tr>`), 'No invoices yet.');
+    } else if (key === 'payments') {
+      kpis = [kpi('Payments received', num(t.payments)), kpi('Total received', ghs(t.received)), kpi('Still due', ghs(t.outstanding))];
+      table = renderTable(['Date', 'Customer', 'Invoice', 'Amount'],
+        f.payments.map((p) => `<tr><td>${esc(p.paidOn)}</td><td>${esc(p.customer)}</td><td>${esc(p.invoice || '—')}</td><td>${ghs(p.amount)}</td></tr>`), 'No payments recorded yet.');
+    } else {
+      kpis = [kpi('Customers owing', num(t.owing)), kpi('Total owed', ghs(t.outstanding)), kpi('Overdue', ghs(t.overdue))];
+      table = renderTable(['Customer', 'Credit limit', 'Owes', 'Overdue', 'Available'],
+        f.credit.map((c) => `<tr><td>${esc(c.customer)}</td><td>${c.creditLimit === null ? 'No limit' : ghs(c.creditLimit)}</td><td>${ghs(c.amountOwed)}</td><td>${ghs(c.overdue)}</td><td>${c.creditLimit === null ? '—' : ghs(c.creditLimit - c.amountOwed)}</td></tr>`), 'No credit accounts yet.');
+    }
+    view.innerHTML = `<div class="ad-head"><div><h1>${TITLES[key]}</h1><p>${note}</p></div></div><div class="ad-kpis">${kpis.join('')}</div>${card(TITLES[key], table)}`;
     return;
   }
 
