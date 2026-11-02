@@ -25,3 +25,13 @@ html[data-theme="dark"] .lg-card { background: #172433; }
 .lg-nav { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--lg-line); font-size: 15px; }
 .lg-nav a { font-weight: 600; text-decoration: none; }
 .lg-nav a:hover, .lg-nav a[aria-current="page"] { text-decoration: underline; }
+
+/* White and blue, like the shop. */
+body.lg { background: #fff; }
+.lg-top { background: linear-gradient(135deg, #0b2a55, #1e5fd8); }
+.lg-card { box-shadow: none; border-color: #cfe0fb; border-top: 4px solid var(--lg-blue); }
+.lg-card h1, .lg-card h2 { color: var(--lg-blue); }
+.lg-table th { background: var(--lg-blue); color: #fff; }
+html[data-theme="dark"] body.lg { background: #101923; }
+html[data-theme="dark"] .lg-card h1, html[data-theme="dark"] .lg-card h2 { color: #8cc0ff; }
+html[data-theme="dark"] .lg-table th { background: #1e5fd8; }
