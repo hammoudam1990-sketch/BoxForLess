@@ -187,7 +187,8 @@ export async function startCatalog(root) {
       brand('p-brand p-brand-foot', storeName, tagline),
       h('nav', { class: 'p-footer-links', 'aria-label': 'Footer' },
         footLink(pageUrl('help'), 'About Us'), footLink(pageUrl('help'), 'Contact'),
-        footLink(pageUrl('help'), 'Terms & Conditions'), footLink(pageUrl('help'), 'Privacy Policy')),
+        footLink('/legal/terms.html', 'Terms & Conditions'), footLink('/legal/privacy.html', 'Privacy Policy'),
+        footLink('/legal/cookies.html', 'Cookie Policy')),
       h('span', { class: 'p-copy' }, `© ${new Date().getFullYear()} ${storeName}. All rights reserved.`)));
 
   setChildren(root, h('div', { class: 'p-shell' },

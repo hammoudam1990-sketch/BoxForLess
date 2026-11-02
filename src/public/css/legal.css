@@ -1,0 +1,27 @@
+/* Policy pages (cookies, privacy, terms): the site's white-and-blue look, readable on any screen. */
+:root { --lg-navy: #0b2a55; --lg-blue: #1e5fd8; --lg-ink: #17365d; --lg-muted: #647790; --lg-line: #e0e8f2; --lg-bg: #f4f7fb; --lg-pale: #edf3ff; }
+html[data-theme="dark"] { --lg-ink: #e5edf5; --lg-muted: #a9b8c8; --lg-line: #304253; --lg-bg: #101923; --lg-pale: #14283f; --lg-blue: #5ba5ff; }
+* { box-sizing: border-box; }
+body.lg { margin: 0; background: var(--lg-bg); color: var(--lg-ink); font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.lg-top { background: var(--lg-navy); color: #fff; }
+.lg-top-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; max-width: 880px; margin: 0 auto; padding: 14px 20px; }
+.lg-brand { color: #fff; font-weight: 700; font-size: 18px; text-decoration: none; }
+.lg-back { color: #fff; text-decoration: none; font-weight: 600; padding: 8px 14px; border: 1px solid rgba(255, 255, 255, .45); border-radius: 8px; }
+.lg-back:hover { background: rgba(255, 255, 255, .12); }
+.lg-wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 56px; }
+.lg-card { background: #fff; border: 1px solid var(--lg-line); border-radius: 12px; padding: 28px clamp(18px, 4vw, 40px); box-shadow: 0 6px 22px rgba(11, 42, 85, .07); }
+html[data-theme="dark"] .lg-card { background: #172433; }
+.lg-card h1 { margin: 0 0 4px; font-size: clamp(26px, 5vw, 34px); line-height: 1.2; color: var(--lg-ink); }
+.lg-updated { margin: 0 0 22px; color: var(--lg-muted); font-size: 14px; }
+.lg-card h2 { margin: 28px 0 8px; padding-top: 4px; font-size: 20px; color: var(--lg-ink); }
+.lg-card p, .lg-card li { overflow-wrap: anywhere; }
+.lg-card ul { padding-left: 22px; }
+.lg-card a { color: var(--lg-blue); }
+.lg-note { margin: 18px 0; padding: 12px 16px; border-left: 4px solid var(--lg-blue); border-radius: 8px; background: var(--lg-pale); }
+.lg-table-wrap { overflow-x: auto; }
+.lg-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.lg-table th, .lg-table td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--lg-line); }
+.lg-table th { background: var(--lg-pale); font-weight: 700; }
+.lg-nav { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--lg-line); font-size: 15px; }
+.lg-nav a { font-weight: 600; text-decoration: none; }
+.lg-nav a:hover, .lg-nav a[aria-current="page"] { text-decoration: underline; }

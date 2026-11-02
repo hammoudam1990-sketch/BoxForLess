@@ -58,7 +58,7 @@ window.addEventListener('resize', onScroll);
 function cookieNotice() {
   if (storage.get('bfl.cookies') === 'ok') return null;
   const box = $('div', { class: 'bfl-cookie', role: 'region', 'aria-label': 'Cookies' },
-    '<p>We use only the cookies this site needs: to keep you signed in and to remember your request and your theme. No tracking, no advertising.</p>');
+    '<p>We use only the cookies this site needs: to keep you signed in and to remember your request and your theme. No tracking, no advertising. <a href="/legal/cookies.html">Cookie Policy</a></p>');
   const ok = $('button', { type: 'button' }, 'OK, got it');
   ok.addEventListener('click', () => { storage.set('bfl.cookies', 'ok'); box.remove(); });
   box.appendChild(ok);
