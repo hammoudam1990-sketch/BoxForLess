@@ -589,7 +589,7 @@ export async function renderCustomersPage(view, id = null) {
   setChildren(view, h('div', { class: 'wh-page sm-page' },
     pageHead('Customers', 'Every customer with their representative, sales in the period, what they still owe and when they last ordered. Active = an order or invoice in the last 30 days.', period.el),
     card('', h('div', { class: 'wh-filters' }, h('label', { class: 'wh-search-wrap' }, icon('search'), search), repSel, activitySel, sortSel,
-      h('label', { class: 'sm-check' }, owing, 'Owing money only')), counts, body, foot.el)));
+      h('label', { class: 'sm-check' }, owing, 'Customers Owing Money Only')), counts, body, foot.el)));
   async function load() {
     const mine = latest.next();
     let d;
