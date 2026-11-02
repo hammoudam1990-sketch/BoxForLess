@@ -133,3 +133,6 @@ html[data-theme="dark"] body.adm {
   --sm-track: #23324a;
 }
 html[data-theme="dark"] .sm-target-tick { stroke: #cfe2fa; }
+
+/* Use the full width of the screen (no blank strip on the right) */
+.wh-page.sm-page { max-width: none; width: 100%; }

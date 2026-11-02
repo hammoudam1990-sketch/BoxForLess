@@ -310,3 +310,5 @@ html[data-theme="dark"] .sm-error { color: #ff8f85; background: #3d1f1c; }
   line-clamp: unset;
   max-height: none;
 }
+
+.sm-sidebar { overflow-y: auto; scrollbar-width: thin; }
