@@ -74,20 +74,41 @@ export async function renderPayments(view) {
   const noReminders = h('p', { class: 'muted hidden' }, 'No reminders yet. They are composed the day before a payment day, on it, and every 7 days while an invoice stays unpaid.');
   const runBtn = h('button', { type: 'button', class: 'secondary', onClick: run }, 'Check for reminders now');
   const followUp20dBtn = h('button', { type: 'button', onClick: runFollowUp20d }, 'Generate 20+ Day Follow-Up Reminders');
-  let onlyUnsettled20d = false;
-  let allInvoicesCache = [];
-
-  const filter20dBtn = h('button', {
-    type: 'button',
-    class: 'secondary',
-    onClick: () => {
-      onlyUnsettled20d = !onlyUnsettled20d;
-      filter20dBtn.className = onlyUnsettled20d ? '' : 'secondary';
-      filter20dBtn.textContent = onlyUnsettled20d ? '✓ Showing 20+ Days Unsettled Only (Show All)' : 'Filter: 20+ Days Unsettled Follow-Up';
-      paintInvoices();
+  const followRows = h('tbody');
+  const noFollow = h('p', { class: 'muted hidden' }, 'No invoice is unsettled for 20+ days.');
+  const invHead = () => h('thead', null, h('tr', null, ['Customer', 'Invoice', 'Invoiced', 'Still due', 'Pay by', 'Where it stands / Follow-up', 'Schedule', 'Last reminder'].map((t) => h('th', { class: t === 'Still due' ? 'num' : null }, t))));
+  const openPanel = h('div', { class: 'pay-panel', id: 'pay-open' },
+    h('div', { class: 'card' },
+      h('h2', null, 'Open invoices'),
+      h('div', { class: 'controls' }, invSearch),
+      h('div', { class: 'exp-wrap' }, h('table', null, invHead(), invoices)),
+      noInvoices),
+    dueCard);
+  const schedPanel = h('div', { class: 'pay-panel hidden', id: 'pay-sched' },
+    h('div', { class: 'card' },
+      h('h2', null, 'Payment schedules'),
+      h('p', { class: 'muted' }, 'Set by the Sales Manager. The default is each invoice\'s own due date. A weekly or monthly schedule means every open invoice is expected on that day.'),
+      h('div', { class: 'exp-wrap' },
+        h('table', null, h('thead', null, h('tr', null, ['Customer', 'Schedule', ''].map((t) => h('th', null, t)))), schedules))));
+  const followPanel = h('div', { class: 'pay-panel hidden', id: 'pay-follow' },
+    h('div', { class: 'card' },
+      h('h2', null, '20-Day Follow-Up'),
+      h('p', { class: 'muted' }, 'Invoices unsettled for 20 or more days since the invoice date.'),
+      h('div', { class: 'exp-wrap' }, h('table', null, invHead(), followRows)),
+      noFollow),
+    h('div', { class: 'card' },
+      h('h2', null, 'Reminders'),
+      h('p', { class: 'muted' }, 'No email, SMS or WhatsApp provider is connected yet. Copy a message, send it yourself, then tap Mark sent. Every reminder stays in this log.'),
+      h('div', { class: 'controls' }, runBtn, followUp20dBtn),
+      reminders, noReminders));
+  const tabDefs = [['Open Invoices', openPanel], ['Payment Schedules', schedPanel], ['20-Day Follow-Up', followPanel]];
+  const tabBar = h('div', { class: 'pay-tabs', role: 'tablist' }, tabDefs.map(([t, panel], idx) => h('button', {
+    type: 'button', role: 'tab', class: idx === 0 ? 'active' : '', 'aria-selected': String(idx === 0),
+    onClick: (ev) => {
+      tabDefs.forEach(([, p]) => p.classList.toggle('hidden', p !== panel));
+      [...tabBar.children].forEach((b) => { const on = b === ev.currentTarget; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
     },
-  }, 'Filter: 20+ Days Unsettled Follow-Up');
-
+  }, t)));
   setChildren(view,
     h('h1', null, 'Payments due & Credit Follow-Up'),
     h('div', { class: 'notice' },
@@ -96,30 +117,8 @@ export async function renderPayments(view) {
       'Invoices unsettled for 20+ days since invoice date are highlighted for follow-up. ',
       'Only a credit customer is reminded, each message lists only their own open invoices, and a reminder never blocks an order — only the credit limit does.'),
     tiles,
-    h('div', { class: 'card' },
-      h('div', { style: 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;' },
-        h('h2', { style: 'margin:0;' }, 'Open invoices & 20-Day Follow-Up'),
-        filter20dBtn),
-      h('div', { class: 'controls' }, invSearch),
-      h('div', { class: 'exp-wrap' },
-        h('table', null,
-          h('thead', null, h('tr', null, ['Customer', 'Invoice', 'Invoiced', 'Still due', 'Pay by', 'Where it stands / Follow-up', 'Schedule', 'Last reminder'].map((t) => h('th', { class: t === 'Still due' ? 'num' : null }, t)))),
-          invoices)),
-      noInvoices),
-    dueCard,
-    h('div', { class: 'card' },
-      h('h2', null, 'Reminders'),
-      h('p', { class: 'muted' }, 'No email, SMS or WhatsApp provider is connected yet. Copy a message, send it yourself, then tap Mark sent. Every reminder stays in this log.'),
-      h('div', { class: 'controls' }, runBtn, followUp20dBtn),
-      reminders, noReminders),
-    h('div', { class: 'card' },
-      h('h2', null, 'Payment schedules'),
-      h('p', { class: 'muted' }, 'Set by the Sales Manager. The default is each invoice\'s own due date. A weekly or monthly schedule means every open invoice is expected on that day.'),
-      h('div', { class: 'exp-wrap' },
-        h('table', null,
-          h('thead', null, h('tr', null, ['Customer', 'Schedule', ''].map((t) => h('th', null, t)))),
-          schedules))));
-
+    tabBar,
+    openPanel, schedPanel, followPanel);
   function tile(label, count, amount, tone) {
     return h('div', { class: `exp-tile ${tone}`, style: { cursor: 'default' } },
       h('span', { class: 'exp-tile-n' }, String(count)), h('span', { class: 'exp-tile-l' }, label), h('span', { class: 'exp-tile-v' }, amount === null ? '' : money(amount)));
@@ -144,9 +143,11 @@ export async function renderPayments(view) {
     const q = invSearch.value.trim().toLowerCase();
     const hay = (i) => [i.customer, i.number, dayText(i.invoiceDate), dayText(i.payBy), i.amountDue, i.schedule].join(' ').toLowerCase();
     const list = allInvoicesCache
-      .filter((i) => !onlyUnsettled20d || i.unsettled20d)
       .filter((i) => !q || hay(i).includes(q));
     setChildren(invoices, list.map(invoiceRow));
+    const fu = allInvoicesCache.filter((i) => i.unsettled20d);
+    setChildren(followRows, fu.map(invoiceRow));
+    noFollow.classList.toggle('hidden', fu.length > 0);
     noInvoices.textContent = q ? `No invoice matches “${invSearch.value.trim()}”.` : noInvoicesText;
     noInvoices.classList.toggle('hidden', list.length > 0);
   }

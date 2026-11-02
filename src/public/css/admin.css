@@ -1203,3 +1203,9 @@ html[data-theme="dark"] .sb-mock-act-btn { background: #0f172a; border-color: #3
 /* Stacked status badges line up on the left edge, one under the other, each showing its full text */
 .badge-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
 .badge-stack .badge { margin: 0; white-space: normal; max-width: 100%; }
+
+/* Payments tabs */
+.pay-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0; border-bottom: 2px solid #e0e8f2; }
+.pay-tabs button { background: transparent; color: #17365d; border: 0; border-bottom: 3px solid transparent; border-radius: 0; padding: 10px 16px; font-weight: 700; cursor: pointer; margin-bottom: -2px; }
+.pay-tabs button.active { color: #1e5fd8; border-bottom-color: #1e5fd8; }
+.pay-panel.hidden { display: none; }
