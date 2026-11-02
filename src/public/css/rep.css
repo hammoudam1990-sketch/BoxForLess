@@ -1091,3 +1091,18 @@ body.rep-page .bfl-cookie, body.rep-page .bfl-fab { border-color: var(--line); b
 body.rep-page .bfl-fab { color: var(--brand); }
 body.rep-page .bfl-cookie p { font-size: 15px; }
 body.rep-page .topbar .brand-sub { font-size: 12px; line-height: 1.3; }
+
+/* Dark theme in the website's blue-slate palette (replaces the warm brown) */
+html[data-theme="dark"] body.rep-page {
+  --bg: #101923; --panel: #172433; --ink: #e5edf5; --muted: #a9b8c8;
+  --on-bg: #e5edf5; --on-bg-muted: #c3d0dd; --line: #304253;
+  --info-bg: #14283f; --yellow: #14283f; --bfl-surface: #172433;
+  --brand: #3f84f0; --brand-dark: #8fc4ff; --orange: #5ba5ff;
+  --shadow: 0 2px 4px rgba(0,0,0,.4), 0 10px 26px rgba(0,0,0,.4);
+}
+html[data-theme="dark"], html[data-theme="dark"] body.rep-page { background-color: #101923; }
+html[data-theme="dark"] body.rep-page .topbar { background: #0b2a55; }
+html[data-theme="dark"] body.rep-page .rep-tab.active,
+html[data-theme="dark"] body.rep-page .bfl-cookie button { background: #3f84f0; color: #fff; }
+html[data-theme="dark"] body.rep-page .bfl-cookie,
+html[data-theme="dark"] body.rep-page .bfl-fab { background: #172433; color: #e5edf5; border-color: #304253; }
