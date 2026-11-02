@@ -11,6 +11,7 @@ import { listReps, myVisits, visitSheet, recordVisit, listVisits, approvals, dec
 import { LotDiscountError } from '../../domain/lot-discounts.js';
 import { todayString } from '../../domain/expiry-list.js';
 import { buildExpiryList } from '../../domain/expiry-list.js';
+import { saveAction } from '../../domain/expiry-actions.js';
 
 const router = express.Router();
 const rep = (req) => (req.staff?.role === 'SALES_REP' ? String(req.staff.repId ?? '') : String((req.method === 'GET' ? req.query.rep : req.body?.rep) ?? ''));
@@ -26,21 +27,35 @@ router.get('/reps', repScreens, (req, res, next) => {
 });
 
 // Expiry lots the Sales Manager has pushed to this rep. Read-only, the rep's own lots only, no money figures.
+// Lots the Sales Manager or admin pushed to this rep (never any value-at-risk or price figure).
+function assignedTo(req) {
+  const me = listReps(todayString(), req.db).find((r) => r.id === String(req.staff?.repId ?? ''));
+  const name = (me?.name || req.staff?.name || '').trim().toLowerCase();
+  return !name ? [] : buildExpiryList(req.db, {}).rows
+    .filter((r) => r.action === 'PUSH_THROUGH_REPS' && (r.owner || '').trim().toLowerCase() === name && r.status !== 'DONE');
+}
+
 router.get('/my-assignments', requireRole('SALES_REP'), (req, res, next) => {
   try {
-    const me = listReps(todayString(), req.db).find((r) => r.id === String(req.staff?.repId ?? ''));
-    const name = (me?.name || req.staff?.name || '').trim().toLowerCase();
-    const items = !name ? [] : buildExpiryList(req.db, {}).rows
-      .filter((r) => r.action === 'PUSH_THROUGH_REPS' && (r.owner || '').trim().toLowerCase() === name && r.status !== 'DONE')
-      .map((r) => ({
-        key: r.key, productName: r.productName, barcode: r.barcode, lotName: r.lotName, expiryDate: r.expiryDate,
-        daysLeft: r.daysLeft, band: r.band, cartons: r.cartons, shopName: r.shopName, location: r.location,
-        decideBy: r.decideBy, status: r.status, discountPct: r.discountPct,
-      }));
+    const items = assignedTo(req).map((r) => ({
+      key: r.key, productName: r.productName, barcode: r.barcode, lotName: r.lotName, expiryDate: r.expiryDate,
+      daysLeft: r.daysLeft, band: r.band, cartons: r.cartons, shopName: r.shopName, location: r.location,
+      decideBy: r.decideBy, status: r.status, discountPct: r.discountPct,
+    }));
     res.json({ items });
   } catch (e) { next(e); }
 });
 
+// The rep takes action on a lot pushed to them: start it, or mark it done. Nothing else on the lot can be changed.
+router.patch('/my-assignments/:key', requireRole('SALES_REP'), (req, res, next) => {
+  try {
+    const status = req.body?.status;
+    if (!['IN_PROGRESS', 'DONE'].includes(status)) return res.status(400).json({ error: 'Choose In progress or Done.' });
+    if (!assignedTo(req).some((r) => r.key === req.params.key)) return res.status(404).json({ error: 'That lot is not assigned to you.' });
+    saveAction(req.db, req.params.key, { status });
+    res.json({ ok: true, status });
+  } catch (e) { next(e); }
+});
 router.get('/my-visits', repScreens, (req, res, next) => {
   try { res.json(myVisits(req.db, rep(req), { today: todayString(), q: req.query.q })); } catch (e) { next(e); }
 });

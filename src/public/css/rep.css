@@ -1114,3 +1114,5 @@ html[data-theme="dark"] body.rep-page .bfl-fab { background: #172433; color: #e5
   .rep-shop-actions .rep-action-btn:not(.primary) { flex: 1 1 0; padding: 0 8px; }
   .rep-shop-actions .rep-action-btn.primary { flex: 1 1 100%; margin-left: 0; min-height: 44px; }
 }
+
+.rep-assigned-act { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }

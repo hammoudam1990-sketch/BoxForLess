@@ -756,6 +756,12 @@ const placedText = (iso) => {
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
+// The rep starts or finishes a lot pushed to them, then the card reloads.
+function setAssignment(key, status) {
+  return fetch(`/api/shelf/my-assignments/${encodeURIComponent(key)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+    .then((r) => (r.ok ? loadAssignments() : r.json().then((b) => alert(b.error || 'Could not update the task.'))));
+}
+
 // Lots the Sales Manager has pushed to this rep (a sales rep only; the card stays hidden when there are none).
 function loadAssignments() {
   return fetch('/api/shelf/my-assignments', { headers: { Accept: 'application/json' } })
@@ -767,14 +773,17 @@ function loadAssignments() {
         h('h2', null, `New task: ${items.length} expiring ${items.length === 1 ? 'lot' : 'lots'} assigned to you`),
         h('p', { class: 'rep-note' }, 'Your Sales Manager asked you to push these lots to customers before they expire.'),
         h('div', { class: 'bfl-table-wrap' }, h('table', { class: 'bfl-table' },
-          h('thead', null, h('tr', null, ['Product', 'Lot', 'Expires', 'Where', 'Decide by'].map((t) => h('th', null, t)), h('th', { class: 'num' }, 'Cartons'))),
+          h('thead', null, h('tr', null, ['Product', 'Lot', 'Expires', 'Where', 'Decide by'].map((t) => h('th', null, t)), h('th', { class: 'num' }, 'Cartons'), h('th', null, 'Action'))),
           h('tbody', null, items.map((i) => h('tr', null,
             h('td', { class: 'primary-text' }, i.productName, h('div', { class: 'rep-note' }, i.barcode)),
             h('td', null, i.lotName),
             h('td', null, `${fmt(i.expiryDate)}${i.daysLeft === null ? '' : ` (${i.daysLeft < 0 ? 'expired' : `${i.daysLeft} days left`})`}`),
             h('td', null, i.location === 'SHOP' ? (i.shopName || 'Customer shop') : 'Warehouse'),
             h('td', null, fmt(i.decideBy)),
-            h('td', { class: 'num' }, String(i.cartons ?? '—'))))))));
+            h('td', { class: 'num' }, String(i.cartons ?? '—')),
+            h('td', { class: 'rep-assigned-act' },
+              i.status === 'IN_PROGRESS' ? h('span', { class: 'rep-note' }, 'In progress') : h('button', { type: 'button', class: 'secondary', onClick: () => setAssignment(i.key, 'IN_PROGRESS') }, 'Start'),
+              h('button', { type: 'button', onClick: () => setAssignment(i.key, 'DONE') }, 'Mark done'))))))));
       assignedCard.classList.remove('hidden');
     })
     .catch(() => { /* a bonus panel; the page works without it */ });
