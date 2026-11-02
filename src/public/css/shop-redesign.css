@@ -760,3 +760,14 @@ button.c-header-account { border: 0; background: transparent; font: inherit; cur
   line-clamp: unset;
   max-height: none;
 }
+
+/* Product pictures always fit whole inside their box: the padding is counted inside the box (not added to it) and is a fixed size, so a wide tile can no longer push the bottom of the picture out of view */
+.c-poster img, .c-hero img, .c-img, .p-card-pic .c-img {
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  padding: clamp(6px, 3%, 16px);
+}
+.c-hero, .c-poster { overflow: visible; }
+.c-hero { overflow: hidden; }
