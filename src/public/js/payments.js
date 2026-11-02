@@ -133,9 +133,9 @@ export async function renderPayments(view) {
       h('td', { class: 'muted' }, dayText(i.invoiceDate)),
       h('td', { class: 'num' }, money(i.amountDue)),
       h('td', null, dayText(i.payBy)),
-      h('td', null,
+      h('td', null, h('div', { class: 'badge-stack' },
         h('span', { class: `badge${i.bucket === 'OVERDUE' ? ' err' : ''}` }, stands),
-        i.unsettled20d ? h('span', { class: 'badge warn', style: 'margin-left:6px;' }, `20+ days unsettled (${i.daysSinceInvoice}d)`) : null),
+        i.unsettled20d ? h('span', { class: 'badge warn' }, `20+ days unsettled (${i.daysSinceInvoice}d)`) : null)),
       h('td', { class: 'muted' }, i.schedule),
       h('td', { class: 'muted' }, dayText(i.lastReminder)));
   }

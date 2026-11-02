@@ -1199,3 +1199,7 @@ html[data-theme="dark"] .sb-mock-act-btn { background: #0f172a; border-color: #3
   line-clamp: unset;
   max-height: none;
 }
+
+/* Stacked status badges line up on the left edge, one under the other, each showing its full text */
+.badge-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.badge-stack .badge { margin: 0; white-space: normal; max-width: 100%; }
