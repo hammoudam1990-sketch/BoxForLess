@@ -74,6 +74,7 @@ export async function renderPayments(view) {
   const noReminders = h('p', { class: 'muted hidden' }, 'No reminders yet. They are composed the day before a payment day, on it, and every 7 days while an invoice stays unpaid.');
   const runBtn = h('button', { type: 'button', class: 'secondary', onClick: run }, 'Check for reminders now');
   const followUp20dBtn = h('button', { type: 'button', onClick: runFollowUp20d }, 'Generate 20+ Day Follow-Up Reminders');
+  let allInvoicesCache = [];
   const followRows = h('tbody');
   const noFollow = h('p', { class: 'muted hidden' }, 'No invoice is unsettled for 20+ days.');
   const invHead = () => h('thead', null, h('tr', null, ['Customer', 'Invoice', 'Invoiced', 'Still due', 'Pay by', 'Where it stands / Follow-up', 'Schedule', 'Last reminder'].map((t) => h('th', { class: t === 'Still due' ? 'num' : null }, t))));
