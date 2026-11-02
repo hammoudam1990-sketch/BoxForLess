@@ -957,3 +957,14 @@ body, .c-main, .c-main *, .c-header, .c-header *, .c-tabbar, .c-tabbar *, .c-dra
 .c-offer-text { color: var(--c-ink); }
 .c-page-list > .c-offers { grid-column: 1 / -1; }
 .c-offer-noreturn { margin-top: 2px; font-size: 16px; font-weight: 700; color: var(--c-out); }
+
+/* ---- Never cut text off: show every word, wrapping instead of "�" (generated) ---- */
+.c-name,
+.c-card-body .c-name {
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  max-height: none;
+}

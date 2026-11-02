@@ -300,3 +300,13 @@ html[data-theme="dark"] .sm-stock-legend b { color: #f0ebe4; }
 html[data-theme="dark"] .sm-bar-chart .gridline { stroke: #3a342d; }
 html[data-theme="dark"] .sm-bar-chart .axis-label, html[data-theme="dark"] .sm-bar-chart .bar-value { fill: #b8aea2; }
 html[data-theme="dark"] .sm-error { color: #ff8f85; background: #3d1f1c; }
+
+/* ---- Never cut text off: show every word, wrapping instead of "�" (generated) ---- */
+.sm-kpi-sub {
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  max-height: none;
+}

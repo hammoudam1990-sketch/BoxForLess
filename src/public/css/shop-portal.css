@@ -418,3 +418,14 @@ body { color: var(--p-ink); }
   .p-hero-pic, .p-card, .p-side { transition: none; }
   .p-card-skeleton i { animation: none; }
 }
+
+/* ---- Never cut text off: show every word, wrapping instead of "�" (generated) ---- */
+.p-user-name,
+.p-card-name {
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  max-height: none;
+}

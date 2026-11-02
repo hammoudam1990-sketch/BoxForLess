@@ -280,3 +280,14 @@ html[data-theme="dark"] .wh-thumb, html[data-theme="dark"] .wh-thumb-empty { bac
 html[data-theme="dark"] .wh-skeleton i { background: #23324a; }
 html[data-theme="dark"] .wh-badge.amber { background: #3d3214; color: #f2cf7c; }
 html[data-theme="dark"] .wh-tag { color: #f2cf7c; }
+
+/* ---- Never cut text off: show every word, wrapping instead of "�" (generated) ---- */
+.wh-nav .wh-nav-label,
+.wh-moves.compact .wh-td-name b {
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  max-height: none;
+}

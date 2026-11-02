@@ -750,3 +750,13 @@ button.c-header-account { border: 0; background: transparent; font: inherit; cur
     padding: 0;
   }
 }
+
+/* ---- Never cut text off: show every word, wrapping instead of "�" (generated) ---- */
+.c-signed-in span {
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  max-height: none;
+}

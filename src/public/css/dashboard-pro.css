@@ -284,3 +284,14 @@ html[data-theme="dark"] .bfl-pill.neutral { background: #332d27; }
   .bfl-hero { padding: 13px 14px 12px; }
   .bfl-hero-value { font-size: 20px; }
 }
+
+/* ---- Never cut text off: show every word, wrapping instead of "�" (generated) ---- */
+.bfl-ellipsis,
+.bfl-alert-text b {
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  max-height: none;
+}
