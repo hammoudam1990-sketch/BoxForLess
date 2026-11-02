@@ -1116,5 +1116,3 @@ html[data-theme="dark"] body.rep-page .bfl-fab { background: #172433; color: #e5
 }
 
 .rep-assigned-act { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-.rep-hand { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-.rep-hand-pick { min-height:36px; max-width:100%; }
