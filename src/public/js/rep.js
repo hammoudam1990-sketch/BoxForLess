@@ -766,8 +766,17 @@ function setAssignment(key, status) {
 function loadAssignments() {
   return fetch('/api/shelf/my-assignments', { headers: { Accept: 'application/json' } })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-    .then(({ items }) => {
+    .then(({ items, colleagues = [] }) => {
       if (!items.length) { assignedCard.classList.add('hidden'); return; }
+      const handOver = (key) => {
+        const pick = h('select', { 'aria-label': 'Hand over to', class: 'rep-hand-pick' }, h('option', { value: '' }, 'Hand over to…'), colleagues.map((c) => h('option', { value: c.id }, c.name)));
+        return h('span', { class: 'rep-hand' }, pick,
+          h('button', { type: 'button', class: 'secondary', onClick: () => {
+            if (!pick.value) return;
+            fetch(`/api/shelf/my-assignments/${encodeURIComponent(key)}/hand-over`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repId: pick.value }) })
+              .then((r) => (r.ok ? loadAssignments() : r.json().then((b) => alert(b.error || 'Could not hand over the lot.'))));
+          } }, 'Hand over'));
+      };
       const fmt = (iso) => (iso ? new Date(`${String(iso).slice(0, 10)}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—');
       setChildren(assignedCard,
         h('h2', null, `New task: ${items.length} expiring ${items.length === 1 ? 'lot' : 'lots'} assigned to you`),
@@ -783,7 +792,8 @@ function loadAssignments() {
             h('td', { class: 'num' }, String(i.cartons ?? '—')),
             h('td', { class: 'rep-assigned-act' },
               i.status === 'IN_PROGRESS' ? h('span', { class: 'rep-note' }, 'In progress') : h('button', { type: 'button', class: 'secondary', onClick: () => setAssignment(i.key, 'IN_PROGRESS') }, 'Start'),
-              h('button', { type: 'button', onClick: () => setAssignment(i.key, 'DONE') }, 'Mark done'))))))));
+              h('button', { type: 'button', onClick: () => setAssignment(i.key, 'DONE') }, 'Mark done'),
+              colleagues.length ? handOver(i.key) : null)))))));
       assignedCard.classList.remove('hidden');
     })
     .catch(() => { /* a bonus panel; the page works without it */ });

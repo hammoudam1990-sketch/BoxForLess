@@ -42,7 +42,19 @@ router.get('/my-assignments', requireRole('SALES_REP'), (req, res, next) => {
       daysLeft: r.daysLeft, band: r.band, cartons: r.cartons, shopName: r.shopName, location: r.location,
       decideBy: r.decideBy, status: r.status, discountPct: r.discountPct,
     }));
-    res.json({ items });
+    const colleagues = listReps(todayString(), req.db).filter((r) => r.id !== String(req.staff?.repId ?? '')).map((r) => ({ id: r.id, name: r.name }));
+    res.json({ items, colleagues });
+  } catch (e) { next(e); }
+});
+
+// A rep hands one of their lots to a colleague, who then sees it as a new task.
+router.post('/my-assignments/:key/hand-over', requireRole('SALES_REP'), (req, res, next) => {
+  try {
+    if (!assignedTo(req).some((r) => r.key === req.params.key)) return res.status(404).json({ error: 'That lot is not assigned to you.' });
+    const to = listReps(todayString(), req.db).find((r) => r.id === String(req.body?.repId ?? '') && r.id !== String(req.staff?.repId ?? ''));
+    if (!to) return res.status(400).json({ error: 'Choose a colleague to hand this lot to.' });
+    saveAction(req.db, req.params.key, { owner: to.name, status: 'OPEN' });
+    res.json({ ok: true, owner: to.name });
   } catch (e) { next(e); }
 });
 
