@@ -12,6 +12,7 @@ import { LotDiscountError } from '../../domain/lot-discounts.js';
 import { todayString } from '../../domain/expiry-list.js';
 import { buildExpiryList } from '../../domain/expiry-list.js';
 import { saveAction } from '../../domain/expiry-actions.js';
+import { collectionsForRep } from '../../domain/payments.js';
 
 const router = express.Router();
 const rep = (req) => (req.staff?.role === 'SALES_REP' ? String(req.staff.repId ?? '') : String((req.method === 'GET' ? req.query.rep : req.body?.rep) ?? ''));
@@ -34,6 +35,11 @@ function assignedTo(req) {
   return !name ? [] : buildExpiryList(req.db, {}).rows
     .filter((r) => r.action === 'PUSH_THROUGH_REPS' && (r.owner || '').trim().toLowerCase() === name && r.status !== 'DONE');
 }
+
+// Customers the Sales Manager has asked this rep to collect payment from (the rep's own assignments only).
+router.get('/my-collections', requireRole('SALES_REP'), (req, res, next) => {
+  try { res.json({ items: collectionsForRep(req.db, req.staff?.repId, todayString()) }); } catch (e) { next(e); }
+});
 
 router.get('/my-assignments', requireRole('SALES_REP'), (req, res, next) => {
   try {

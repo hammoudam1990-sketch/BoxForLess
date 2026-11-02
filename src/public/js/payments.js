@@ -86,12 +86,26 @@ export async function renderPayments(view) {
       h('div', { class: 'exp-wrap' }, h('table', null, invHead(), invoices)),
       noInvoices),
     dueCard);
+  const schedSearch = h('input', {
+    type: 'search', class: 'pay-search', placeholder: 'Search customer or sales rep…', 'aria-label': 'Search payment schedules',
+    onInput: () => paintSchedules(),
+  });
+  const noSched = h('p', { class: 'muted hidden' }, 'No customer matches your search.');
+  let schedCache = [];
+  function paintSchedules() {
+    const q = schedSearch.value.trim().toLowerCase();
+    const list = q ? schedCache.filter((s) => `${s.customer} ${s.collectorName || ''} ${s.description || ''}`.toLowerCase().includes(q)) : schedCache;
+    setChildren(schedules, list.map(scheduleRow));
+    noSched.classList.toggle('hidden', list.length > 0 || !q);
+  }
   const schedPanel = h('div', { class: 'pay-panel hidden', id: 'pay-sched' },
     h('div', { class: 'card' },
       h('h2', null, 'Payment schedules'),
       h('p', { class: 'muted' }, 'Set by the Sales Manager. The default is each invoice\'s own due date. A weekly or monthly schedule means every open invoice is expected on that day.'),
+      h('div', { class: 'controls' }, schedSearch),
       h('div', { class: 'exp-wrap' },
-        h('table', null, h('thead', null, h('tr', null, ['Customer', 'Schedule', 'Payment collected by', ''].map((t) => h('th', null, t)))), schedules))));
+        h('table', null, h('thead', null, h('tr', null, ['Customer', 'Schedule', 'Payment collected by', ''].map((t) => h('th', null, t)))), schedules)),
+      noSched));
   const followPanel = h('div', { class: 'pay-panel hidden', id: 'pay-follow' },
     h('div', { class: 'card' },
       h('h2', null, '20-Day Follow-Up'),
@@ -247,7 +261,7 @@ export async function renderPayments(view) {
     paintInvoices();
     setChildren(reminders, d.reminders.map(reminderCard));
     noReminders.classList.toggle('hidden', d.reminders.length > 0);
-    if (!editing) setChildren(schedules, d.schedules.map(scheduleRow));
+    if (!editing) { schedCache = d.schedules; paintSchedules(); } else schedCache = d.schedules;
   }
 
   await load();

@@ -244,6 +244,24 @@ export function markReminderSent(db, id, by = null, now = new Date()) {
   db.prepare("UPDATE payment_reminders SET status = 'SENT', sent_at = ?, sent_by = ? WHERE id = ?").run(now.toISOString(), by, r.id);
 }
 
+/** The customers a rep has been assigned to collect payment from, with each one's open invoices (the rep's own customers only). */
+export function collectionsForRep(db, repId, todayStr) {
+  const today = toDay(todayStr);
+  const rows = db.prepare(`SELECT s.customer_id, c.name AS customer, c.phone FROM payment_schedules s JOIN customers c ON c.id = s.customer_id
+                            WHERE s.collector_rep_id = ? ORDER BY c.name`).all(String(repId ?? ''));
+  const items = [];
+  for (const r of rows) {
+    const invs = openInvoices(db, r.customer_id, today);
+    if (!invs.length) continue;
+    items.push({
+      customer: r.customer, phone: r.phone || null, schedule: describeSchedule(getSchedule(db, r.customer_id)),
+      invoiceCount: invs.length, totalDue: money(invs.reduce((s, i) => s + i.amountDue, 0)),
+      invoices: invs.map((i) => ({ number: i.number, amountDue: i.amountDue, payBy: i.payBy, daysToPay: i.daysToPay, unsettled20d: i.unsettled20d })),
+    });
+  }
+  return items.sort((a, b) => Math.min(...a.invoices.map((i) => i.daysToPay)) - Math.min(...b.invoices.map((i) => i.daysToPay)));
+}
+
 /** Everything the Payments due screen shows. */
 export function paymentsOverview(db, todayStr) {
   const today = toDay(todayStr);

@@ -155,6 +155,7 @@ const monthHero = h('div', { class: 'bfl-hero-grid rep-hero hidden', 'aria-label
 const monthCard = h('div', { class: 'card rep-month hidden' });
 const recentOrdersCard = h('div', { class: 'card rep-month hidden' });
 const assignedCard = h('div', { class: 'card rep-assigned hidden', role: 'region', 'aria-label': 'Tasks assigned to you' });
+const collectCard = h('div', { class: 'card rep-assigned hidden', role: 'region', 'aria-label': 'Payments to collect' });
 const repBroadcastBox = h('div', { class: 'rep-broadcast-banner hidden' });
 
 /** "Good morning" / "Good afternoon" / "Good evening" for the local hour. */
@@ -190,6 +191,7 @@ const listView = h('section', { 'aria-label': 'My visits' },
   monthCard,
   quickActions,
   assignedCard,
+  collectCard,
   recentOrdersCard,
   h('div', { class: 'card rep-as', id: 'repAs' },
     h('div', { class: 'rep-as-head' }, 'Visiting as'),
@@ -789,6 +791,32 @@ function loadAssignments() {
     .catch(() => { /* a bonus panel; the page works without it */ });
 }
 
+// Customers the Sales Manager asked this rep to collect payment from (the card stays hidden when there are none).
+function loadCollections() {
+  return fetch('/api/shelf/my-collections', { headers: { Accept: 'application/json' } })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+    .then(({ items }) => {
+      if (!items.length) { collectCard.classList.add('hidden'); return; }
+      const ghs = (n) => `GHS ${Number(n).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const when = (d) => (d < 0 ? `${-d} day${d === -1 ? '' : 's'} overdue` : d === 0 ? 'due today' : `in ${d} day${d === 1 ? '' : 's'}`);
+      setChildren(collectCard,
+        h('h2', null, `Payments to collect: ${items.length} ${items.length === 1 ? 'customer' : 'customers'}`),
+        h('p', { class: 'rep-note' }, 'Your Sales Manager asked you to collect payment from these customers.'),
+        h('div', { class: 'bfl-table-wrap' }, h('table', { class: 'bfl-table' },
+          h('thead', null, h('tr', null, ['Customer', 'Open invoices', 'Next payment'].map((t) => h('th', null, t)), h('th', { class: 'num' }, 'Total due'))),
+          h('tbody', null, items.map((c) => {
+            const next = c.invoices.reduce((a, b) => (b.daysToPay < a.daysToPay ? b : a));
+            return h('tr', null,
+              h('td', { class: 'primary-text' }, c.customer, c.phone ? h('div', { class: 'rep-note' }, c.phone) : null),
+              h('td', null, `${c.invoiceCount} (${c.invoices.map((i) => i.number).join(', ')})`),
+              h('td', null, `${next.number} ${when(next.daysToPay)}${c.invoices.some((i) => i.unsettled20d) ? ' · 20+ days unsettled' : ''}`),
+              h('td', { class: 'num' }, ghs(c.totalDue)));
+          })))));
+      collectCard.classList.remove('hidden');
+    })
+    .catch(() => { /* a bonus panel; the page works without it */ });
+}
+
 function loadRecentOrders() {
   return fetch('/api/rep-orders/mine', { headers: { Accept: 'application/json' } })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
@@ -858,6 +886,7 @@ function loadRecentOrders() {
         repGreeting.textContent = `${greeting()}, ${reps[0].name.split(' ')[0]}`;
         loadMyMonth();
         loadAssignments();
+        loadCollections();
         loadRecentOrders();
         const sub = document.querySelector('.brand-sub');
         if (sub) sub.textContent = `Sales Representative · ${reps[0].name}`;
