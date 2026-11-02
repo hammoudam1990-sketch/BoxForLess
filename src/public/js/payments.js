@@ -75,6 +75,7 @@ export async function renderPayments(view) {
   const runBtn = h('button', { type: 'button', class: 'secondary', onClick: run }, 'Check for reminders now');
   const followUp20dBtn = h('button', { type: 'button', onClick: runFollowUp20d }, 'Generate 20+ Day Follow-Up Reminders');
   let allInvoicesCache = [];
+  let repList = [];
   const followRows = h('tbody');
   const noFollow = h('p', { class: 'muted hidden' }, 'No invoice is unsettled for 20+ days.');
   const invHead = () => h('thead', null, h('tr', null, ['Customer', 'Invoice', 'Invoiced', 'Still due', 'Pay by', 'Where it stands / Follow-up', 'Schedule', 'Last reminder'].map((t) => h('th', { class: t === 'Still due' ? 'num' : null }, t))));
@@ -90,7 +91,7 @@ export async function renderPayments(view) {
       h('h2', null, 'Payment schedules'),
       h('p', { class: 'muted' }, 'Set by the Sales Manager. The default is each invoice\'s own due date. A weekly or monthly schedule means every open invoice is expected on that day.'),
       h('div', { class: 'exp-wrap' },
-        h('table', null, h('thead', null, h('tr', null, ['Customer', 'Schedule', ''].map((t) => h('th', null, t)))), schedules))));
+        h('table', null, h('thead', null, h('tr', null, ['Customer', 'Schedule', 'Payment collected by', ''].map((t) => h('th', null, t)))), schedules))));
   const followPanel = h('div', { class: 'pay-panel hidden', id: 'pay-follow' },
     h('div', { class: 'card' },
       h('h2', null, '20-Day Follow-Up'),
@@ -189,7 +190,20 @@ export async function renderPayments(view) {
         } catch (e) { toast(e.message, 'err'); }
       }
     }, 'Save');
-    return h('tr', null, h('td', null, h('b', null, s.customer)), h('td', null, kind, ' ', weekday, ' ', dom, ' ', note), h('td', null, save));
+    const collector = h('select', { 'aria-label': `Sales rep to collect payment from ${s.customer}` },
+      h('option', { value: '' }, 'Not assigned'),
+      ...repList.map((r) => h('option', { value: r.id, selected: r.id === s.collectorRepId }, r.name)));
+    const assign = h('button', {
+      type: 'button', class: 'secondary', onClick: async () => {
+        try {
+          const r = await api.setPaymentCollector(s.customerId, collector.value);
+          toast(r.collectorName ? `${r.collectorName} will collect payment from ${s.customer}.` : `No rep assigned to collect from ${s.customer}.`, 'ok');
+          load();
+        } catch (e) { toast(e.message, 'err'); }
+      }
+    }, 'Assign');
+    return h('tr', null, h('td', null, h('b', null, s.customer)), h('td', null, kind, ' ', weekday, ' ', dom, ' ', note),
+      h('td', null, h('div', { class: 'pay-collector' }, collector, assign)), h('td', null, save));
   }
 
   async function markSent(id) {
@@ -222,6 +236,7 @@ export async function renderPayments(view) {
     let d;
     try { d = await api.payments(); } catch (e) { toast(e.message, 'err'); return; }
     allInvoicesCache = d.invoices || [];
+    repList = d.reps || [];
     const u20 = d.summary.unsettled20d || { count: 0, amount: 0 };
     setChildren(tiles,
       tile('Overdue', d.summary.overdue.count, d.summary.overdue.amount, 'err'),

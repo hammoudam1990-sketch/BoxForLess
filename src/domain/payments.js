@@ -14,6 +14,7 @@
 // the credit limit does. Every reminder is logged; "sent" means a person marked it sent, because no
 // email, SMS or WhatsApp provider is connected yet (the message is ready to copy).
 import { toDay, formatDay } from './expiry.js';
+import { allReps } from './reps.js';
 
 export const ScheduleKind = Object.freeze({ DUE_DATE: 'DUE_DATE', WEEKLY: 'WEEKLY', MONTHLY: 'MONTHLY' });
 export const ReminderKind = Object.freeze({ BEFORE: 'BEFORE', DUE: 'DUE', OVERDUE: 'OVERDUE' });
@@ -101,6 +102,24 @@ export function setSchedule(db, customerId, input, by = null, now = new Date()) 
                                                     updated_by = excluded.updated_by, updated_at = excluded.updated_at`)
     .run(c.id, s.kind, s.weekday, s.dayOfMonth, by, now.toISOString());
   return { customerId: c.id, ...s, description: describeSchedule(s) };
+}
+
+/** Name the sales rep who must collect this customer's payment (Sales Manager only; the route enforces it). repId '' clears it. */
+export function setCollector(db, customerId, repId, by = null, now = new Date()) {
+  const c = db.prepare('SELECT id, customer_type FROM customers WHERE id = ?').get(Number(customerId));
+  if (!c) throw new PaymentError('That customer does not exist.', 404);
+  if (c.customer_type === 'CASH') throw new PaymentError('A cash customer pays in cash and has no payment to collect.');
+  const rep = String(repId || '');
+  let name = null;
+  if (rep) {
+    const found = allReps(db).find((r) => r.id === rep);
+    if (!found) throw new PaymentError('Choose a sales rep from the list.');
+    name = found.name;
+  }
+  db.prepare(`INSERT INTO payment_schedules (customer_id, kind, collector_rep_id, updated_by, updated_at) VALUES (?,?,?,?,?)
+              ON CONFLICT(customer_id) DO UPDATE SET collector_rep_id = excluded.collector_rep_id, updated_by = excluded.updated_by, updated_at = excluded.updated_at`)
+    .run(c.id, ScheduleKind.DUE_DATE, rep || null, by, now.toISOString());
+  return { customerId: c.id, collectorRepId: rep || null, collectorName: name };
 }
 
 /**
@@ -247,6 +266,7 @@ export function paymentsOverview(db, todayStr) {
   invoices.sort((a, b) => a.daysToPay - b.daysToPay || a.customer.localeCompare(b.customer));
   const sum = (bucket) => ({ count: invoices.filter((i) => i.bucket === bucket).length, amount: money(invoices.filter((i) => i.bucket === bucket).reduce((s, i) => s + i.amountDue, 0)) });
   const unsettled20 = invoices.filter((i) => i.unsettled20d);
+  const reps = allReps(db);
 
   const credit = db.prepare(`SELECT c.id, c.name FROM customers c WHERE c.customer_type = 'CREDIT' AND c.is_active = 1
                                AND (EXISTS (SELECT 1 FROM odoo_invoices i WHERE i.customer_id = c.id) OR EXISTS (SELECT 1 FROM payment_schedules s WHERE s.customer_id = c.id))
@@ -262,7 +282,11 @@ export function paymentsOverview(db, todayStr) {
       remindersSent: reminders.filter((r) => r.status === 'SENT').length,
     },
     invoices,
-    schedules: credit.map((c) => ({ customerId: c.id, customer: c.name, ...getSchedule(db, c.id), description: describeSchedule(getSchedule(db, c.id)) })),
+    schedules: credit.map((c) => {
+      const collectorId = db.prepare('SELECT collector_rep_id AS id FROM payment_schedules WHERE customer_id = ?').get(c.id)?.id || null;
+      return { customerId: c.id, customer: c.name, ...getSchedule(db, c.id), description: describeSchedule(getSchedule(db, c.id)), collectorRepId: collectorId, collectorName: collectorId ? (reps.find((r) => r.id === collectorId)?.name || collectorId) : null };
+    }),
+    reps: reps.map((r) => ({ id: r.id, name: r.name })),
     reminders: reminders.map((r) => ({
       id: r.id, customerId: r.customer_id, customer: r.customer, remindOn: r.remind_on, kind: r.kind, to: r.to_address, subject: r.subject, body: r.body,
       invoiceCount: r.invoice_count, totalDue: r.total_due, status: r.status, createdAt: r.created_at, sentAt: r.sent_at, sentBy: r.sent_by,

@@ -2,7 +2,7 @@
 // the Sales Manager sets each credit customer's payment schedule and sees what is due, overdue and
 // which reminders went out. The platform reminds; it does not collect.
 import express from 'express';
-import { paymentsOverview, setSchedule, runReminders, runUnsettled20dFollowUps, markReminderSent, PaymentError } from '../../domain/payments.js';
+import { paymentsOverview, setSchedule, setCollector, runReminders, runUnsettled20dFollowUps, markReminderSent, PaymentError } from '../../domain/payments.js';
 import { todayString } from '../../domain/expiry-list.js';
 import { paymentDueFor, setPaymentDue, ordersAwaitingDueDate, PaymentDueError } from '../../domain/payment-due.js';
 
@@ -31,6 +31,10 @@ router.post('/follow-up-20d', (req, res, next) => {
 
 router.put('/customers/:id/schedule', (req, res, next) => {
   try { res.json(setSchedule(req.db, req.params.id, req.body || {}, req.staff?.name)); } catch (e) { fail(e, res, next); }
+});
+
+router.put('/customers/:id/collector', (req, res, next) => {
+  try { res.json(setCollector(req.db, req.params.id, req.body?.repId, req.staff?.name)); } catch (e) { fail(e, res, next); }
 });
 
 router.post('/reminders/:id/sent', (req, res, next) => {

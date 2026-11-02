@@ -226,6 +226,9 @@ export const api = {
   setPaymentSchedule: (id, body) => fetch(`/api/payments/customers/${id}/schedule`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   }).then(handle),
+  setPaymentCollector: (id, repId) => fetch(`/api/payments/customers/${id}/collector`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repId }),
+  }).then(handle),
   markPaymentReminderSent: (id) => fetch(`/api/payments/reminders/${id}/sent`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(handle),
 
   // Team: staff accounts (administrator and Sales Manager).

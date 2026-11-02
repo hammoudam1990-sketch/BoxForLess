@@ -1209,3 +1209,5 @@ html[data-theme="dark"] .sb-mock-act-btn { background: #0f172a; border-color: #3
 .pay-tabs button { background: transparent; color: #17365d; border: 0; border-bottom: 3px solid transparent; border-radius: 0; padding: 10px 16px; font-weight: 700; cursor: pointer; margin-bottom: -2px; }
 .pay-tabs button.active { color: #1e5fd8; border-bottom-color: #1e5fd8; }
 .pay-panel.hidden { display: none; }
+
+.pay-collector { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }

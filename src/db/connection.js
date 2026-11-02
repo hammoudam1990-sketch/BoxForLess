@@ -487,6 +487,7 @@ export function applyMigrations(db) {
       updated_by   TEXT,
       updated_at   TEXT NOT NULL
     )`);
+  if (!columnsOf(db, 'payment_schedules').includes('collector_rep_id')) db.exec('ALTER TABLE payment_schedules ADD COLUMN collector_rep_id TEXT');
   db.exec(`
     CREATE TABLE IF NOT EXISTS payment_reminders (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
