@@ -1057,3 +1057,37 @@ body.rep-page .topbar {
 .rep-assigned { border-left: 5px solid var(--orange, #f59e0b); }
 .rep-assigned h2 { margin: 0 0 4px; }
 
+
+/* ---- Match the website palette (navy #0b2a55, blue #1e5fd8, as in the shop and sign-in) on every screen size ---- */
+html:not([data-theme="dark"]) body.rep-page {
+  --bg: #f4f7fb;
+  --ink: #17365d;
+  --on-bg: #17365d;
+  --on-bg-muted: #536980;
+  --muted: #647790;
+  --line: #e0e8f2;
+  --brand: #1e5fd8;
+  --brand-dark: #0b2a55;
+  --orange: #1e5fd8;
+  --yellow: #edf3ff;
+  --info-bg: #edf3ff;
+  --bfl-ink: #17365d;
+  --bfl-line: #e0e8f2;
+  --bfl-orange: #1e5fd8;
+  --rep-accent-glow: rgba(30, 95, 216, .12);
+}
+html[data-theme="dark"] body.rep-page {
+  --brand: #5ba5ff; --brand-dark: #8fc4ff; --orange: #5ba5ff;
+  --bfl-ink: #e5edf5; --bfl-line: #304253; --bfl-orange: #5ba5ff;
+}
+body.rep-page .topbar { background: #0b2a55; border-bottom: 0; color: #fff; box-shadow: 0 2px 12px rgba(11, 42, 85, .25); }
+body.rep-page .topbar .brand-title { color: #fff; }
+body.rep-page .topbar .brand-sub { color: #d1dfec; }
+body.rep-page .topbar .mainnav a { color: #fff; }
+body.rep-page .topbar .logo { background-color: #1e5fd8; }
+body.rep-page .rep-tab.active { background: var(--brand); color: #fff; }
+body.rep-page .bfl-cookie button { background: var(--brand); color: #fff; }
+body.rep-page .bfl-cookie, body.rep-page .bfl-fab { border-color: var(--line); box-shadow: 0 10px 28px rgba(11, 42, 85, .2); }
+body.rep-page .bfl-fab { color: var(--brand); }
+body.rep-page .bfl-cookie p { font-size: 15px; }
+body.rep-page .topbar .brand-sub { font-size: 12px; line-height: 1.3; }

@@ -1,7 +1,7 @@
 /* Sales rep app. Mobile first, with a full-width desktop workspace. */
 :root {
-  --navy: #0b2a52; --navy-2: #123f78; --blue: #1557d6; --ink: #14233b; --muted: #61728a;
-  --line: #dfe6f0; --bg: #f2f6fb; --card: #fff;
+  --navy: #0b2a55; --navy-2: #123f78; --blue: #1e5fd8; --ink: #14233b; --muted: #61728a;
+  --line: #dfe6f0; --bg: #f4f7fb; --card: #fff;
   --red: #d7263d; --red-bg: #fde8eb; --amber: #b45f06; --amber-bg: #fff0cf; --green: #1f8a4c; --green-bg: #dff5e8;
 }
 * { box-sizing: border-box; }
